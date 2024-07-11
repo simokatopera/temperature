@@ -111,6 +111,10 @@ class gameApi {
         const path = `creategame`;
         return await this.sendPostJsonAsync(path, data);
     }
+    async test(data) {
+        const path = `locations`;
+        return await this.sendPostJsonAsync(path, data);
+    }
 }
 async function apiGetDriverAsync(userid) {
     return await new gameApi(userid).apiGetDriverAsync();
@@ -165,4 +169,8 @@ async function apiUploadGameAsync(data) {
 }
 async function apiCreateGameAsync(data) {
     return await new gameApi('').createGameAsync(data);
+}
+
+async function apiTest(data) {
+    return await new gameApi('').text(data);
 }
