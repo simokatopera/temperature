@@ -172,5 +172,5 @@ async function apiCreateGameAsync(data) {
 }
 
 async function apiTest(data) {
-    return await new gameApi('').text(data);
+    return await new gameApi('').test(data);
 }
