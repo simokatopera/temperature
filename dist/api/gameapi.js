@@ -113,7 +113,7 @@ class gameApi {
     }
     async test(data) {
         const path = `locations`;
-        return await this.sendPostJsonAsync(path, data);
+        return await this.sendGetJsonAsync(path);
     }
 }
 async function apiGetDriverAsync(userid) {
