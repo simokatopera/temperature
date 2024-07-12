@@ -1,6 +1,6 @@
 class gameApi {
     constructor(guid) {
-        this.apipath = '/server/.netlify/functions/';
+        this.apipath = '.netlify/functions/';
         this.guid = guid;
     }
     async sendGetJsonAsync(url) {

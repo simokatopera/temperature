@@ -8,7 +8,9 @@ const handler = async (event, context) => {
 
     // const teams = await GetProvider(event.queryStringParameters.userid).seasons(event.queryStringParameters.team);
     // return createHttpJsonOkResponse(null, teams);
-    return new Response("Hello, world!")
+    return  {body: "Ok", statusCode: 200};
+  
 }
+
 
 export { handler }
