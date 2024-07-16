@@ -5,7 +5,7 @@
 <html>
 
 <head>
-    <title>Lentopallotilastot</title>
+    <title>Temperature</title>
 
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -23,7 +23,7 @@
           }
         } </script>
 
-        <script src="api/gameapi.js" defer></script>
+        <script src="api/api.js" defer></script>
 
     <style>
     </style>
@@ -35,6 +35,9 @@
                 <div class="card">
                     <div class="page-title">
                         <h1 id="ID_PageTitle">Lämpötilat</h1>
+                        <div id="cities">
+
+                        </div>
                     </div>
 
                 </div>
@@ -48,11 +51,13 @@
 
 
         (async function () {
-            debugger
             
-            let resp = await apiTest('');
+            let resp = await apiGetLocations('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc');
+            let elem = document.getElementById("cities");
+            elem.textContent = JSON.stringify(resp);
+            let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', resp.data[0]);
 
-            debugger
+            let temps = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', resp.data[0], years.data);
         })();
 
     </script>

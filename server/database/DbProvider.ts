@@ -1,11 +1,11 @@
 
-import {DbSupa} from "./DbSupa";
-import {GameFileDataClass} from "./GameFileDataClass";
-import {GameApi} from "./GameApi"
+//import {DbSupa} from "./DbSupa";
+import {FileDbClass} from "./DbFileClass";
+import {TemperatureApi} from "./TemperatureApi"
 
 
-export function GetProvider(guid: string): GameApi {
-    //let gameApi = new GameFileDataClass(guid);
-    let gameApi = new DbSupa(guid);
-    return new GameApi(gameApi);
+export function GetProvider(guid: string): TemperatureApi {
+    let gameApi = new FileDbClass(guid);
+    //let gameApi = new DbSupa(guid);
+    return new TemperatureApi(gameApi);
 }

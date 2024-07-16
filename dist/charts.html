@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Volleyball</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+
+    <script>let exports = {};</script>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+          }
+        }
+      </script>
+
+    <script src="js/echarts5.4.3.js"></script>
+    <link href="css/loader.css" rel="stylesheet">
+    <script src="api/api.js" defer></script>
+
+    <style>
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="page-title">
+            <h1 id="ID_PageTitle">Lämpötilakäyrät</h1>
+        </div>
+        <div id="app" class="page-content">
+            <trendgraph :active="selectedplayerstat==1&&selectedplayerstatsub1==1" :elemid="testgraph" :title="trendtitles"></trendgraph>
+        </div>
+    </div>
+    <script type="module">
+
+        import { createApp, ref } from 'vue'
+
+        (async function () {
+
+
+        })();
+
+
+
+        const vueapp = createApp({
+            data() {
+                return {
+                }
+            },
+            async mounted() {
+                // const urlParams = new URL(window.location.href).searchParams;
+                // const games = urlParams.get('games');
+                // if (games === null) return;
+                // let userid = urlParams.get('userid');
+                // if (userid === null) return;
+                let temps = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", [2020, 2024]);
+
+                let chartdata = this.getChartData(temps);//, { playernumbers: sel, names: [] });
+
+                let serie = initSerie(chartdata, 'testgraph');
+                this.setSerie( 'testgraph', serie, chartdata);
+
+            },
+            methods: {
+
+                initSerie(options, elementname) {
+                    //const titleelem = document.getElementById(elementname + 'title');
+                    //if (titleelem) titleelem.innerHTML = options.title.text2 ?? "NONAME";
+                    const graphelem = document.getElementById(elementname);
+                    if (graphelem) {
+                        let trendChart = echarts.init(graphelem);
+                        trendChart.setOption(options);
+                        return trendChart;
+                    }
+                    return null;
+                },
+                setSerie(id, data, chartdata) {
+                    let serie = this.serieinfo.find((s) => s.id == id);
+                    if (!serie) this.serieinfo.push({ id: id, data: data, chartdata: chartdata });
+                },
+                getChartData(temperatures) {
+                    //let teams = [];
+                    let categories = [];
+                    let values = [];
+                    temperatures.data.forEach(yeartemp => {
+                        categories.push(yeartemp.info.year);
+                        yeartemp.data.forEach(temp => {
+                            values.push({morning: temp.morning, evening: temp.evening, date: temp.date})
+                         });
+                    });
+                    //this.trendtitles[id] = temperatures.options.chartname;
+
+                    // function formatvalues(teams, values, d) {
+                    //     if (values && values.length > 0) {
+                    //         return values.map((item, ind) => ({ value: item.value ?? item.data.value, team: teams[ind], text: item.text ?? item.data.text ?? 'NaN' }));
+                    //     }
+                    //     return [];
+                    // }
+                    //let selection = this.initSerieLegends(temperatures)
+                    return this.fillScatterOptions({
+                        chartname: 'kukkuu', //temperatures.options.chartname,
+                        categories:  categories,
+                        data: values.map((d, i) => ({
+                            name: `{d.date`,
+                            values: d.morning
+                        })),
+                        selected: [],
+                    });
+                },
+                initSerieLegends(data) {
+                    let selection = [];
+                    // if (activation.playernumbers && activation.playernumbers.length) {
+                    //     activation.playernumbers.forEach((pno, i) => {
+                    //         let foundplayer = data.options.chartitems.find((item, index) => {
+                    //             let matchplayer = item.name.match(/^(\d{1,2}) ./);
+                    //             return (matchplayer && pno == Number(matchplayer[1]));
+                    //         });
+                    //         if (foundplayer) selection.push(foundplayer.name);
+                    //     });
+                    // }
+                    // else if (activation.names && activation.names.length) {
+                    //     return activation.names;
+                    // }
+                    return selection;
+                },
+                fillScatterSeriedata(series) {
+                    /*
+                     {
+                        chartname: string
+                        categories: string[]
+                        data: []
+                     }
+                    */
+                    let returnvalues = series.data.map(ser => ({
+                        type: 'line',
+                        symbolSize: 15,
+                        data: ser.values.map((value, i) => ({
+                            value: [series.categories[i], value.value],
+                            name: value.team,
+                            text: value.text
+                        })),
+                        name: ser.name,
+                    }))
+                    /*
+                        returnvalues: [{type, name, data, symbolSize}]
+                            data: [{name, text, value[x, y]]}]
+                
+                        {
+                        name: '2 Klemola Olivia'
+                        data:
+                        [
+                            {
+                            type: 'line',
+                            symbolSize: 12,
+                            name: 'Loimu',
+                            text: '1/3',
+                            value: [2023-10-22, 33.33]
+                            },
+                            {
+                            name: 'Viesti',
+                            text: '0/3',
+                            value: [2023-10-31, 0]
+                            },
+                        ]
+                        }
+                    */
+                    return returnvalues;
+                },
+                fillScatterOptions(seriedata) {
+                    debugger
+                    let option = {
+                        animation: false,
+                        title: {
+                            text2: seriedata.chartdata,
+                        },
+                        tooltip: {
+                            trigger: 'item',
+                            formatter: function (params) {
+                                let d = new Date(params.value[0]);
+                                let dstr = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`
+                                return `
+                Arvo: ${Math.trunc(params.value[1] * 10) / 10}<br>Txt: ${params.data.text}<br>Nimi: ${params.seriesName}<br>Päivä: ${dstr}<br>Vastustaja: ${params.name}
+                     `
+                            }
+                        },
+                        legend: {
+                            data: seriedata.data.map(d => d.name),
+                            selected: getSelection(seriedata),
+                            inactiveColor: '#aaa',
+                            textStyle: { color: '#f0f', fontSize: '16' },
+                            type: 'scroll',
+                            orient: 'vertical',
+                            top: 0,
+                            right: 20,
+                        },
+                        xAxis: {
+                            type: 'time',
+                        },
+                        yAxis: {},
+                        series: this.fillScatterSeriedata(seriedata),
+
+                    };
+                    return option;
+                }
+            }
+        }).mount('#app');
+
+    </script>
+
+</body>
+
+</html>

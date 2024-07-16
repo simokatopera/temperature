@@ -4,13 +4,19 @@ import { HttpResponseType, createJsonErrorResponse, requestGuidValid, createHttp
 import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
-    console.log('Locations');
+    console.log('Temperatures');
 	const guidresp = requestGuidValid(event);
 	if (guidresp.msg !== null) return createJsonErrorResponse(HttpResponseType.BadRequest, guidresp.msg);
-
+    if (!event.queryStringParameters || !event.queryStringParameters.location || !event.queryStringParameters.years) return createJsonErrorResponse(HttpResponseType.BadRequest, "Invalid parameter");
     const api = await GetProvider(guidresp.guid);
     if (event.httpMethod == "GET") {
-		const resp = await api.locations();
+        let years: number[] = [];
+        let i: number;
+        let yeartbl = event.queryStringParameters.years.split(',');
+        for (i = 0; i < yeartbl.length; i++) {
+            years.push(Number(yeartbl[i]));
+        }
+		const resp = await api.temperatures(event.queryStringParameters.location, years);
 		return createHttpJsonOkResponse(null, resp);
   	}
   	if (event.httpMethod == "PUT") {

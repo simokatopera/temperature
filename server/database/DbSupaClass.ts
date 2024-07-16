@@ -54,7 +54,7 @@ interface ACCESS {
     all: boolean;
     list: ACCESSTEAMS[];
 }
-export class DbSupa implements GameApiClass {
+export class DbSupaClass implements GameApiClass {
     guid: string | null = null;
     access: ACCESS | null;
 
