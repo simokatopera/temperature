@@ -19,6 +19,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 		const resp = await api.temperatures(event.queryStringParameters.location, years);
 		return createHttpJsonOkResponse(null, resp);
   	}
+    
   	if (event.httpMethod == "PUT") {
     	return  {body: JSON.stringify({statusText: "Vastaus Put done"}), statusCode: HttpResponseType.Ok};
   	}

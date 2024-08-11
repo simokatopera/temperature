@@ -3,7 +3,7 @@
 <html>
 
 <head>
-    <title>Volleyball</title>
+    <title>Lämpötilat</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -28,6 +28,10 @@
     <script src="api/api.js" defer></script>
 
     <style>
+       .graphelement {
+            width: 800px;
+            height: 380px;
+        }         
     </style>
 </head>
 
@@ -37,7 +41,9 @@
             <h1 id="ID_PageTitle">Lämpötilakäyrät</h1>
         </div>
         <div id="app" class="page-content">
-            <trendgraph :active="selectedplayerstat==1&&selectedplayerstatsub1==1" :elemid="testgraph" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph2" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph3" :title="trendtitles"></trendgraph>
         </div>
     </div>
     <script type="module">
@@ -54,70 +60,285 @@
         const vueapp = createApp({
             data() {
                 return {
+                    testgraph: 'GraphLocation',
+                    testgraph2: 'GraphLocation2',
+                    testgraph3: 'GraphLocation3',
+                    trendtitles: [],
                 }
             },
             async mounted() {
-                // const urlParams = new URL(window.location.href).searchParams;
-                // const games = urlParams.get('games');
-                // if (games === null) return;
-                // let userid = urlParams.get('userid');
-                // if (userid === null) return;
-                let temps = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", [2020, 2024]);
+                let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", [2020, 2021, 2024]);
 
-                let chartdata = this.getChartData(temps);//, { playernumbers: sel, names: [] });
+                let trendChart = this.initSerie(this.testgraph);
+                if (trendChart === null) return;
+                let serieoptions = this.buildChartOptions('Kuukausittainen keskiarvo', this.createAllYearsMonthlyAverageSeriedata(temperatures));
+                trendChart.setOption(serieoptions);
 
-                let serie = initSerie(chartdata, 'testgraph');
-                this.setSerie( 'testgraph', serie, chartdata);
+                let trendChart2 = this.initSerie(this.testgraph2);
+                if (trendChart2 === null) return;
+                let serieoptions2 = this.buildChartOptions('Päivittäinen keskiarvo', this.createAllYearsAverageSeriedata(temperatures));
+                trendChart2.setOption(serieoptions2);
 
+                let trendChart3 = this.initSerie(this.testgraph3);
+                if (trendChart3 === null) return;
+                let serieoptions3 = this.buildChartOptions('Päivittäinen lämpötila', this.createAllYearsSeriedata(temperatures));
+                trendChart3.setOption(serieoptions3);
             },
+            components: {
+                'trendgraph': {
+                    props: ['active', 'elemid', 'title'],
+                    template: `
+                        <div :class="{hidden: !active}" class="trendchart">
+                            <div class="trendtitle"></div>
+                            <div :id="elemid" class="graphelement"></div>
+                        </div>
+                        `
+                }
+            },            
             methods: {
 
-                initSerie(options, elementname) {
-                    //const titleelem = document.getElementById(elementname + 'title');
-                    //if (titleelem) titleelem.innerHTML = options.title.text2 ?? "NONAME";
-                    const graphelem = document.getElementById(elementname);
-                    if (graphelem) {
-                        let trendChart = echarts.init(graphelem);
-                        trendChart.setOption(options);
-                        return trendChart;
-                    }
-                    return null;
+                initSerie(element) {
+                    const graphelem = document.getElementById(element);
+                    if (graphelem === null) return null;
+                    return echarts.init(graphelem);
                 },
-                setSerie(id, data, chartdata) {
-                    let serie = this.serieinfo.find((s) => s.id == id);
-                    if (!serie) this.serieinfo.push({ id: id, data: data, chartdata: chartdata });
-                },
-                getChartData(temperatures) {
-                    //let teams = [];
-                    let categories = [];
-                    let values = [];
-                    temperatures.data.forEach(yeartemp => {
-                        categories.push(yeartemp.info.year);
-                        yeartemp.data.forEach(temp => {
-                            values.push({morning: temp.morning, evening: temp.evening, date: temp.date})
-                         });
-                    });
-                    //this.trendtitles[id] = temperatures.options.chartname;
+                //setSerie(id, data, chartdata) {
+                    //let serie = this.serieinfo.find((s) => s.id == id);
+                    //if (!serie) this.serieinfo.push({ id: id, data: data, chartdata: chartdata });
+                //},
+                buildChartOptions(title, series) {
+                    const months = ['Tammi','Helmi','Maalis','Huhti','Touko','Kesä','Heinä','Elo','Syys','Loka','Marras','Joulu']
+                    let chartoptions = {
+                        animation: false,
+                        title: {
+                            text: title,
+                        },
+                        tooltip: {
+                            trigger: 'item',
+                            formatter: function (params) {
+                                return params.data.text;
+                            }
+                        },
+                        xAxis: {
+                            type: 'time',
+                            axisLabel: {
+                                formatter: (function(value) {
+                                    let v = new Date(value);
+                                    let m = v.getMonth();
+                                    let y = v.getFullYear();
+                                    let d = v.getDate();
+                                    if (y < 1978) return months[m];
+                                    return y.toString();
+                                })
+                            },
+                            name: 'Aika',
+                        },
+                        yAxis: {
+                            name: 'Lämpötila/°C'
+                        },
+                        series: this.createSeries(series),
+                        // legend: {
+                        //     data: series.data.map(s => s.year),
+                        // //     selected: this.getSelection(temperatures),
+                        // //     inactiveColor: '#aaa',
+                        //     textStyle: { color: '#f0f', fontSize: '16' },
+                        //     type: 'scroll',
+                        //     //orient: 'vertical',
+                        //     //top: 0,
+                        //     //right: 20,
+                        // },
+                    };
 
-                    // function formatvalues(teams, values, d) {
-                    //     if (values && values.length > 0) {
-                    //         return values.map((item, ind) => ({ value: item.value ?? item.data.value, team: teams[ind], text: item.text ?? item.data.text ?? 'NaN' }));
-                    //     }
-                    //     return [];
-                    // }
-                    //let selection = this.initSerieLegends(temperatures)
-                    return this.fillScatterOptions({
-                        chartname: 'kukkuu', //temperatures.options.chartname,
-                        categories:  categories,
-                        data: values.map((d, i) => ({
-                            name: `{d.date`,
-                            values: d.morning
-                        })),
-                        selected: [],
-                    });
+                    return chartoptions;
                 },
-                initSerieLegends(data) {
-                    let selection = [];
+                getDate(date) {
+                    let parts = date.split('/');
+                    if (parts && parts.length === 3) {
+                        return new Date(parts[2], Number(parts[0])-1, parts[1]);
+                     }
+                    return NaN;
+                },
+                getDateTxt(date, daymonth) {
+                    const year = date.getFullYear();
+                    const month = date.getMonth() + 1;
+                    const day = date.getDate();
+                    if (daymonth) return `${day}.${month}`;
+                    return `${day}.${month}.${year}`;
+                },
+                createSeries(series) {
+                    let chartdata = series.data.map(values => ({
+                        type: 'line',
+                        symbolSize: 1,
+                        data: values.values.map(s => ({
+                            value: [s.value[0], s.value[1]],
+                            name: values.location,
+                            text: `${s.tooltip}`,
+                        })),
+                        name: 'Vuosi ' + values.year,
+                    }))                    
+                    return chartdata;
+                },
+                createAllYearsSeriedata(series) {
+                    let returnvalues = series.data.map(yearserie => ({
+                        values: yearserie.data.map(s => ({
+                            value: [this.getDate( s.date), s.morning],
+                            tooltip: `${yearserie.info.location} ${this.getDateTxt(this.getDate( s.date))} ${s.morning}`,
+                        })),
+                        location: yearserie.info.location,
+                        year: yearserie.info.year,
+                    }))
+                    const seriedata = { 
+                        data: returnvalues,
+                        params: null
+                    };
+                    return seriedata;
+                },
+                isNumeric(obj){
+                    return !Array.isArray( obj ) && (obj - parseFloat( obj ) + 1) >= 0;
+                },
+                roundNumber(value, num) {
+                    return value.toFixed(num);
+                },
+                createAllYearsMonthlyAverageSeriedata(series) {
+                    let index;
+                    let months = [];
+                    let dailyvalues = this.createAllYearsAverageSeriedata(series);
+                    dailyvalues.data.forEach((yeardata, ind) => {
+                        let tempvalue;
+                        let month;
+                        months.push([]);
+                        for (index = 0; index < 12; index++) months[ind].push({sum: 0, count: 0, average: NaN});
+                        yeardata.values.forEach(dailyValues => {
+                            month = dailyValues.value[0].getMonth();
+                            tempvalue = dailyValues.value[1];
+                            if (tempvalue) {
+                                months[ind][month].count++;
+                                months[ind][month].sum += tempvalue;
+                            }
+                        })
+                        months[ind].forEach(m => { if (m.count > 0) m.average = m.sum / m.count; })
+                    })
+                    dailyvalues.data.forEach((monthdata, dataindex) => {
+                        let newvalues = [];
+                        let y = monthdata.values[0].value[0].getFullYear();
+                        for (index = 0; index < months[dataindex].length; index++) {
+                            let newdate = new Date(y, index, 1);
+                            newvalues.push({tooltip: 'uusi', value: [newdate, months[dataindex][index].average]});
+                        }
+                        monthdata.values = newvalues;
+                    })
+
+
+                    return dailyvalues;
+                },
+                createAllYearsAverageSeriedata(series) {
+                    const defaultyear = 1976;
+                    let sums = [];
+                    let dayindex;
+                    let yearindex;
+                    let index;
+                    let value;
+                    for (dayindex = 0; dayindex < 366; dayindex++) {
+                        value = {date: new Date(defaultyear, 0, dayindex + 1), morning: {sum: 0, count: 0, average: NaN}, evening: {sum: 0, count: 0, average: NaN}, total: {sum: 0, count: 0, average: NaN}, day: 0, month: 0};
+                        value.month = value.date.getMonth() + 1;
+                        value.day = value.date.getDate();
+                        sums.push(value);
+                    }
+                    let dayreadings;
+                    let dt;
+                    let month;
+                    let day;
+                    for (yearindex = 0; yearindex < series.data.length; yearindex++) {
+                        for (dayindex = 0; dayindex < series.data[yearindex].data.length; dayindex++) {
+                            dayreadings = series.data[yearindex].data[dayindex];
+                            dt = new Date(dayreadings.datetimeUtc);
+                            month = dt.getMonth() + 1;
+                            day = dt.getDate();
+                            let foundsum = sums.find(s => s.day == day && s.month == month);
+                            if (foundsum) {
+                                if (dayreadings.morning && this.isNumeric(dayreadings.morning)) {
+                                    foundsum.morning.count += 1;
+                                    foundsum.morning.sum += dayreadings.morning;
+                                    foundsum.total.count += 1;
+                                    foundsum.total.sum += dayreadings.morning;
+                                }
+                                if (dayreadings.evening && this.isNumeric(dayreadings.evening)) {
+                                    foundsum.evening.count += 1;
+                                    foundsum.evening.sum += dayreadings.evening;
+                                    foundsum.total.count += 1;
+                                    foundsum.total.sum += dayreadings.evening;
+                                }
+                            }
+                        }
+                    }
+                    for (dayindex = 0; dayindex < sums.length; dayindex++) {
+                        if (sums[dayindex].morning.count > 0) {
+                            sums[dayindex].morning.average = sums[dayindex].morning.sum / sums[dayindex].morning.count;
+                        }
+                        if (sums[dayindex].evening.count > 0) {
+                            sums[dayindex].evening.average = sums[dayindex].evening.sum / sums[dayindex].evening.count;
+                        }
+                        if (sums[dayindex].total.count > 0) {
+                            sums[dayindex].total.average = sums[dayindex].total.sum / sums[dayindex].total.count;
+                        }
+                    }
+                    let loc = null;
+                    for (index = 0; index < series.data.length; index++) {
+                        if (series.data[index].info.location !== loc) {
+                            if (loc === null) loc = series.data[index].info.location;
+                            else loc = loc + ', ' + series.data[index].info.location;
+                        }
+                    }
+                    if (loc === null) loc = '';
+                    
+                    let valuearray1 = sums.map(s => ({
+                            value: [s.date, s.morning.average],
+                            tooltip: `Aamu ${this.getDateTxt(s.date, true)} ${this.roundNumber(s.morning.average,2)}`,
+                    }))
+                    let valuearray2 = sums.map(s => ({
+                            value: [s.date, s.evening.average],
+                            tooltip: `Ilta ${this.getDateTxt(s.date, true)} ${this.roundNumber(s.evening.average, 2)}`,
+                    }))
+                    let valuearray3 = sums.map(s => ({
+                            value: [s.date, s.total.average],
+                            tooltip: `Keskiarvo ${this.getDateTxt(s.date, true)} ${this.roundNumber(s.total.average, 2)}`,
+                    }))
+                    let returnvalues1 = {
+                        values: valuearray1,
+                        location: loc,
+                        year: 'kaikki vuodet',
+                    }
+                    let returnvalues2 = {
+                        values: valuearray2,
+                        location: loc,
+                        year: 'kaikki vuodet',
+                    }
+                    let returnvalues3 = {
+                        values: valuearray3,
+                        location: loc,
+                        year: 'kaikki vuodet',
+                    }
+                    const seriedata = { 
+                        data: [returnvalues1, returnvalues2, returnvalues3],
+                        params: null
+                    };
+                    return seriedata;
+                },
+                //getSelection(seriedata) {
+                    //let selection = {};
+                    // seriedata.data.forEach(s => {
+                    //     selection[s.name] = false;
+                    // })
+                    // if (seriedata.selected && seriedata.selected.length) {
+                    //     seriedata.selected.forEach(s => {
+                    //         selection[s] = true;
+                    //     })
+                    // }
+                    //return selection;
+                //}, 
+            
+                //initSerieLegends(data) {
+                   // let selection = [];
                     // if (activation.playernumbers && activation.playernumbers.length) {
                     //     activation.playernumbers.forEach((pno, i) => {
                     //         let foundplayer = data.options.chartitems.find((item, index) => {
@@ -130,87 +351,9 @@
                     // else if (activation.names && activation.names.length) {
                     //     return activation.names;
                     // }
-                    return selection;
-                },
-                fillScatterSeriedata(series) {
-                    /*
-                     {
-                        chartname: string
-                        categories: string[]
-                        data: []
-                     }
-                    */
-                    let returnvalues = series.data.map(ser => ({
-                        type: 'line',
-                        symbolSize: 15,
-                        data: ser.values.map((value, i) => ({
-                            value: [series.categories[i], value.value],
-                            name: value.team,
-                            text: value.text
-                        })),
-                        name: ser.name,
-                    }))
-                    /*
-                        returnvalues: [{type, name, data, symbolSize}]
-                            data: [{name, text, value[x, y]]}]
-                
-                        {
-                        name: '2 Klemola Olivia'
-                        data:
-                        [
-                            {
-                            type: 'line',
-                            symbolSize: 12,
-                            name: 'Loimu',
-                            text: '1/3',
-                            value: [2023-10-22, 33.33]
-                            },
-                            {
-                            name: 'Viesti',
-                            text: '0/3',
-                            value: [2023-10-31, 0]
-                            },
-                        ]
-                        }
-                    */
-                    return returnvalues;
-                },
-                fillScatterOptions(seriedata) {
-                    debugger
-                    let option = {
-                        animation: false,
-                        title: {
-                            text2: seriedata.chartdata,
-                        },
-                        tooltip: {
-                            trigger: 'item',
-                            formatter: function (params) {
-                                let d = new Date(params.value[0]);
-                                let dstr = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`
-                                return `
-                Arvo: ${Math.trunc(params.value[1] * 10) / 10}<br>Txt: ${params.data.text}<br>Nimi: ${params.seriesName}<br>Päivä: ${dstr}<br>Vastustaja: ${params.name}
-                     `
-                            }
-                        },
-                        legend: {
-                            data: seriedata.data.map(d => d.name),
-                            selected: getSelection(seriedata),
-                            inactiveColor: '#aaa',
-                            textStyle: { color: '#f0f', fontSize: '16' },
-                            type: 'scroll',
-                            orient: 'vertical',
-                            top: 0,
-                            right: 20,
-                        },
-                        xAxis: {
-                            type: 'time',
-                        },
-                        yAxis: {},
-                        series: this.fillScatterSeriedata(seriedata),
+                    //return selection;
+                //},
 
-                    };
-                    return option;
-                }
             }
         }).mount('#app');
 

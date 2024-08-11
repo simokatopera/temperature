@@ -1,12 +1,13 @@
 
 import {DbApiClass} from "./DbApiClass.js";
 import { guidValid } from "../utils.js";
-import { TemperatureType } from "./definitions.js";
+import { TemperatureType, TemperatureDataType } from "./definitions.js";
 
 
 let temperaturedata: TemperatureType[] = [];
 
 temperaturedata.push(require("./files/Salo_2020.json"));
+temperaturedata.push(require("./files/Salo_2021.json"));
 temperaturedata.push(require("./files/Salo_2024.json"));
 
 
@@ -62,18 +63,28 @@ export class FileDbClass implements DbApiClass {
         if (this.operationAllowed('get', 'temperatures')) {
             let dataindex, yearindex: number;
             let temperatures: TemperatureType[] = [];
-            console.log('temperatures')
             for (yearindex = 0; yearindex < years.length; yearindex++) {
-                //console.log('yearindex')
                 for (dataindex = 0; dataindex < temperaturedata.length; dataindex++) {
-                    //console.log('dataindex')
                     if (temperaturedata[dataindex].info.location == location && temperaturedata[dataindex].info.year == years[yearindex]) {
+                        let dailyreadings: TemperatureDataType[] = temperaturedata[dataindex].data;
+                        dailyreadings.map(reading => {
+                            reading.datetimeUtc = getDate(reading.date);
+                        })
+
                         temperatures.push(temperaturedata[dataindex]);
-                        //console.log(temperaturedata[dataindex])
                         break;
                     }
                 }
             }
+            function getDate(date: string): Date | null {
+                let parts = date.split('/');
+                if (parts && parts.length === 3) {
+                    //console.log(`${parts[0]} ${parts[1]} ${parts[2]}`)
+                    return new Date(Number(parts[2]), Number(parts[0])-1, Number(parts[1]));
+                 }
+                return null;
+            }
+
             return temperatures;
         }
         return [];
