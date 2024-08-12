@@ -190,4 +190,37 @@
 	,{ "date": "7/6/2024", "morning": 12.2, "evening": 17.5 }
 	,{ "date": "7/7/2024", "morning": 16.4, "evening": 19.1 }
 	,{ "date": "7/8/2024", "morning": 16, "evening": 20.2 }
+	,{ "date": "7/9/2024", "morning": 14.1, "evening": 21 }
+	,{ "date": "7/10/2024", "morning": 13.5, "evening": 24 }
+	,{ "date": "7/11/2024", "morning": 18.9, "evening": 20.3 }
+	,{ "date": "7/12/2024", "morning": 17.4, "evening": 23 }
+	,{ "date": "7/13/2024", "morning": 15.6, "evening": 25.5 }
+	,{ "date": "7/14/2024", "morning": 19.8, "evening": 19.5 }
+	,{ "date": "7/15/2024", "morning": 16.4, "evening": 21.1 }
+	,{ "date": "7/16/2024", "morning": 15.9, "evening": 25 }
+	,{ "date": "7/17/2024", "morning": 19, "evening": 23.2 }
+	,{ "date": "7/18/2024", "morning": 17.5, "evening": 19.3 }
+	,{ "date": "7/19/2024", "morning": 16.4, "evening": 21.6 }
+	,{ "date": "7/20/2024", "morning": 16.3, "evening": 22.7 }
+	,{ "date": "7/21/2024", "morning": 18.2, "evening": 24.5 }
+	,{ "date": "7/22/2024", "morning": 17.5, "evening": 25.7 }
+	,{ "date": "7/23/2024", "morning": 19.5, "evening": 26.5 }
+	,{ "date": "7/24/2024", "morning": 19, "evening": 21.6 }
+	,{ "date": "7/25/2024", "morning": 16.3, "evening": 22.9 }
+	,{ "date": "7/26/2024", "morning": 16.5, "evening": 25.5 }
+	,{ "date": "7/27/2024", "morning": 16.7, "evening": 23.1 }
+	,{ "date": "7/28/2024", "morning": 15.3, "evening": 23 }
+	,{ "date": "7/29/2024", "morning": 16.9, "evening": 24 }
+	,{ "date": "7/30/2024", "morning": 15.9, "evening": 22.8 }
+	,{ "date": "7/31/2024", "morning": 16.3, "evening": 20.8 }
+	,{ "date": "8/1/2024", "morning": 15.3, "evening": 17.9 }
+	,{ "date": "8/2/2024", "morning": 15.4, "evening": 20.2 }
+	,{ "date": "8/3/2024", "morning": 15.7, "evening": 19.5 }
+	,{ "date": "8/4/2024", "morning": 15, "evening": 23 }
+	,{ "date": "8/5/2024", "morning": 14.4, "evening": 18.7 }
+	,{ "date": "8/6/2024", "morning": 13.4, "evening": 25.1 }
+	,{ "date": "8/7/2024", "morning": 15.1, "evening": 23.9 }
+	,{ "date": "8/8/2024", "morning": 13.6, "evening": 23.4 }
+	,{ "date": "8/9/2024", "morning": 13.2, "evening": 23.2 }
+	,{ "date": "8/10/2024", "morning": 16.5, "evening": 17.7 }
 ]}

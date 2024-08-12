@@ -6,8 +6,29 @@ import { TemperatureType, TemperatureDataType } from "./definitions.js";
 
 let temperaturedata: TemperatureType[] = [];
 
+temperaturedata.push(require("./files/Salo_2001.json"));
+temperaturedata.push(require("./files/Salo_2002.json"));
+temperaturedata.push(require("./files/Salo_2003.json"));
+temperaturedata.push(require("./files/Salo_2004.json"));
+temperaturedata.push(require("./files/Salo_2005.json"));
+temperaturedata.push(require("./files/Salo_2006.json"));
+temperaturedata.push(require("./files/Salo_2007.json"));
+temperaturedata.push(require("./files/Salo_2008.json"));
+temperaturedata.push(require("./files/Salo_2009.json"));
+temperaturedata.push(require("./files/Salo_2010.json"));
+temperaturedata.push(require("./files/Salo_2011.json"));
+temperaturedata.push(require("./files/Salo_2012.json"));
+temperaturedata.push(require("./files/Salo_2013.json"));
+temperaturedata.push(require("./files/Salo_2014.json"));
+temperaturedata.push(require("./files/Salo_2015.json"));
+temperaturedata.push(require("./files/Salo_2016.json"));
+temperaturedata.push(require("./files/Salo_2017.json"));
+temperaturedata.push(require("./files/Salo_2018.json"));
+temperaturedata.push(require("./files/Salo_2019.json"));
 temperaturedata.push(require("./files/Salo_2020.json"));
 temperaturedata.push(require("./files/Salo_2021.json"));
+temperaturedata.push(require("./files/Salo_2022.json"));
+temperaturedata.push(require("./files/Salo_2023.json"));
 temperaturedata.push(require("./files/Salo_2024.json"));
 
 
