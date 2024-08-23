@@ -11,6 +11,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     const api = await GetProvider(guidresp.guid);
     if (event.httpMethod == "GET") {
 		const resp = await api.years(event.queryStringParameters.location);
+		resp.sort((a, b) => a - b);
 		return createHttpJsonOkResponse(null, resp);
   	}
   	if (event.httpMethod == "PUT") {

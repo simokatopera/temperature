@@ -17,6 +17,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             years.push(Number(yeartbl[i]));
         }
 		const resp = await api.temperatures(event.queryStringParameters.location, years);
+        resp.sort((a, b) => a.info.year - b.info.year);
 		return createHttpJsonOkResponse(null, resp);
   	}
     

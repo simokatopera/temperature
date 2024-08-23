@@ -105,7 +105,6 @@ export class FileDbClass implements DbApiClass {
                  }
                 return null;
             }
-
             return temperatures;
         }
         return [];

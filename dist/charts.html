@@ -41,9 +41,14 @@
             <h1 id="ID_PageTitle">Lämpötilakäyrät</h1>
         </div>
         <div id="app" class="page-content">
+            <trendgraph :active="false" :elemid="testgraph5" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph6" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph7" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph8" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph2" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph3" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph4" :title="trendtitles"></trendgraph>
         </div>
     </div>
     <script type="module">
@@ -63,26 +68,30 @@
                     testgraph: 'GraphLocation',
                     testgraph2: 'GraphLocation2',
                     testgraph3: 'GraphLocation3',
+                    testgraph4: 'GraphLocation4',
+                    testgraph5: 'GraphLocation5',
+                    testgraph6: 'GraphLocation6',
+                    testgraph7: 'GraphLocation7',
+                    testgraph8: 'GraphLocation8',
                     trendtitles: [],
+                    calculatedMonthlytrends: [],
+                    rangemin: -99999999999,
+                    rangemax: 9999999999,
+                    rangefit: 9999999998,
                 }
             },
             async mounted() {
-                let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", [2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024]);
+                let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
+                let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
 
-                let trendChart = this.initSerie(this.testgraph);
-                if (trendChart === null) return;
-                let serieoptions = this.buildChartOptions('Kuukausittainen keskiarvo', this.createAllYearsMonthlyAverageSeriedata(temperatures));
-                trendChart.setOption(serieoptions);
-
-                let trendChart2 = this.initSerie(this.testgraph2);
-                if (trendChart2 === null) return;
-                let serieoptions2 = this.buildChartOptions('Päivittäinen keskiarvo', this.createAllYearsAverageSeriedata(temperatures));
-                trendChart2.setOption(serieoptions2);
-
-                let trendChart3 = this.initSerie(this.testgraph3);
-                if (trendChart3 === null) return;
-                let serieoptions3 = this.buildChartOptions('Päivittäinen lämpötila', this.createAllYearsSeriedata(temperatures));
-                trendChart3.setOption(serieoptions3);
+                this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, this.createAllYearsMonthlyAverageSeriedata);
+                this.createChart(this.testgraph2, 'Päivittäinen keskiarvo', temperatures, this.createAllYearsAverageSeriedata);
+                this.createChart(this.testgraph3, 'Päivittäinen keskialämpötilarvo', temperatures, this.createAllYearsSeriedata);
+                this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, this.createLastYearsSeriedata);
+                this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, this.createMonthlySummerTrendSeriedata);
+                this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, this.createMonthlyWinterTrendSeriedata);
+                this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, this.createMonthlyFallTrendSeriedata);
+                this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, this.createMonthlySpringTrendSeriedata);
             },
             components: {
                 'trendgraph': {
@@ -96,7 +105,12 @@
                 }
             },            
             methods: {
-
+                createChart(element, title, temperatures, funct) {
+                    let trendChart = this.initSerie(element);
+                    if (trendChart === null) return;
+                    let serieoptions = this.buildChartOptions(title, funct(temperatures));
+                    trendChart.setOption(serieoptions);
+                },
                 initSerie(element) {
                     const graphelem = document.getElementById(element);
                     if (graphelem === null) return null;
@@ -106,6 +120,18 @@
                     //let serie = this.serieinfo.find((s) => s.id == id);
                     //if (!serie) this.serieinfo.push({ id: id, data: data, chartdata: chartdata });
                 //},
+                getMinMaxValue(series) {
+                    let min = 999999999;
+                    let max = -999999999;
+                    series.data.forEach(s => {
+                        s.values.forEach( point => {
+                            let val = Number(point.value[1])
+                            if (val > max) max = val;
+                            if (val < min) min = val;
+                        })
+                    })
+                    return {min: min, max: max}
+                },
                 buildChartOptions(title, series) {
                     const months = ['Tammi','Helmi','Maalis','Huhti','Touko','Kesä','Heinä','Elo','Syys','Loka','Marras','Joulu']
                     let chartoptions = {
@@ -137,7 +163,9 @@
                             name: 'Lämpötila/°C'
                         },
                         series: this.createSeries(series),
-                        // legend: {
+                        legend: {
+                            show: false,
+                           // data: ['1','2','3']
                         //     data: series.data.map(s => s.year),
                         // //     selected: this.getSelection(temperatures),
                         // //     inactiveColor: '#aaa',
@@ -146,9 +174,24 @@
                         //     //orient: 'vertical',
                         //     //top: 0,
                         //     //right: 20,
-                        // },
+                        },
                     };
-
+                    if (series.params) {
+                        if (series.params.range) {
+                            if (series.params.range === this.rangefit) {
+                                let minmax = this.getMinMaxValue(series);
+                                let offset = 0;
+                                if (series.params.offset) {
+                                    offset = Number(series.params.offset);
+                                }
+                                chartoptions.yAxis.min = this.roundNumber(minmax.min - offset - 1, 0);
+                                chartoptions.yAxis.max = this.roundNumber(minmax.max + offset, 0);
+                            }
+                            if (series.params.showlegend) {
+                                chartoptions.legend.show = true;
+                            }
+                        }
+                    }
                     return chartoptions;
                 },
                 getDate(date) {
@@ -174,10 +217,69 @@
                             name: values.location,
                             text: `${s.tooltip}`,
                         })),
-                        name: 'Vuosi ' + values.year,
+                        name: values.name,
                     }))                    
                     return chartdata;
                 },
+                getReadingsBetween(startdate, enddate, series) {
+                    if (startdate >= enddate) return [];
+
+                    const startyear = startdate.getFullYear();
+                    const endyear = enddate.getFullYear();
+
+                    let startyearindex = 0;
+                    while (series.data[startyearindex].info.year < startyear) startyearindex++;
+                    let endyearindex = startyearindex;
+                    while (series.data[endyearindex].info.year < endyear) endyearindex++;
+
+                    let startdayindex = 0;
+                    while (this.getDate(series.data[startyearindex].data[startdayindex].date) < startdate) startdayindex++;
+                    let enddayindex = 0;
+                    while (this.getDate(series.data[endyearindex].data[enddayindex].date) < enddate) enddayindex++;
+                    let yearindex;
+                    let dayindex ;
+                    let firstindex = startdayindex;
+                    let readings = [];
+                    for (yearindex = startyearindex; yearindex <= endyearindex; yearindex++) {
+                        for (dayindex = firstindex; startyearindex === endyearindex ? dayindex < enddayindex : dayindex < series.data[yearindex].data.length; dayindex++) {
+                            readings.push(series.data[yearindex].data[dayindex]);
+                        }
+                        firstindex = 0;
+                    }
+                    return readings;
+                },
+                createLastYearsSeriedata(series) {
+                    const seriedata = { 
+                        data: null,
+                        params: null
+                    };
+                    if (!series || !series.data || series.data.length == 0) {
+                        return seriedata;
+                    }
+                    const lastdate = this.getDate(series.data[series.data.length-1].data[series.data[series.data.length-1].data.length-1].date);
+                    const firstdate = new Date(lastdate.getFullYear() - 1, lastdate.getMonth(), lastdate.getDate());
+                    const readings = this.getReadingsBetween(firstdate, lastdate, series);
+
+                    let values1 = readings.map(r => ({
+                        value: [this.getDate( r.date), r.morning],
+                        tooltip: `Aamu ${this.getDateTxt(this.getDate( r.date))} ${r.morning}`,
+                    }));
+                    let morning = {};
+                    let evening = {};
+                    morning.location = series.data[0].info.location;
+                    morning.year = firstdate.getFullYear();
+                    morning.values = values1;
+                    let values2 = readings.map(r => ({
+                        value: [this.getDate( r.date), r.evening],
+                        tooltip: `Ilta ${this.getDateTxt(this.getDate( r.date))} ${r.morning}`,
+                    }));
+                    evening.location = morning.location;
+                    evening.year = lastdate.getFullYear();
+                    evening.values = values2;
+                    seriedata.data = [morning, evening];
+                    return seriedata;
+                },
+
                 createAllYearsSeriedata(series) {
                     let returnvalues = series.data.map(yearserie => ({
                         values: yearserie.data.map(s => ({
@@ -198,6 +300,112 @@
                 },
                 roundNumber(value, num) {
                     return value.toFixed(num);
+                },
+                calculateTrend(valuearray) {
+                    let k = 0;
+                    let b = 0;
+                    let sumxy = 0;
+                    let sumx = 0;
+                    let sumy = 0;
+                    let sumxsqr = 0;
+                    let n = 0;
+                    valuearray.forEach(values => {
+                        values.data.forEach(reading => {
+                            n++;
+                            sumx += reading.year;
+                            sumy += reading.value;
+                            sumxy += reading.value * reading.year;
+                            sumxsqr += reading.year * reading.year;
+                        })
+                    })
+                    k = (n * sumxy - sumx * sumy) / (n * sumxsqr - sumx * sumx);
+                    b = (sumy - k * sumx) / n;
+
+                    return {k, b}
+                },
+                calculateMonthlyTrends(series) {
+                    if (this.calculatedMonthlytrends.length > 0) return this.calculatedMonthlytrends;
+
+                    let i;
+                    let monthlyaverages = [];
+                    series.data.map((year, yearindex) => {
+                        monthlyaverages.push({year: year.info.year, data: []});
+                        for (i = 0; i < 12; i++) {
+                            monthlyaverages[yearindex].data.push({morningsum: 0, morningcount: 0, eveningsum: 0, eveningcount: 0, month: i+1});
+                        }
+                        year.data.map(tempdata => {
+                            let monthindex = this.getDate(tempdata.date).getMonth();
+                            if (tempdata.morning) {
+                                monthlyaverages[yearindex].data[monthindex].morningcount++;
+                                monthlyaverages[yearindex].data[monthindex].morningsum += tempdata.morning;
+                            }
+                            if (tempdata.evening) {
+                                monthlyaverages[yearindex].data[monthindex].eveningcount++;
+                                monthlyaverages[yearindex].data[monthindex].eveningsum += tempdata.evening;
+                            }
+                        })
+                    });
+
+                    let monthlytrenddata = [];
+                    let monthindex;
+                    for (monthindex = 0; monthindex < 12; monthindex++) {
+                        monthlytrenddata.push({month: monthindex+1, data: []});
+                        let monthlyvalues = monthlyaverages.map((year, index) => {
+                            if (year.data[monthindex].eveningcount > 0 || year.data[monthindex].morningcount > 0) {
+                                let value = (year.data[monthindex].eveningsum + year.data[monthindex].morningsum) / (year.data[monthindex].eveningcount + year.data[monthindex].morningcount);
+                                monthlytrenddata[monthindex].data.push({year: year.year, month: monthindex+1, value: value});
+                            }
+                        })
+                    }
+                    this.calculatedMonthlytrends = monthlytrenddata;
+
+                    return monthlytrenddata;
+                },
+                getSeasonTrends(series, monthnumbers, monthnames) {
+                    let monthlytrenddata = this.calculateMonthlyTrends(series);
+
+                    let datavalues = [];
+                    let v = monthlytrenddata.map(month => {
+                        if (month.month == monthnumbers[0] || month.month == monthnumbers[1] || month.month == monthnumbers[2]) {
+                            let values = [];
+                            let t = month.data.map(value => {
+                                values.push({value: [new Date(value.year, 0, 1), this.roundNumber(value.value, 2)], tooltip: `${value.year} ${value.month} ${this.roundNumber(value.value, 2)}`});
+                            });
+                            datavalues.push({values: values, location: series.data[0].info.location, year: 0, name: monthnames[datavalues.length]});
+                        }
+                    });
+                    let summertrend = this.calculateTrend([monthlytrenddata[monthnumbers[0]-1], monthlytrenddata[monthnumbers[1]-1], monthlytrenddata[monthnumbers[2]-1]]);
+                    let newvalues = [];
+                    series.data.map((ser, serieindex) => {
+                        newvalues.push({value: [new Date(ser.info.year, 0, 1), this.roundNumber(ser.info.year * summertrend.k + summertrend.b, 2)], tooltip: `${ser.info.year} Suuntaus ${this.roundNumber(ser.info.year * summertrend.k + summertrend.b, 2)}`});
+                    });
+                    datavalues.push({values: newvalues, location: series.data[0].info.location, year: 0, name: `Trendi ${this.roundNumber(summertrend.k*10, 1)}°C/10v`});
+                    return datavalues;
+                },
+                createMonthlySummerTrendSeriedata(series) {
+                    let datavalues = this.getSeasonTrends(series, [6,7,8], ['Kesäkuu','Heinäkuu','Elokuu']);
+                    /*
+                    let values = [];
+                    values.push({value: [datetime, reading], tooltip: ''})
+
+                    let datavalues = [];
+                    datavalues.push({values: values, location: '', year: 2000})
+
+                    return {data: datavalues, params: null}
+                    */
+                    return {data: datavalues, params: {range: this.rangefit, offset: 1, showlegend: true}};
+                },
+                createMonthlyWinterTrendSeriedata(series) {
+                    let datavalues = this.getSeasonTrends(series, [1,2,12], ['Tammikuu','Helmikuu','Joulukuu']);
+                    return {data: datavalues, params: {range: this.rangefit, offset: 1, showlegend: true}};
+                },
+                createMonthlyFallTrendSeriedata(series) {
+                    let datavalues = this.getSeasonTrends(series, [9,10,11], ['Syyskuu','Lokakuu','Marraskuu']);
+                    return {data: datavalues, params: {range: this.rangefit, offset: 1, showlegend: true}};
+                },
+                createMonthlySpringTrendSeriedata(series) {
+                    let datavalues = this.getSeasonTrends(series, [4,5,6], ['Huhtikuu','Toukokuu','Kesäkuu']);
+                    return {data: datavalues, params: {range: this.rangefit, offset: 1, showlegend: true}};
                 },
                 createAllYearsMonthlyAverageSeriedata(series) {
                     let index;
@@ -306,17 +514,20 @@
                     let returnvalues1 = {
                         values: valuearray1,
                         location: loc,
-                        year: 'kaikki vuodet',
+                        year: 0,
+                        name: 'kaikki vuodet',
                     }
                     let returnvalues2 = {
                         values: valuearray2,
                         location: loc,
-                        year: 'kaikki vuodet',
+                        year: 0,
+                        name: 'kaikki vuodet',
                     }
                     let returnvalues3 = {
                         values: valuearray3,
                         location: loc,
-                        year: 'kaikki vuodet',
+                        year: 0,
+                        name: 'kaikki vuodet',
                     }
                     const seriedata = { 
                         data: [returnvalues1, returnvalues2, returnvalues3],
