@@ -41,15 +41,15 @@
             <h1 id="ID_PageTitle">Lämpötilakäyrät</h1>
         </div>
         <div id="app" class="page-content">
-            <trendgraph :active="false" :elemid="testgraph9" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph4" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph2" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph3" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph5" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph6" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph7" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph8" :title="trendtitles"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph2" :title="trendtitles"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph3" :title="trendtitles"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph4" :title="trendtitles"></trendgraph>
+            <trendgraph :active="false" :elemid="testgraph9" :title="trendtitles"></trendgraph>
         </div>
     </div>
     <script type="module">
@@ -171,7 +171,6 @@
                             show: false,
                            // data: ['1','2','3']
                         //     data: series.data.map(s => s.year),
-                        // //     selected: this.getSelection(temperatures),
                         // //     inactiveColor: '#aaa',
                             textStyle: { color: '#f0f', fontSize: '16' },
                         //     type: 'scroll',
@@ -189,6 +188,9 @@
                         }
                         if (series.params.showlegend) {
                             chartoptions.legend.show = true;
+                        }
+                        if (series.params.selection) {
+                            chartoptions.legend.selected = this.getSelection(series, series.params.selection);
                         }
                     }
 
@@ -235,9 +237,9 @@
                             chartdata.forEach(d => {
                                 let found = params.series.find(p => p.name === d.name);
                                 if (found) {
-                                    d.showSymbol = false;
+                                    //d.showSymbol = false;
                                     //d.symbol = 'none';
-                                    //d.symbolSize = 0;
+                                    d.symbolSize = 1;
                                     if (found.color) d.lineStyle = {color: found.color}
                                     // d.markPoint = {symbolSize: 0, opacity: 0};
                                 }
@@ -324,7 +326,7 @@
                         let value = this.findMax(r.value[0], sums);
                         return {
                             value: [r.value[0], value],
-                            tooltip: `Maksimi ${this.getDateTxt(r.value[0])} ${value}`,
+                            tooltip: `Maksimi ${r.value[0].getDate()}.${r.value[0].getMonth()+1} ${value}`,
                         }
                     });
                     maximum.name = 'Maksimi';
@@ -332,7 +334,7 @@
                         let value = this.findMin(r.value[0], sums);
                         return {
                             value: [r.value[0], value],
-                            tooltip: `Minimi ${this.getDateTxt(r.value[0])} ${value}`,
+                            tooltip: `Minimi ${r.value[0].getDate()}.${r.value[0].getMonth()+1} ${value}`,
                         }
                     });
                     minimum.name = 'Minimi';
@@ -349,7 +351,7 @@
                             dt = new Date(defaultyear, dt.getMonth(), dt.getDate())
                             return {
                                 value: [dt, s.evening-s.morning],
-                                tooltip: `${yearserie.info.location} ${this.getDateTxt(dt)} ${s.evening-s.morning}`,
+                                tooltip: `${yearserie.info.location} ${new Date(s.datetimeUtc).getDate()}.${new Date(s.datetimeUtc).getMonth()+ 1}.${new Date(s.datetimeUtc).getFullYear()} ${this.roundNumber(s.evening-s.morning, 2)}`,
                                 datetimeUtc: s.datetimeUtc,
                             }
                         }),
@@ -392,12 +394,12 @@
                         }
                     }                    
 
-                    // add average curve
+                    // add average, minimum, maximum curves
                     let averagevalues = sums.map(daydata => {
                         let value = daydata.difference.count > 0 ? daydata.difference.sum / daydata.difference.count : NaN;
                         return {
                             value: [daydata.date, value],
-                            tooltip: `${series.data[0].info.location} ${this.getDateTxt(daydata.date)} ${this.roundNumber(value, 2)}`,
+                            tooltip: `Keskiarvo ${series.data[0].info.location} ${this.getDateTxt(daydata.date)} ${this.roundNumber(value, 2)}`,
                         }
                     });
                     let averages = {
@@ -407,6 +409,26 @@
                         name: 'Keskiarvo'
                     };
                     differencies.push(averages);
+                    let maximum = {
+                        values: sums.map(daydata => ({
+                            value: [daydata.date, daydata.difference.max],
+                            tooltip: `Maksimi ${series.data[0].info.location} ${this.getDateTxt(daydata.date)} ${this.roundNumber(daydata.difference.max, 2)}`,
+                        })),
+                        location: series.data[0].info.location,
+                        year: 0,
+                        name: 'Maksimi',
+                    };
+                    differencies.push(maximum);
+                    let minimum = {
+                        values: sums.map(daydata => ({
+                            value: [daydata.date, daydata.difference.min],
+                            tooltip: `Minimi ${series.data[0].info.location} ${this.getDateTxt(daydata.date)} ${this.roundNumber(daydata.difference.min, 2)}`,
+                        })),
+                        location: series.data[0].info.location,
+                        year: 0,
+                        name: 'Minimi',
+                    };
+                    differencies.push(minimum);
                     /*
                     let values = [];
                     values.push({value: [datetime, reading], tooltip: ''})
@@ -417,9 +439,10 @@
                     return {data: datavalues, params: null}
                     */                    
                     // return values
+                    const lastyear = series.data[series.data.length - 1].info.year;
                     const seriedata = { 
                         data: differencies,
-                        params: {showlegend: true, series: [{name: '', markersize: 1}]}
+                        params: {showlegend: true, series: [ {name: 'Minimi', color: '#777777'}, {name: 'Maksimi', color: '#777777'}], selection: ['Maksimi', 'Minimi','Keskiarvo', lastyear]}
                     };
                     return seriedata;
                 },
@@ -684,18 +707,18 @@
                     };
                     return seriedata;
                 },
-                //getSelection(seriedata) {
-                    //let selection = {};
-                    // seriedata.data.forEach(s => {
-                    //     selection[s.name] = false;
-                    // })
-                    // if (seriedata.selected && seriedata.selected.length) {
-                    //     seriedata.selected.forEach(s => {
-                    //         selection[s] = true;
-                    //     })
-                    // }
-                    //return selection;
-                //}, 
+                getSelection(seriedata, selectedseries) {
+                    let selection = {};
+                    seriedata.data.forEach(s => {
+                        selection[s.name] = false;
+                    })
+                    if (selectedseries && selectedseries.length) {
+                        selectedseries.forEach(s => {
+                            selection[s] = true;
+                        })
+                    }
+                    return selection;
+                }, 
             
                 //initSerieLegends(data) {
                    // let selection = [];
