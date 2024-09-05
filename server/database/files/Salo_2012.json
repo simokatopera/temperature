@@ -19,7 +19,7 @@
 	,{ "date": "1/17/2012", "morning": -10.5, "evening": -4.1 }
 	,{ "date": "1/18/2012", "morning": -3.9, "evening": -4.3 }
 	,{ "date": "1/19/2012", "morning": -0.9, "evening": -0.1 }
-	,{ "date": "1/20/2012", "evening": -1.4 }
+	,{ "date": "1/20/2012", "morning": 0, "evening": -1.4 }
 	,{ "date": "1/21/2012", "morning": -3.6, "evening": -2.7 }
 	,{ "date": "1/22/2012", "morning": -2.2, "evening": -4.1 }
 	,{ "date": "1/23/2012", "morning": -3.4, "evening": -1.4 }
@@ -309,7 +309,7 @@
 	,{ "date": "11/2/2012", "morning": 4.5, "evening": 5.9 }
 	,{ "date": "11/3/2012", "morning": 6, "evening": 7 }
 	,{ "date": "11/4/2012", "morning": -0.5, "evening": 3 }
-	,{ "date": "11/5/2012", "evening": 3.9 }
+	,{ "date": "11/5/2012", "morning": 0, "evening": 3.9 }
 	,{ "date": "11/6/2012", "morning": 0.8, "evening": 0.5 }
 	,{ "date": "11/7/2012", "morning": -0.1, "evening": 3.9 }
 	,{ "date": "11/8/2012", "morning": 2, "evening": 3.2 }

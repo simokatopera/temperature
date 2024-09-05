@@ -133,7 +133,7 @@
 	,{ "date": "12/17/2006", "morning": -1.8, "evening": 0.1 }
 	,{ "date": "12/18/2006", "morning": -1.1, "evening": -1.9 }
 	,{ "date": "12/19/2006", "morning": -6.8, "evening": -6.4 }
-	,{ "date": "12/20/2006", "evening": -0.1 }
+	,{ "date": "12/20/2006", "morning": 0, "evening": -0.1 }
 	,{ "date": "12/21/2006", "morning": 2.3, "evening": 1.7 }
 	,{ "date": "12/22/2006", "morning": 0.6, "evening": 0.3 }
 	,{ "date": "12/23/2006", "morning": 3.7, "evening": 1.3 }
@@ -141,5 +141,5 @@
 	,{ "date": "12/25/2006", "morning": -4.4, "evening": -4.8 }
 	,{ "date": "12/26/2006", "morning": 1.7, "evening": 0.4 }
 	,{ "date": "12/27/2006", "morning": 2.4, "evening": 3.7 }
-	,{ "date": "12/28/2006", "morning": 4.4 }
+	,{ "date": "12/28/2006", "morning": 4.4, "evening": 0 }
 ]}

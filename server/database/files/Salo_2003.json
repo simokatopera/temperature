@@ -18,12 +18,13 @@
 	,{ "date": "1/16/2003", "morning": 2.1, "evening": 1.6 }
 	,{ "date": "1/17/2003", "morning": -3.6, "evening": 2.2 }
 	,{ "date": "1/18/2003", "morning": 1, "evening": 1 }
+	,{ "date": "1/19/2003", "morning": 0, "evening": 0 }
 	,{ "date": "1/20/2003", "morning": -7.3, "evening": -7 }
 	,{ "date": "1/21/2003", "morning": 0.8, "evening": 0.1 }
-	,{ "date": "1/22/2003", "evening": -0.5 }
+	,{ "date": "1/22/2003", "morning": 0, "evening": -0.5 }
 	,{ "date": "1/23/2003", "morning": -0.9, "evening": -0.5 }
 	,{ "date": "1/24/2003", "morning": -11, "evening": -7.2 }
-	,{ "date": "1/25/2003", "morning": 1 }
+	,{ "date": "1/25/2003", "morning": 1, "evening": 0 }
 	,{ "date": "1/26/2003", "morning": 1, "evening": 1 }
 	,{ "date": "1/27/2003", "morning": 0.2, "evening": -3.6 }
 	,{ "date": "1/28/2003", "morning": -5.3, "evening": -7.1 }
@@ -62,10 +63,10 @@
 	,{ "date": "3/2/2003", "morning": -14, "evening": -6 }
 	,{ "date": "3/3/2003", "morning": -7.3, "evening": -5.8 }
 	,{ "date": "3/4/2003", "morning": -14.2, "evening": -3.4 }
-	,{ "date": "3/5/2003", "morning": -8.3 }
+	,{ "date": "3/5/2003", "morning": -8.3, "evening": 0 }
 	,{ "date": "3/6/2003", "morning": -4.4, "evening": -2 }
 	,{ "date": "3/7/2003", "morning": -5.7, "evening": -0.3 }
-	,{ "date": "3/8/2003", "morning": -1 }
+	,{ "date": "3/8/2003", "morning": -1, "evening": 0 }
 	,{ "date": "3/9/2003", "morning": -2, "evening": 1 }
 	,{ "date": "3/10/2003", "morning": -0.4, "evening": 1.1 }
 	,{ "date": "3/11/2003", "morning": 1.5, "evening": 2.8 }
@@ -92,7 +93,7 @@
 	,{ "date": "4/1/2003", "morning": -10.2, "evening": -0.8 }
 	,{ "date": "4/2/2003", "morning": -4.5, "evening": 0.2 }
 	,{ "date": "4/3/2003", "morning": -2.9, "evening": -2.4 }
-	,{ "date": "4/4/2003", "morning": -6.2 }
+	,{ "date": "4/4/2003", "morning": -6.2, "evening": 0 }
 	,{ "date": "4/5/2003", "morning": -4, "evening": -1 }
 	,{ "date": "4/6/2003", "morning": -6, "evening": -1 }
 	,{ "date": "4/7/2003", "morning": -7, "evening": -0.1 }
@@ -102,13 +103,13 @@
 	,{ "date": "4/11/2003", "morning": -0.5, "evening": 5.5 }
 	,{ "date": "4/12/2003", "morning": 2, "evening": 5 }
 	,{ "date": "4/13/2003", "morning": 2, "evening": 4 }
-	,{ "date": "4/14/2003", "evening": 8.2 }
+	,{ "date": "4/14/2003", "morning": 0, "evening": 8.2 }
 	,{ "date": "4/15/2003", "morning": -2.7, "evening": 10.3 }
 	,{ "date": "4/16/2003", "morning": 0.9, "evening": 11.2 }
 	,{ "date": "4/17/2003", "morning": 4.1, "evening": 7.5 }
 	,{ "date": "4/18/2003", "morning": 1, "evening": 12 }
 	,{ "date": "4/19/2003", "morning": -1, "evening": 15 }
-	,{ "date": "4/20/2003", "evening": 16 }
+	,{ "date": "4/20/2003", "morning": 0, "evening": 16 }
 	,{ "date": "4/21/2003", "morning": 5, "evening": 18 }
 	,{ "date": "4/22/2003", "morning": 3.4, "evening": 19.1 }
 	,{ "date": "4/23/2003", "morning": 4.6, "evening": 11 }
@@ -121,7 +122,7 @@
 	,{ "date": "4/30/2003", "morning": 2.4, "evening": 5.2 }
 	,{ "date": "5/1/2003", "morning": 5, "evening": 7 }
 	,{ "date": "5/2/2003", "morning": 2.4, "evening": 9.1 }
-	,{ "date": "5/3/2003", "evening": 8 }
+	,{ "date": "5/3/2003", "morning": 0, "evening": 8 }
 	,{ "date": "5/4/2003", "morning": 3, "evening": 5 }
 	,{ "date": "5/5/2003", "morning": 0.4, "evening": 9.7 }
 	,{ "date": "5/6/2003", "morning": 7.5, "evening": 12.8 }
@@ -310,8 +311,8 @@
 	,{ "date": "11/5/2003", "morning": 6.2, "evening": 5.1 }
 	,{ "date": "11/6/2003", "morning": 7.2, "evening": 8 }
 	,{ "date": "11/7/2003", "morning": 5.3, "evening": 5 }
-	,{ "date": "11/8/2003", "evening": 4 }
-	,{ "date": "11/9/2003", "morning": -2 }
+	,{ "date": "11/8/2003", "morning": 0, "evening": 4 }
+	,{ "date": "11/9/2003", "morning": -2, "evening": 0 }
 	,{ "date": "11/10/2003", "morning": 2.1, "evening": 2.5 }
 	,{ "date": "11/11/2003", "morning": 3.9, "evening": 4.9 }
 	,{ "date": "11/12/2003", "morning": 4.5, "evening": 5.8 }
@@ -352,11 +353,11 @@
 	,{ "date": "12/17/2003", "morning": -10.4, "evening": 1 }
 	,{ "date": "12/18/2003", "morning": -5.6, "evening": -3.8 }
 	,{ "date": "12/19/2003", "morning": 2.9, "evening": 4.1 }
-	,{ "date": "12/20/2003", "evening": -4 }
+	,{ "date": "12/20/2003", "morning": 0, "evening": -4 }
 	,{ "date": "12/21/2003", "morning": -7, "evening": -5 }
 	,{ "date": "12/22/2003", "morning": -7.4, "evening": -9 }
 	,{ "date": "12/23/2003", "morning": -19.2, "evening": -15 }
-	,{ "date": "12/24/2003", "morning": -18 }
+	,{ "date": "12/24/2003", "morning": -18, "evening": 0 }
 	,{ "date": "12/25/2003", "morning": 2, "evening": 2 }
 	,{ "date": "12/26/2003", "morning": 2, "evening": 2 }
 	,{ "date": "12/27/2003", "morning": 3, "evening": 2 }

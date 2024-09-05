@@ -31,7 +31,7 @@
 	,{ "date": "1/29/2023", "morning": -2, "evening": 1.4 }
 	,{ "date": "1/30/2023", "morning": 3.6, "evening": 2.4 }
 	,{ "date": "1/31/2023", "morning": 0.3, "evening": 1.6 }
-	,{ "date": "2/1/2023", "morning": -6.7 }
+	,{ "date": "2/1/2023", "morning": -6.7, "evening": 0 }
 	,{ "date": "2/2/2023", "morning": -1.4, "evening": -0.7 }
 	,{ "date": "2/3/2023", "morning": -3.8, "evening": -4.1 }
 	,{ "date": "2/4/2023", "morning": -5, "evening": -2.6 }

@@ -3,20 +3,21 @@
 	{ "date": "1/1/2002", "morning": -20, "evening": -13 }
 	,{ "date": "1/2/2002", "morning": -16, "evening": -21 }
 	,{ "date": "1/3/2002", "morning": -17, "evening": -5 }
-	,{ "date": "1/4/2002", "evening": 1 }
-	,{ "date": "1/5/2002", "morning": -2 }
-	,{ "date": "1/6/2002", "evening": -1 }
+	,{ "date": "1/4/2002", "morning": 0, "evening": 1 }
+	,{ "date": "1/5/2002", "morning": -2, "evening": 0 }
+	,{ "date": "1/6/2002", "morning": 0, "evening": -1 }
 	,{ "date": "1/7/2002", "morning": -4, "evening": -2 }
 	,{ "date": "1/8/2002", "morning": 1, "evening": 2 }
 	,{ "date": "1/9/2002", "morning": -2, "evening": 1 }
 	,{ "date": "1/10/2002", "morning": -4, "evening": -1 }
-	,{ "date": "1/11/2002", "evening": 1 }
-	,{ "date": "1/12/2002", "morning": 1 }
+	,{ "date": "1/11/2002", "morning": 0, "evening": 1 }
+	,{ "date": "1/12/2002", "morning": 1, "evening": 0 }
 	,{ "date": "1/13/2002", "morning": -1, "evening": 2 }
 	,{ "date": "1/14/2002", "morning": 2, "evening": 2 }
 	,{ "date": "1/15/2002", "morning": 1, "evening": 2 }
 	,{ "date": "1/16/2002", "morning": 2, "evening": 1 }
 	,{ "date": "1/17/2002", "morning": 1, "evening": 1 }
+	,{ "date": "1/18/2002", "morning": 0, "evening": 0 }
 	,{ "date": "1/19/2002", "morning": 1, "evening": 1 }
 	,{ "date": "1/20/2002", "morning": -2, "evening": -4 }
 	,{ "date": "1/21/2002", "morning": -4, "evening": -3 }
@@ -27,6 +28,7 @@
 	,{ "date": "1/26/2002", "morning": -8, "evening": -9 }
 	,{ "date": "1/27/2002", "morning": -14, "evening": -14 }
 	,{ "date": "1/28/2002", "morning": -11, "evening": -4 }
+	,{ "date": "1/29/2002", "morning": 0, "evening": 0 }
 	,{ "date": "1/30/2002", "morning": -8, "evening": -6 }
 	,{ "date": "1/31/2002", "morning": -8, "evening": -6 }
 	,{ "date": "2/1/2002", "morning": -16, "evening": -12 }
@@ -36,59 +38,62 @@
 	,{ "date": "2/5/2002", "morning": 2, "evening": 1 }
 	,{ "date": "2/6/2002", "morning": 2, "evening": 2 }
 	,{ "date": "2/7/2002", "morning": 1, "evening": 2 }
-	,{ "date": "2/8/2002", "morning": -1 }
-	,{ "date": "2/9/2002", "evening": 1 }
+	,{ "date": "2/8/2002", "morning": -1, "evening": 0 }
+	,{ "date": "2/9/2002", "morning": 0, "evening": 1 }
 	,{ "date": "2/10/2002", "morning": 2, "evening": 2 }
+	,{ "date": "2/11/2002", "morning": 0, "evening": 0 }
+	,{ "date": "2/12/2002", "morning": 0, "evening": 0 }
 	,{ "date": "2/13/2002", "morning": -5, "evening": -4 }
 	,{ "date": "2/14/2002", "morning": -6, "evening": -3 }
 	,{ "date": "2/15/2002", "morning": -5, "evening": 1 }
-	,{ "date": "2/16/2002", "evening": 3 }
+	,{ "date": "2/16/2002", "morning": 0, "evening": 3 }
 	,{ "date": "2/17/2002", "morning": 2, "evening": 3 }
 	,{ "date": "2/18/2002", "morning": -4, "evening": 1 }
 	,{ "date": "2/19/2002", "morning": 1, "evening": -1 }
 	,{ "date": "2/20/2002", "morning": -8, "evening": -8 }
 	,{ "date": "2/21/2002", "morning": -14, "evening": -3 }
-	,{ "date": "2/22/2002", "morning": -5 }
-	,{ "date": "2/23/2002", "morning": -2 }
+	,{ "date": "2/22/2002", "morning": -5, "evening": 0 }
+	,{ "date": "2/23/2002", "morning": -2, "evening": 0 }
 	,{ "date": "2/24/2002", "morning": -12, "evening": -3 }
 	,{ "date": "2/25/2002", "morning": -8, "evening": -2 }
-	,{ "date": "2/26/2002", "morning": -5 }
-	,{ "date": "2/27/2002", "morning": -6 }
+	,{ "date": "2/26/2002", "morning": -5, "evening": 0 }
+	,{ "date": "2/27/2002", "morning": -6, "evening": 0 }
 	,{ "date": "2/28/2002", "morning": -14, "evening": -2 }
-	,{ "date": "3/1/2002", "morning": -5 }
+	,{ "date": "3/1/2002", "morning": -5, "evening": 0 }
 	,{ "date": "3/2/2002", "morning": -8, "evening": -2 }
 	,{ "date": "3/3/2002", "morning": -3, "evening": -4 }
 	,{ "date": "3/4/2002", "morning": -3, "evening": 2 }
 	,{ "date": "3/5/2002", "morning": 2, "evening": 3 }
+	,{ "date": "3/6/2002", "morning": 0, "evening": 0 }
 	,{ "date": "3/7/2002", "morning": -2, "evening": -4 }
 	,{ "date": "3/8/2002", "morning": -11, "evening": -3 }
 	,{ "date": "3/9/2002", "morning": -2, "evening": 2 }
 	,{ "date": "3/10/2002", "morning": -2, "evening": -3 }
 	,{ "date": "3/11/2002", "morning": -8, "evening": -1 }
 	,{ "date": "3/12/2002", "morning": -1, "evening": 3 }
-	,{ "date": "3/13/2002", "evening": 1 }
+	,{ "date": "3/13/2002", "morning": 0, "evening": 1 }
 	,{ "date": "3/14/2002", "morning": -11, "evening": -2 }
 	,{ "date": "3/15/2002", "morning": -11, "evening": 2 }
 	,{ "date": "3/16/2002", "morning": -7, "evening": 1 }
 	,{ "date": "3/17/2002", "morning": -6, "evening": 2 }
-	,{ "date": "3/18/2002", "evening": 1 }
+	,{ "date": "3/18/2002", "morning": 0, "evening": 1 }
 	,{ "date": "3/19/2002", "morning": 1, "evening": 5 }
 	,{ "date": "3/20/2002", "morning": 4, "evening": 1 }
-	,{ "date": "3/21/2002", "evening": 2 }
+	,{ "date": "3/21/2002", "morning": 0, "evening": 2 }
 	,{ "date": "3/22/2002", "morning": 1, "evening": 2 }
 	,{ "date": "3/23/2002", "morning": -1, "evening": 1 }
 	,{ "date": "3/24/2002", "morning": -4, "evening": 1 }
 	,{ "date": "3/25/2002", "morning": -8, "evening": 3 }
-	,{ "date": "3/26/2002", "evening": 4 }
-	,{ "date": "3/27/2002", "evening": 8 }
-	,{ "date": "3/28/2002", "evening": 7 }
+	,{ "date": "3/26/2002", "morning": 0, "evening": 4 }
+	,{ "date": "3/27/2002", "morning": 0, "evening": 8 }
+	,{ "date": "3/28/2002", "morning": 0, "evening": 7 }
 	,{ "date": "3/29/2002", "morning": -2, "evening": 10 }
 	,{ "date": "3/30/2002", "morning": -1, "evening": 8 }
-	,{ "date": "3/31/2002", "evening": 8 }
+	,{ "date": "3/31/2002", "morning": 0, "evening": 8 }
 	,{ "date": "4/1/2002", "morning": -1, "evening": 8 }
 	,{ "date": "4/2/2002", "morning": -1, "evening": 4 }
 	,{ "date": "4/3/2002", "morning": -4, "evening": 4 }
-	,{ "date": "4/4/2002", "evening": 3 }
+	,{ "date": "4/4/2002", "morning": 0, "evening": 3 }
 	,{ "date": "4/5/2002", "morning": -5, "evening": 4 }
 	,{ "date": "4/6/2002", "morning": -3, "evening": 5 }
 	,{ "date": "4/7/2002", "morning": -2, "evening": 4 }
@@ -99,14 +104,14 @@
 	,{ "date": "4/12/2002", "morning": 1, "evening": 14 }
 	,{ "date": "4/13/2002", "morning": 5, "evening": 13 }
 	,{ "date": "4/14/2002", "morning": 5, "evening": 11 }
-	,{ "date": "4/15/2002", "evening": 6 }
+	,{ "date": "4/15/2002", "morning": 0, "evening": 6 }
 	,{ "date": "4/16/2002", "morning": -4, "evening": 5 }
 	,{ "date": "4/17/2002", "morning": -2, "evening": 9 }
 	,{ "date": "4/18/2002", "morning": -4, "evening": 9 }
 	,{ "date": "4/19/2002", "morning": -2, "evening": 10 }
 	,{ "date": "4/20/2002", "morning": -2, "evening": 12 }
 	,{ "date": "4/21/2002", "morning": 3, "evening": 13 }
-	,{ "date": "4/22/2002", "evening": 16 }
+	,{ "date": "4/22/2002", "morning": 0, "evening": 16 }
 	,{ "date": "4/23/2002", "morning": 3, "evening": 14 }
 	,{ "date": "4/24/2002", "morning": 5, "evening": 14 }
 	,{ "date": "4/25/2002", "morning": 5, "evening": 12 }
@@ -277,36 +282,36 @@
 	,{ "date": "10/7/2002", "morning": -1, "evening": 2 }
 	,{ "date": "10/8/2002", "morning": -1, "evening": 2 }
 	,{ "date": "10/9/2002", "morning": -2, "evening": 2 }
-	,{ "date": "10/10/2002", "evening": 1 }
-	,{ "date": "10/11/2002", "evening": 1 }
+	,{ "date": "10/10/2002", "morning": 0, "evening": 1 }
+	,{ "date": "10/11/2002", "morning": 0, "evening": 1 }
 	,{ "date": "10/12/2002", "morning": -1, "evening": 3 }
 	,{ "date": "10/13/2002", "morning": 2, "evening": 4 }
 	,{ "date": "10/14/2002", "morning": 1, "evening": 1 }
-	,{ "date": "10/15/2002", "evening": 1 }
-	,{ "date": "10/16/2002", "morning": -1 }
+	,{ "date": "10/15/2002", "morning": 0, "evening": 1 }
+	,{ "date": "10/16/2002", "morning": -1, "evening": 0 }
 	,{ "date": "10/17/2002", "morning": -1, "evening": -1 }
 	,{ "date": "10/18/2002", "morning": -2, "evening": -2 }
 	,{ "date": "10/19/2002", "morning": -13, "evening": -2 }
-	,{ "date": "10/20/2002", "morning": -14 }
+	,{ "date": "10/20/2002", "morning": -14, "evening": 0 }
 	,{ "date": "10/21/2002", "morning": -12, "evening": 1 }
 	,{ "date": "10/22/2002", "morning": -12, "evening": 2 }
 	,{ "date": "10/23/2002", "morning": -10, "evening": -1 }
-	,{ "date": "10/24/2002", "morning": -1 }
+	,{ "date": "10/24/2002", "morning": -1, "evening": 0 }
 	,{ "date": "10/25/2002", "morning": -2, "evening": 6 }
 	,{ "date": "10/26/2002", "morning": 1, "evening": 4 }
 	,{ "date": "10/27/2002", "morning": 2, "evening": 4 }
 	,{ "date": "10/28/2002", "morning": 1, "evening": 1 }
 	,{ "date": "10/29/2002", "morning": -1, "evening": 5 }
 	,{ "date": "10/30/2002", "morning": -2, "evening": 1 }
-	,{ "date": "10/31/2002", "morning": -4 }
+	,{ "date": "10/31/2002", "morning": -4, "evening": 0 }
 	,{ "date": "11/1/2002", "morning": 1, "evening": 1 }
 	,{ "date": "11/2/2002", "morning": -6, "evening": -4 }
 	,{ "date": "11/3/2002", "morning": -6, "evening": -7 }
 	,{ "date": "11/4/2002", "morning": -7, "evening": -4 }
-	,{ "date": "11/5/2002", "morning": -10 }
-	,{ "date": "11/6/2002", "evening": 3 }
+	,{ "date": "11/5/2002", "morning": -10, "evening": 0 }
+	,{ "date": "11/6/2002", "morning": 0, "evening": 3 }
 	,{ "date": "11/7/2002", "morning": 3, "evening": 4 }
-	,{ "date": "11/8/2002", "morning": 1 }
+	,{ "date": "11/8/2002", "morning": 1, "evening": 0 }
 	,{ "date": "11/9/2002", "morning": -3, "evening": -3 }
 	,{ "date": "11/10/2002", "morning": -6, "evening": -5 }
 	,{ "date": "11/11/2002", "morning": -11, "evening": -8 }
@@ -316,15 +321,17 @@
 	,{ "date": "11/15/2002", "morning": -4, "evening": -5 }
 	,{ "date": "11/16/2002", "morning": -3, "evening": -2 }
 	,{ "date": "11/17/2002", "morning": -1, "evening": -1 }
-	,{ "date": "11/18/2002", "morning": -1 }
+	,{ "date": "11/18/2002", "morning": -1, "evening": 0 }
 	,{ "date": "11/19/2002", "morning": 2, "evening": 1 }
+	,{ "date": "11/20/2002", "morning": 0, "evening": 0 }
 	,{ "date": "11/21/2002", "morning": -3, "evening": -4 }
 	,{ "date": "11/22/2002", "morning": -5, "evening": -5 }
 	,{ "date": "11/23/2002", "morning": -6, "evening": -4 }
 	,{ "date": "11/24/2002", "morning": -3, "evening": -3 }
+	,{ "date": "11/25/2002", "morning": 0, "evening": 0 }
 	,{ "date": "11/26/2002", "morning": 1, "evening": 2 }
 	,{ "date": "11/27/2002", "morning": 1, "evening": 1 }
-	,{ "date": "11/28/2002", "evening": -3 }
+	,{ "date": "11/28/2002", "morning": 0, "evening": -3 }
 	,{ "date": "11/29/2002", "morning": -13, "evening": -10 }
 	,{ "date": "11/30/2002", "morning": -12, "evening": -8 }
 	,{ "date": "12/1/2002", "morning": -9, "evening": -8 }
