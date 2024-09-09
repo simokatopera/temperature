@@ -291,14 +291,14 @@
                     let month = dt.getMonth() + 1;
                     let value = serie.find(s => day == s.day && month == s.month);
 
-                    return value.morning.min < value.evening.min ? value.morning.min : value.evening.min;
+                    return value.morning.min < value.evening.min ? {value: value.morning.min, date: value.morning.mindate} : {value: value.evening.min, date: value.evening.mindate};
                 },
                 findMax(dt, serie) {
                     let day = dt.getDate();
                     let month = dt.getMonth() + 1;
                     let value = serie.find(s => day == s.day && month == s.month);
 
-                    return value.morning.max > value.evening.max ? value.morning.max : value.evening.max;
+                    return value.morning.max > value.evening.max ? {value: value.morning.max, date: value.morning.maxdate} : {value: value.evening.max, date: value.evening.maxdate};
                 },
                 createLastYearsSeriedata(series) {
                     const seriedata = {
@@ -325,7 +325,7 @@
                     morning.name = "Aamu";
                     evening.values = readings.map(r => ({
                         value: [this.getDate(r.date), r.evening],
-                        tooltip: `Ilta ${this.getDateTxt(this.getDate(r.date))} ${r.morning}`,
+                        tooltip: `Ilta ${this.getDateTxt(this.getDate(r.date))} ${r.evening}`,
                     }));
                     evening.location = morning.location;
                     evening.year = lastdate.getFullYear();
@@ -336,16 +336,16 @@
                     maximum.values = morning.values.map(r => {
                         let value = this.findMax(r.value[0], sums);
                         return {
-                            value: [r.value[0], value],
-                            tooltip: `Maksimi ${r.value[0].getDate()}.${r.value[0].getMonth() + 1} ${value}`,
+                            value: [r.value[0], value.value],
+                            tooltip: `Maksimi ${this.getDateTxt(this.getDate(value.date))} ${value.value}`,
                         }
                     });
                     maximum.name = 'Maksimi';
                     minimum.values = morning.values.map(r => {
                         let value = this.findMin(r.value[0], sums);
                         return {
-                            value: [r.value[0], value],
-                            tooltip: `Minimi ${r.value[0].getDate()}.${r.value[0].getMonth() + 1} ${value}`,
+                            value: [r.value[0], value.value],
+                            tooltip: `Minimi ${this.getDateTxt(this.getDate(value.date))} ${value.value }`,
                         }
                     });
                     minimum.name = 'Minimi';
@@ -559,7 +559,7 @@
                     let index;
                     let value;
                     for (dayindex = 0; dayindex < 366; dayindex++) {
-                        value = { date: new Date(this.defaultyear, 0, dayindex + 1), morning: { sum: 0, count: 0, average: NaN, min: 999999, max: -999999 }, evening: { sum: 0, count: 0, average: NaN, min: 999999, max: -999999 }, total: { sum: 0, count: 0, average: NaN, min: 999999, max: -999999 }, day: 0, month: 0 };
+                        value = { date: new Date(this.defaultyear, 0, dayindex + 1), morning: { sum: 0, count: 0, average: NaN, min: 999999, max: -999999, mindate: null, maxdate: null }, evening: { sum: 0, count: 0, average: NaN, min: 999999, max: -999999, mindate: null, maxdate: null }, total: { sum: 0, count: 0, average: NaN, min: 999999, max: -999999, mindate: null, maxdate: null }, day: 0, month: 0 };
                         value.month = value.date.getMonth() + 1;
                         value.day = value.date.getDate();
                         sums.push(value);
@@ -581,16 +581,28 @@
                                     foundsum.morning.sum += dayreadings.morning;
                                     foundsum.total.count += 1;
                                     foundsum.total.sum += dayreadings.morning;
-                                    if (dayreadings.morning < foundsum.morning.min) foundsum.morning.min = dayreadings.morning;
-                                    if (dayreadings.morning > foundsum.morning.max) foundsum.morning.max = dayreadings.morning;
+                                    if (dayreadings.morning < foundsum.morning.min) {
+                                        foundsum.morning.min = dayreadings.morning;
+                                        foundsum.morning.mindate = dayreadings.date;
+                                    }
+                                    if (dayreadings.morning > foundsum.morning.max) {
+                                        foundsum.morning.max = dayreadings.morning;
+                                        foundsum.morning.maxdate = dayreadings.date;
+                                    }
                                 }
                                 if (dayreadings.evening !== undefined && this.isNumeric(dayreadings.evening)) {
                                     foundsum.evening.count += 1;
                                     foundsum.evening.sum += dayreadings.evening;
                                     foundsum.total.count += 1;
                                     foundsum.total.sum += dayreadings.evening;
-                                    if (dayreadings.evening < foundsum.evening.min) foundsum.evening.min = dayreadings.evening;
-                                    if (dayreadings.evening > foundsum.evening.max) foundsum.evening.max = dayreadings.evening;
+                                    if (dayreadings.evening < foundsum.evening.min) {
+                                        foundsum.evening.min = dayreadings.evening;
+                                        foundsum.evening.mindate = dayreadings.date;
+                                    }
+                                    if (dayreadings.evening > foundsum.evening.max) {
+                                        foundsum.evening.max = dayreadings.evening;
+                                        foundsum.evening.maxdate = dayreadings.date;
+                                    }
                                 }
                             }
                         }
@@ -744,7 +756,7 @@
                             valuearray.push({year: curryear, name: curryear.toString(), values: [], location: 'kukku'});
                         }
                         let dt = new Date(this.defaultyear, f.date.getMonth(), f.date.getDate());
-                        valuearray[valuearray.length-1].values.push({value: [dt, f.value], tooltip: this.getDateTxt(f.date)});
+                        valuearray[valuearray.length-1].values.push({value: [dt, f.value], tooltip: `${this.getDateTxt(f.date)} ${this.roundNumber(f.value,1)}`});
                     })
                     const seriedata = {
                         data: valuearray,
