@@ -724,7 +724,7 @@
                         if (currindex < tbl.length) {
                             for (currdateindex = 0; currdateindex < yearserie.data.length; currdateindex++) {
                                 if (yearserie.info.year === tbl[currindex].date.getFullYear()) {
-                                    const t = new Date(yearserie.data[currdateindex].datetimeUtc);
+                                    const t = new Date(yearserie.data[currdateindex].datetimeUtc).toLocaleString();
                                     while (currindex < tbl.length && tbl[currindex].date < t) {
                                         currindex++;
                                     }
