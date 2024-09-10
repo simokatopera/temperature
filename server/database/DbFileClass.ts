@@ -89,6 +89,7 @@ export class FileDbClass implements DbApiClass {
                     if (temperaturedata[dataindex].info.location == location && temperaturedata[dataindex].info.year == years[yearindex]) {
                         let dailyreadings: TemperatureDataType[] = temperaturedata[dataindex].data;
                         dailyreadings.map(reading => {
+                            //;console.log(reading.date)
                             reading.datetimeUtc = getDate(reading.date);
                         })
 
@@ -101,7 +102,7 @@ export class FileDbClass implements DbApiClass {
                 let parts = date.split('/');
                 if (parts && parts.length === 3) {
                     //console.log(`${parts[0]} ${parts[1]} ${parts[2]}`)
-                    return new Date(Number(parts[2]), Number(parts[0])-1, Number(parts[1]));
+                    return new Date(Number(parts[2]), Number(parts[0])-1, Number(parts[1]), 0, 0, 0, 0);
                  }
                 return null;
             }
