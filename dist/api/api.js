@@ -67,8 +67,7 @@ async function apiGetTemperatures(guid, location, years) {
     if (values && values.data) {
         values.data.forEach(yearserie => {
             yearserie.data.forEach(dayvalue => {
-                //dayvalue.datetimeUtc = new Date(dayvalue.datetimeUtc).toString();
-                dayvalue.datetimeUtc = getDate(dayvalue.date)
+                dayvalue.datetimeLocal = getDate(dayvalue.date)
             })
         });
     }

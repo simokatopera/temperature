@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "@netlify/functions": "^2.8.1",
     "@types/node": "^22.5.4"
   }
 }

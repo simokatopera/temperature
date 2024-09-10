@@ -9,6 +9,7 @@ export interface TemperatureType {
 export interface TemperatureDataType {
     date: string;
     datetimeUtc: Date | null;
+    datetimeLocal: Date | null;
     morning: number;
     evening: number;
 }
