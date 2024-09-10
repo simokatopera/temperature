@@ -63,5 +63,21 @@ async function apiGetYears(guid, location) {
     return await new TemperatureApi(guid).getYears(location);
 }
 async function apiGetTemperatures(guid, location, years) {
-    return await new TemperatureApi(guid).getTemperatures(location, years);
+    const values = await new TemperatureApi(guid).getTemperatures(location, years);
+    if (values && values.data) {
+        values.data.forEach(yearserie => {
+            yearserie.data.forEach(dayvalue => {
+                dayvalue.datetimeUtc = new Date(dayvalue.datetimeUtc).toString();
+            })
+        });
+    }
+    return values;
+
+    function getDate(date) {
+        let parts = date.split('/');
+        if (parts && parts.length === 3) {
+            return new Date(parts[2], Number(parts[0]) - 1, parts[1]);
+        }
+        return NaN;
+    }
 }
