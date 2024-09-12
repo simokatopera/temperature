@@ -45,6 +45,7 @@
             <trendgraph :active="false" :elemid="testgraph4" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph2" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
+            <monthtable :monthlydata="months"></monthtable>
             <trendgraph :active="false" :elemid="testgraph3" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph5" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph6" :title="trendtitles"></trendgraph>
@@ -81,6 +82,7 @@
                     calculatedMonthlytrends: [],
                     calculatedDailyAverages: [],
                     defaultyear: 1976,
+                    months: []
                 }
             },
             async mounted() {
@@ -97,9 +99,25 @@
                 this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, this.createMonthlyFallTrendSeriedata);
                 this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, this.createMonthlySpringTrendSeriedata);
                 this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
+
+                this.calculateMonthlyAverages(temperatures);
             },
             components: {
-                'trendgraph': {
+                monthtable: {
+                    props: ['monthlydata'],
+                    template: `
+                        Taulukko
+                        <table>
+                            <thead><tr>Kuukausittaiset keskiarvot</tr></thead>
+                            <tbody>
+                                <tr v-for="item in monthlydata">
+                                    <td>{{ item.year }}</td> 
+                                </tr>                                
+                            </tbody>
+                        </table>
+                        `
+                },
+                trendgraph: {
                     props: ['active', 'elemid', 'title'],
                     template: `
                         <div :class="{hidden: !active}" class="trendchart">
@@ -703,6 +721,27 @@
                     let datavalues = this.getSeasonTrends(series, [4, 5, 6], ['Huhtikuu', 'Toukokuu', 'Kesäkuu']);
                     return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
                 },
+                calculateMonthlyAverages(series) {
+                    this.months = series.data.map(yearserie => {
+                        let monthtbl = [];
+                        let i;
+                        for (i = 0; i < 12; i++) monthtbl.push({sum: 0, count: 0});
+                        for (i = 0; i < yearserie.data.length; i++) {
+                            let month = yearserie.data[i].datetimeLocal.getMonth();
+                            if ((!isNaN(yearserie.data[i].morning) && !isNaN(yearserie.data[i].evening))
+                                && (yearserie.data[i].morning !== undefined && yearserie.data[i].evening !== undefined)) {
+                                monthtbl[month].sum += (yearserie.data[i].morning + yearserie.data[i].evening)/2;
+                                monthtbl[month].count++;
+                            }
+                        }
+                        return {
+                            year: yearserie.info.year,
+                            months: monthtbl.map(m => ({
+                                average: m.count == 0 ? NaN : m.sum / m.count,
+                            })),
+                        }
+                    })
+                },
                 createAllYearsMonthlyAverageSeriedata(series) {
                     let index;
                     let months = [];
@@ -809,7 +848,6 @@
                     const filtered = this.filterSeries(tbl, filtersize);
                     let curryear = 0;
                     filtered.forEach((f, ii) => {
-                        console.log(ii)
                         if (f.date.getFullYear() != curryear) {
                             curryear = f.date.getFullYear();
                             valuearray.push({year: curryear, name: curryear.toString(), values: [], location: 'kukku'});
