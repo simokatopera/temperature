@@ -32,6 +32,9 @@
             width: 1200px;
             height: 380px;
         }
+        .datatable, .datatable th, .datatable td {
+            border:1px solid;
+        }
     </style>
 </head>
 
@@ -107,11 +110,12 @@
                     props: ['monthlydata'],
                     template: `
                         Taulukko
-                        <table>
-                            <thead><tr>Kuukausittaiset keskiarvot</tr></thead>
+                        <table class="datatable">
+                            <thead><tr><td></td><td>Tammi</td><td>Helmi</td><td>Maalis</td><td>Huhti</td><td>Touko</td><td>Kesä</td><td>Heinä</td><td>Elo</td><td>Syys</td><td>Loka</td><td>Marras</td><td>Joulu</td></tr></thead>
                             <tbody>
                                 <tr v-for="item in monthlydata">
                                     <td>{{ item.year }}</td> 
+                                    <td v-for="m in item.months">{{ isNaN(m.average) ? '-' : this.$root.roundNumber(m.average, 1) }}</td>
                                 </tr>                                
                             </tbody>
                         </table>
