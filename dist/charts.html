@@ -35,6 +35,11 @@
         .datatable, .datatable th, .datatable td {
             border:1px solid;
         }
+        .scrollbox {
+            height: 500px;
+            width: 500px;
+            overflow: scroll;
+        }
     </style>
 </head>
 
@@ -44,12 +49,13 @@
             <h1 id="ID_PageTitle">Lämpötilakäyrät</h1>
         </div>
         <div id="app" class="page-content">
+            <readings :readings="readings"></readings>
             <trendgraph :active="false" :elemid="testgraph10" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph4" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph2" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
-            <monthtable :monthlydata="months"></monthtable>
             <trendgraph :active="false" :elemid="testgraph3" :title="trendtitles"></trendgraph>
+            <monthtable :monthlydata="months"></monthtable>
             <trendgraph :active="false" :elemid="testgraph5" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph6" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph7" :title="trendtitles"></trendgraph>
@@ -85,12 +91,14 @@
                     calculatedMonthlytrends: [],
                     calculatedDailyAverages: [],
                     defaultyear: 1976,
-                    months: []
+                    months: [],
+                    readings: {values: [], filtered: []},
                 }
             },
             async mounted() {
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
+                this.readings.values = temperatures.data;
 
                 this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, this.createAllYearsMonthlyAverageSeriedata);
                 this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, this.createAllYearsFilteredSeriedata);
@@ -104,8 +112,28 @@
                 this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
 
                 this.calculateMonthlyAverages(temperatures);
+                this.formatReadings();
             },
             components: {
+                readings: {
+                    props: ['readings'],
+                    template: `
+                        Mittaustulokset ja suodatettu arvo
+                        <div class="scrollbox">
+                        <table class="datatable">
+                            <thead><tr><td></td><td>Aamu</td><td>Ilta</td><td>Suodatettu</td></tr></thead>
+                            <tbody>
+                                <tr v-for="item in readings.filtered">
+                                    <td> {{ item.date.getDate() }} {{ item.date.getMonth()+1 }} {{ item.date.getFullYear() }} </td>
+                                    <td> {{ this.$root.roundNumber(item.morning, 1) }} </td>
+                                    <td> {{ this.$root.roundNumber(item.evening, 1) }} </td>
+                                    <td> {{ this.$root.roundNumber(item.value, 1) }} </td>
+                                </tr>                                
+                            </tbody>
+                        </table>            
+                        </div>            
+                        `
+                },
                 monthtable: {
                     props: ['monthlydata'],
                     template: `
@@ -510,7 +538,8 @@
                     return !Array.isArray(obj) && (obj - parseFloat(obj) + 1) >= 0;
                 },
                 roundNumber(value, num) {
-                    return value.toFixed(num);
+                    if (this.isNumeric(value)) return value.toFixed(num);
+                    return 'NaN';
                 },
                 calculateTrend(valuearray) {
                     let k = 0;
@@ -801,7 +830,7 @@
                             for (index = firstindex; index < lastindex; index++) {
                                 sum += lastvalues[index].value;
                             }
-                            return {value: sum / (lastindex-firstindex), date: ss.date };
+                            return {value: sum / (lastindex-firstindex), date: ss.date, firstday: first, lastday: last };
                             // const sum = lastvalues.reduce((accumulator, currentValue) => {
                             //     accumulator += currentValue.value;
                             //     return accumulator;
@@ -844,12 +873,62 @@
                     })
                     return tbl;
                 },
+                formatReadings() {
+                    let index;
+                    let dayindex = 0;
+                    let yearindex = 0;
+                    for (index = 0; index < this.readings.filtered.length && yearindex < this.readings.values.length; index++) {
+                        if (this.readings.filtered[index].date < this.readings.values[yearindex].data[dayindex].datetimeLocal) {
+                            this.readings.filtered[index].morning = NaN;
+                            this.readings.filtered[index].evening = NaN;
+                        }
+                        else {
+                            let y1 = this.readings.filtered[index].date.getFullYear();
+                            let m1 = this.readings.filtered[index].date.getMonth();
+                            let d1 = this.readings.filtered[index].date.getDate();
+                            let y2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getFullYear();
+                            let m2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getMonth();
+                            let d2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getDate();
+
+                            if (y1 == y2 && m1 == m2 && d1 == d2) {
+                                this.readings.filtered[index].morning = this.readings.values[yearindex].data[dayindex].morning;
+                                this.readings.filtered[index].evening = this.readings.values[yearindex].data[dayindex].evening;
+                                dayindex++;
+                                if (dayindex >= this.readings.values[yearindex].data.length) {
+                                    dayindex = 0;
+                                    yearindex++;
+                                }
+                            }
+                            else {
+                                while (yearindex < this.readings.values.length && dayindex < this.readings.values[yearindex].data.length) {
+                                    this.readings.filtered[index].morning = NaN;
+                                    this.readings.filtered[index].evening = NaN;
+                                    dayindex++;
+                                    if (dayindex > this.readings.values[yearindex].data.length) {
+                                        dayindex = 0;
+                                        yearindex++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    this.readings.filtered = this.readings.filtered.reverse();
+                    index = 0;
+                    while (index < this.readings.filtered.length && isNaN(this.readings.filtered[index].value)) index++;
+                    if (index > 0) this.readings.filtered.splice(0, index);
+                    index = this.readings.filtered.length-1;
+                    while (index < this.readings.filtered.length && isNaN(this.readings.filtered[index].value)) index--;
+                    if (index > 0) this.readings.filtered.splice(index + 1);
+
+                    //this.readings.filtered.splice(50);
+                },
                 createAllYearsFilteredSeriedata(series) {
                     const filtersize = 10;
 
                     const tbl = this.createLinearContTable(series);
                     let valuearray = [];
                     const filtered = this.filterSeries(tbl, filtersize);
+                    this.readings.filtered = filtered;
                     let curryear = 0;
                     filtered.forEach((f, ii) => {
                         if (f.date.getFullYear() != curryear) {
@@ -880,6 +959,7 @@
 
                     valuearray.push(minimum);
                     valuearray.push(maximum);
+
                     const seriedata = {
                         data: valuearray,
                         params: {showlegend: true, selection: [curryear, 'Minimi','Maksimi'], series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }]}
