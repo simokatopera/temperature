@@ -1,0 +1,16 @@
+{
+    "compilerOptions": 
+    {
+      "target": "ES2021",
+      "noEmit": true,
+      "module": "CommonJS",
+      "allowSyntheticDefaultImports": true,
+      "noImplicitAny": false,
+      "removeComments": true,
+      "preserveConstEnums": true,
+      "outDir": "./dist"
+    },
+    "files": [ 
+      "./server/chartfunctions.ts"
+      ]
+  }

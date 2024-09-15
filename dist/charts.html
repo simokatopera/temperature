@@ -27,6 +27,8 @@
     <link href="css/loader.css" rel="stylesheet">
     <script src="api/api.js" defer></script>
 
+    <script src="chartfunctions.js" defer></script>
+
     <style>
         .graphelement {
             width: 1200px;
@@ -37,7 +39,11 @@
         .datatable th,
         .datatable td {
             border: 1px solid;
+            text-align: center;
         }
+        /* .datatable button {
+            text-align: center;
+        } */
 
         .scrollbox {
             height: 400px;
@@ -47,6 +53,9 @@
 
         .active {
             background-color: lightgreen;
+        }
+        .actionbutton {
+            background-color: lightblue;
         }
     </style>
 </head>
@@ -96,7 +105,7 @@
                     calculatedDailyAverages: [],
                     defaultyear: 1976,
                     months: [],
-                    readings: { values: [], filtered: [] },
+                    readings: { values: [], filtered: [], filtersize: 10 },
                 }
             },
             async mounted() {
@@ -117,7 +126,8 @@
                 this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
 
                 this.calculateMonthlyAverages(temperatures);
-                this.formatReadings();
+                //this.formatReadings();
+                this.readings = formatReadingsTS(this.readings);
             },
             components: {
                 readings: {
@@ -126,7 +136,6 @@
                         return {
                             selected: ref(-1),
                             sum: ref(0),
-                            count: 0,
                         }
                     },
                     computed: {
@@ -189,9 +198,11 @@
                             return { active: false }
                         },
                         saveValuestoFile() {
-                            let data = 'kukkuma';
+                            let data = this.readings.filtered.map(line => (
+                                `${this.getDateTxt(line.date)}\t${this.$root.roundNumber(line.morning, 1)}\t${this.$root.roundNumber(line.evening, 1)}\t${this.$root.roundNumber(line.value, 1)}`
+                            ));
                             let filename = 'readings.txt';
-                            this.saveToFile(data, filename, 'Tallennettu', '');
+                            this.saveToFile(`Päivämäärä\tAamu\tIlta\tSuodatettu(${this.readings.filtersize})\n${data.join('\n')}`, filename, `Tallennettu tiedostoon ${filename}`, '');
                         },
                         saveToFile(dataToSave, fileName, successmsg, eventname) {
                             var gameblob = new Blob([dataToSave], { type: 'text/plain' })
@@ -213,13 +224,13 @@
                     },
                     template: `
                         Mittaustulokset ja suodatettu arvo
-                        <div><button @click="saveValuestoFile">Tallenna tiedostoon</button></div>
+                        <div><button class="actionbutton" @click="saveValuestoFile">Tallenna lukemat tiedostoon</button></div>
                         <div class="scrollbox">
                         <table class="datatable">
-                            <thead><tr><td></td><td>Aamulämpö</td><td>Iltalämpö</td><td>Suodatettu</td><td>Alkupvm</td><td>Loppupvm</td></tr></thead>
+                            <thead><tr><td></td><td>Aamulämpö</td><td>Iltalämpö</td><td>Suodatettu({{readings.filtersize}})</td><td>Alkupvm</td><td>Loppupvm</td></tr></thead>
                             <tbody>
                                 <tr v-for="item in readings.filtered">
-                                    <td> <button @click="selectDay(item)" :class="markIfPressed(item)">{{ this.getDateTxt(item.date) }} </button> </td>
+                                    <td :class="markIfPressed(item)" align="center"> <button class="actionbutton" @click="selectDay(item)" :class="markIfPressed(item)">{{ this.getDateTxt(item.date) }} </button> </td>
                                     <td class="xxx" :class="markIfSelected(item)"> {{ this.$root.roundNumber(item.morning, 1) }} </td>
                                     <td class="xxx" :class="markIfSelected(item)"> {{ this.$root.roundNumber(item.evening, 1) }} </td>
                                     <td :class="markIfPressed(item)"> {{ this.$root.roundNumber(item.value, 1) }} </td>
@@ -355,9 +366,7 @@
                     return NaN;
                 },
                 getDateTxt(date, daymonth) {
-                    if (!date) {
-                        return '???';
-                    }
+                    if (!date) return '???';
                     const year = date.getFullYear();
                     const month = date.getMonth() + 1;
                     const day = date.getDate();
@@ -914,7 +923,6 @@
                     let lastindex = 0;
                     let negoffset = filterlength % 2 ? -filterlength / 2 + 0.5 : -filterlength / 2;
                     let posoffset = negoffset + filterlength;
-
                     let filtered = serie.map((ss, i) => {
                         if (!isNaN(ss.value)) {
                             let first = new Date(ss.date.getFullYear(), ss.date.getMonth(), ss.date.getDate() + negoffset);
@@ -972,64 +980,63 @@
                     })
                     return tbl;
                 },
-                formatReadings() {
-                    let index;
-                    let dayindex = 0;
-                    let yearindex = 0;
-                    for (index = 0; index < this.readings.filtered.length && yearindex < this.readings.values.length; index++) {
-                        if (this.readings.filtered[index].date < this.readings.values[yearindex].data[dayindex].datetimeLocal) {
-                            this.readings.filtered[index].morning = NaN;
-                            this.readings.filtered[index].evening = NaN;
-                        }
-                        else {
-                            let y1 = this.readings.filtered[index].date.getFullYear();
-                            let m1 = this.readings.filtered[index].date.getMonth();
-                            let d1 = this.readings.filtered[index].date.getDate();
-                            let y2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getFullYear();
-                            let m2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getMonth();
-                            let d2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getDate();
+                // formatReadings() {
+                //     let index;
+                //     let dayindex = 0;
+                //     let yearindex = 0;
+                //     for (index = 0; index < this.readings.filtered.length && yearindex < this.readings.values.length; index++) {
+                //         if (this.readings.filtered[index].date < this.readings.values[yearindex].data[dayindex].datetimeLocal) {
+                //             this.readings.filtered[index].morning = NaN;
+                //             this.readings.filtered[index].evening = NaN;
+                //         }
+                //         else {
+                //             let y1 = this.readings.filtered[index].date.getFullYear();
+                //             let m1 = this.readings.filtered[index].date.getMonth();
+                //             let d1 = this.readings.filtered[index].date.getDate();
+                //             let y2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getFullYear();
+                //             let m2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getMonth();
+                //             let d2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getDate();
 
-                            if (y1 == y2 && m1 == m2 && d1 == d2) {
-                                this.readings.filtered[index].morning = this.readings.values[yearindex].data[dayindex].morning;
-                                this.readings.filtered[index].evening = this.readings.values[yearindex].data[dayindex].evening;
-                                dayindex++;
-                                if (dayindex >= this.readings.values[yearindex].data.length) {
-                                    dayindex = 0;
-                                    yearindex++;
-                                }
-                            }
-                            else {
-                                while (yearindex < this.readings.values.length && dayindex < this.readings.values[yearindex].data.length) {
-                                    this.readings.filtered[index].morning = NaN;
-                                    this.readings.filtered[index].evening = NaN;
-                                    dayindex++;
-                                    if (dayindex > this.readings.values[yearindex].data.length) {
-                                        dayindex = 0;
-                                        yearindex++;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    this.readings.filtered = this.readings.filtered.reverse();
-                    // remove empty values from the beginning and end
-                    index = 0;
-                    while (index < this.readings.filtered.length && isNaN(this.readings.filtered[index].value)) index++;
-                    if (index > 0) this.readings.filtered.splice(0, index);
-                    index = this.readings.filtered.length - 1;
-                    while (index < this.readings.filtered.length && isNaN(this.readings.filtered[index].value)) index--;
-                    if (index > 0) this.readings.filtered.splice(index + 1);
-                    // add index
-                    this.readings.filtered.forEach((r, i) => {
-                        r.index = i;
-                    })
-                },
+                //             if (y1 == y2 && m1 == m2 && d1 == d2) {
+                //                 this.readings.filtered[index].morning = this.readings.values[yearindex].data[dayindex].morning;
+                //                 this.readings.filtered[index].evening = this.readings.values[yearindex].data[dayindex].evening;
+                //                 dayindex++;
+                //                 if (dayindex >= this.readings.values[yearindex].data.length) {
+                //                     dayindex = 0;
+                //                     yearindex++;
+                //                 }
+                //             }
+                //             else {
+                //                 while (yearindex < this.readings.values.length && dayindex < this.readings.values[yearindex].data.length) {
+                //                     this.readings.filtered[index].morning = NaN;
+                //                     this.readings.filtered[index].evening = NaN;
+                //                     dayindex++;
+                //                     if (dayindex > this.readings.values[yearindex].data.length) {
+                //                         dayindex = 0;
+                //                         yearindex++;
+                //                     }
+                //                 }
+                //             }
+                //         }
+                //     }
+                //     this.readings.filtered = this.readings.filtered.reverse();
+                //     // remove empty values from the beginning and end
+                //     index = 0;
+                //     while (index < this.readings.filtered.length && isNaN(this.readings.filtered[index].value)) index++;
+                //     if (index > 0) this.readings.filtered.splice(0, index);
+                //     index = this.readings.filtered.length - 1;
+                //     while (index < this.readings.filtered.length && isNaN(this.readings.filtered[index].value)) index--;
+                //     if (index > 0) this.readings.filtered.splice(index + 1);
+                //     // add index
+                //     this.readings.filtered.forEach((r, i) => {
+                //         r.index = i;
+                //     })
+                // },
                 createAllYearsFilteredSeriedata(series) {
-                    const filtersize = 10;
 
                     const tbl = this.createLinearContTable(series);
                     let valuearray = [];
-                    const filtered = this.filterSeries(tbl, filtersize);
+                    const filtered = this.filterSeries(tbl, this.readings.filtersize);
                     this.readings.filtered = filtered;
                     let curryear = 0;
                     filtered.forEach((f, ii) => {
