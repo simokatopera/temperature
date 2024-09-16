@@ -106,13 +106,14 @@
                     defaultyear: 1976,
                     months: [],
                     readings: { values: [], filtered: [], filtersize: 10 },
+                    monthnames: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
+                    monthnamesLong: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
                 }
             },
             async mounted() {
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
                 //years.data = [2021,2022,2023,2024]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
-                this.readings.values = temperatures.data;
 
                 this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, this.createAllYearsMonthlyAverageSeriedata);
                 this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, this.createAllYearsFilteredSeriedata);
@@ -126,8 +127,7 @@
                 this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
 
                 this.calculateMonthlyAverages(temperatures);
-                //this.formatReadings();
-                this.readings = formatReadingsTS(this.readings);
+                formatFilteredTableTS(temperatures.data, this.readings.filtered);
             },
             components: {
                 readings: {
@@ -247,7 +247,11 @@
                     template: `
                         Kuukausittaiset lämpötilat
                         <table class="datatable">
-                            <thead><tr><td></td><td>Tammi</td><td>Helmi</td><td>Maalis</td><td>Huhti</td><td>Touko</td><td>Kesä</td><td>Heinä</td><td>Elo</td><td>Syys</td><td>Loka</td><td>Marras</td><td>Joulu</td></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th></th><th v-for="month in this.$root.monthnames"><th>{{ month }}</td>
+                                </tr>
+                            </thead>
                             <tbody>
                                 <tr v-for="item in monthlydata">
                                     <td>{{ item.year }}</td> 
@@ -279,10 +283,6 @@
                     if (graphelem === null) return null;
                     return echarts.init(graphelem);
                 },
-                //setSerie(id, data, chartdata) {
-                //let serie = this.serieinfo.find((s) => s.id == id);
-                //if (!serie) this.serieinfo.push({ id: id, data: data, chartdata: chartdata });
-                //},
                 getMinMaxValue(series) {
                     let min = 999999999;
                     let max = -999999999;
@@ -296,7 +296,7 @@
                     return { min: min, max: max }
                 },
                 buildChartOptions(title, series) {
-                    const months = ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu']
+                    const monthnames = this.monthnames;
                     let chartoptions = {
                         animation: false,
                         title: {
@@ -319,7 +319,7 @@
                                     if (series.params && series.params.legend && series.params.legend.items) {
                                         return series.params.legend.items[m];
                                     }
-                                    if (y < 1978) return months[m];
+                                    if (y < 1978) return monthnames[m];
                                     return y.toString();
                                 })
                             },
@@ -462,7 +462,7 @@
                 createLastYearsSeriedata(series) {
                     const seriedata = {
                         data: null,
-                        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }], legend: { items: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'] } }
+                        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }], legend: { items: this.monthnames } }
                     };
                     if (!series || !series.data || series.data.length == 0) {
                         return seriedata;
@@ -918,34 +918,6 @@
 
                     return dailyvalues;
                 },
-                filterSeries(serie, filterlength) {
-                    let firstindex = 0;
-                    let lastindex = 0;
-                    let negoffset = filterlength % 2 ? -filterlength / 2 + 0.5 : -filterlength / 2;
-                    let posoffset = negoffset + filterlength;
-                    let filtered = serie.map((ss, i) => {
-                        if (!isNaN(ss.value)) {
-                            let first = new Date(ss.date.getFullYear(), ss.date.getMonth(), ss.date.getDate() + negoffset);
-                            let last = new Date(ss.date.getFullYear(), ss.date.getMonth(), ss.date.getDate() + posoffset);
-                            while (firstindex < serie.length && serie[firstindex].date < first) firstindex++;
-                            while (lastindex < serie.length && serie[lastindex].date < last) lastindex++;
-                            let index;
-                            let sum = 0;
-                            let dec = 0;
-                            for (index = firstindex; index < lastindex; index++) {
-                                if (isNaN(serie[index].value)) {
-                                    dec++;
-                                }
-                                else {
-                                    sum += serie[index].value;
-                                }
-                            }
-                            return { value: sum / (lastindex - firstindex - dec), date: ss.date, firstday: first, lastday: last };
-                        }
-                        return { value: NaN, date: ss.date, firstday: null, lastday: null };
-                    })
-                    return filtered;
-                },
                 createLinearContTable(series) {
                     let tbl = [];
                     let year;
@@ -980,66 +952,14 @@
                     })
                     return tbl;
                 },
-                // formatReadings() {
-                //     let index;
-                //     let dayindex = 0;
-                //     let yearindex = 0;
-                //     for (index = 0; index < this.readings.filtered.length && yearindex < this.readings.values.length; index++) {
-                //         if (this.readings.filtered[index].date < this.readings.values[yearindex].data[dayindex].datetimeLocal) {
-                //             this.readings.filtered[index].morning = NaN;
-                //             this.readings.filtered[index].evening = NaN;
-                //         }
-                //         else {
-                //             let y1 = this.readings.filtered[index].date.getFullYear();
-                //             let m1 = this.readings.filtered[index].date.getMonth();
-                //             let d1 = this.readings.filtered[index].date.getDate();
-                //             let y2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getFullYear();
-                //             let m2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getMonth();
-                //             let d2 = this.readings.values[yearindex].data[dayindex].datetimeLocal.getDate();
-
-                //             if (y1 == y2 && m1 == m2 && d1 == d2) {
-                //                 this.readings.filtered[index].morning = this.readings.values[yearindex].data[dayindex].morning;
-                //                 this.readings.filtered[index].evening = this.readings.values[yearindex].data[dayindex].evening;
-                //                 dayindex++;
-                //                 if (dayindex >= this.readings.values[yearindex].data.length) {
-                //                     dayindex = 0;
-                //                     yearindex++;
-                //                 }
-                //             }
-                //             else {
-                //                 while (yearindex < this.readings.values.length && dayindex < this.readings.values[yearindex].data.length) {
-                //                     this.readings.filtered[index].morning = NaN;
-                //                     this.readings.filtered[index].evening = NaN;
-                //                     dayindex++;
-                //                     if (dayindex > this.readings.values[yearindex].data.length) {
-                //                         dayindex = 0;
-                //                         yearindex++;
-                //                     }
-                //                 }
-                //             }
-                //         }
-                //     }
-                //     this.readings.filtered = this.readings.filtered.reverse();
-                //     // remove empty values from the beginning and end
-                //     index = 0;
-                //     while (index < this.readings.filtered.length && isNaN(this.readings.filtered[index].value)) index++;
-                //     if (index > 0) this.readings.filtered.splice(0, index);
-                //     index = this.readings.filtered.length - 1;
-                //     while (index < this.readings.filtered.length && isNaN(this.readings.filtered[index].value)) index--;
-                //     if (index > 0) this.readings.filtered.splice(index + 1);
-                //     // add index
-                //     this.readings.filtered.forEach((r, i) => {
-                //         r.index = i;
-                //     })
-                // },
                 createAllYearsFilteredSeriedata(series) {
 
                     const tbl = this.createLinearContTable(series);
                     let valuearray = [];
-                    const filtered = this.filterSeries(tbl, this.readings.filtersize);
-                    this.readings.filtered = filtered;
+                    //const filtered = this.filterSeriesTS(tbl, this.readings.filtersize);
+                    this.readings.filtered = filterSeriesTS(tbl, this.readings.filtersize);
                     let curryear = 0;
-                    filtered.forEach((f, ii) => {
+                    this.readings.filtered.forEach((f, ii) => {
                         if (f.date.getFullYear() != curryear) {
                             curryear = f.date.getFullYear();
                             valuearray.push({ year: curryear, name: curryear.toString(), values: [], location: 'kukku' });
@@ -1050,7 +970,7 @@
                     // add minimum and maximum values to screen data
                     let minimum = {};
                     let maximum = {};
-                    let minmax = this.getDailyFilteredMinMax(filtered);
+                    let minmax = this.getDailyFilteredMinMax(this.readings.filtered);
                     maximum.values = minmax.map(r => {
                         return {
                             value: [r.date, r.total.max],
