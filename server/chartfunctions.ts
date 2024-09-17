@@ -28,6 +28,12 @@ interface Temperature {
     value: number;
     average: number;
 }
+interface TemperatureMsg {
+    data: DbTemperature[];
+    statusCode; number;
+    message: string;
+
+}
 interface DbTemperature {
     data: DbData[];
     info: Info;
@@ -43,6 +49,23 @@ interface DbData {
     datetimeLocal: Date;
     datetimeUtc: Date;
 }
+interface FilteredCalc {
+    date: Date;
+    day: number;
+    month: number;
+    total: FilteredSum;
+}
+interface FilteredSum {
+    min: number;
+    max: number;
+    mindate: Date;
+    maxdate: Date;
+}
+function createFilteredSum(): FilteredSum {
+    return { min: 999999, max: -999999, mindate: null, maxdate: null }
+}
+
+
 export function filterSeriesTS(serie: Temperature[], filterlength: number): Filtered[] {
     let firstindex: number = 0;
     let lastindex: number = 0;
@@ -120,3 +143,63 @@ export function formatFilteredTableTS(readings: DbTemperature[], filtered: Filte
     return filtered;
 }
 
+export function getReadingsBetweenTS(startdate: Date, enddate: Date, series: TemperatureMsg): DbData[] {
+    if (startdate >= enddate) return [];
+
+    const startyear: number = startdate.getFullYear();
+    const endyear: number = enddate.getFullYear();
+
+    let startyearindex: number = 0;
+    while (series.data[startyearindex].info.year < startyear) startyearindex++;
+    let endyearindex: number = startyearindex;
+    while (series.data[endyearindex].info.year < endyear) endyearindex++;
+
+    let startdayindex: number = 0;
+    while (series.data[startyearindex].data[startdayindex].datetimeLocal < startdate) startdayindex++;
+    let enddayindex: number = 0;
+    while (series.data[endyearindex].data[enddayindex].datetimeLocal < enddate) enddayindex++;
+    let yearindex: number;
+    let dayindex: number;
+    let firstindex = startdayindex;
+    let readings: DbData[] = [];
+    for (yearindex = startyearindex; yearindex <= endyearindex; yearindex++) {
+        for (dayindex = firstindex; startyearindex === endyearindex ? dayindex < enddayindex : dayindex < series.data[yearindex].data.length; dayindex++) {
+            readings.push(series.data[yearindex].data[dayindex]);
+        }
+        firstindex = 0;
+    }
+    return readings;
+}
+
+export function getDailyFilteredMinMaxTS(filteredvalues: Filtered[], defaultyear: number) {
+    let sums: FilteredCalc[] = [];
+    let dayindex: number;
+    let index: number;
+    let value: FilteredCalc;
+    for (dayindex = 0; dayindex < 366; dayindex++) {
+        value = { date: new Date(defaultyear, 0, dayindex + 1), total: createFilteredSum(), day: 0, month: 0 };
+        value.month = value.date.getMonth() + 1;
+        value.day = value.date.getDate();
+        sums.push(value);
+    }
+    for (index = 0; index < sums.length; index++) {
+        let i = 0;
+        while (i < filteredvalues.length) {
+            if (sums[index].date.getDate() == filteredvalues[i].date.getDate() &&
+                sums[index].date.getMonth() == filteredvalues[i].date.getMonth()) {
+                if (!(isNaN(filteredvalues[i].value))) {
+                    if (filteredvalues[i].value > sums[index].total.max) {
+                        sums[index].total.max = filteredvalues[i].value;
+                        sums[index].total.maxdate = filteredvalues[i].date;
+                    }
+                    if (filteredvalues[i].value < sums[index].total.min) {
+                        sums[index].total.min = filteredvalues[i].value;
+                        sums[index].total.mindate = filteredvalues[i].date;
+                    }
+                }
+            }
+            i++;
+        }
+    }
+    return sums;
+}

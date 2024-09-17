@@ -249,7 +249,7 @@
                         <table class="datatable">
                             <thead>
                                 <tr>
-                                    <th></th><th v-for="month in this.$root.monthnames"><th>{{ month }}</td>
+                                    <th></th><th v-for="month in this.$root.monthnames">{{ month }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -418,33 +418,6 @@
                     }
                     return chartdata;
                 },
-                getReadingsBetween(startdate, enddate, series) {
-                    if (startdate >= enddate) return [];
-
-                    const startyear = startdate.getFullYear();
-                    const endyear = enddate.getFullYear();
-
-                    let startyearindex = 0;
-                    while (series.data[startyearindex].info.year < startyear) startyearindex++;
-                    let endyearindex = startyearindex;
-                    while (series.data[endyearindex].info.year < endyear) endyearindex++;
-
-                    let startdayindex = 0;
-                    while (this.getDate(series.data[startyearindex].data[startdayindex].date) < startdate) startdayindex++;
-                    let enddayindex = 0;
-                    while (this.getDate(series.data[endyearindex].data[enddayindex].date) < enddate) enddayindex++;
-                    let yearindex;
-                    let dayindex;
-                    let firstindex = startdayindex;
-                    let readings = [];
-                    for (yearindex = startyearindex; yearindex <= endyearindex; yearindex++) {
-                        for (dayindex = firstindex; startyearindex === endyearindex ? dayindex < enddayindex : dayindex < series.data[yearindex].data.length; dayindex++) {
-                            readings.push(series.data[yearindex].data[dayindex]);
-                        }
-                        firstindex = 0;
-                    }
-                    return readings;
-                },
                 findMin(dt, serie) {
                     let day = dt.getDate();
                     let month = dt.getMonth() + 1;
@@ -469,7 +442,7 @@
                     }
                     const lastdate = this.getDate(series.data[series.data.length - 1].data[series.data[series.data.length - 1].data.length - 1].date);
                     const firstdate = new Date(lastdate.getFullYear() - 1, lastdate.getMonth(), lastdate.getDate());
-                    const readings = this.getReadingsBetween(firstdate, lastdate, series);
+                    const readings = getReadingsBetweenTS(firstdate, lastdate, series);
 
                     let morning = {};
                     let evening = {};
@@ -712,38 +685,38 @@
 
                     return monthlytrenddata;
                 },
-                getDailyFilteredMinMax(filteredvalues) {
-                    let sums = [];
-                    let dayindex;
-                    let index;
-                    let value;
-                    for (dayindex = 0; dayindex < 366; dayindex++) {
-                        value = { date: new Date(this.defaultyear, 0, dayindex + 1), total: { min: 999999, max: -999999, mindate: null, maxdate: null }, day: 0, month: 0 };
-                        value.month = value.date.getMonth() + 1;
-                        value.day = value.date.getDate();
-                        sums.push(value);
-                    }
-                    for (index = 0; index < sums.length; index++) {
-                        let i = 0;
-                        while (i < filteredvalues.length) {
-                            if (sums[index].date.getDate() == filteredvalues[i].date.getDate() &&
-                                sums[index].date.getMonth() == filteredvalues[i].date.getMonth()) {
-                                if (!(isNaN(filteredvalues[i].value))) {
-                                    if (filteredvalues[i].value > sums[index].total.max) {
-                                        sums[index].total.max = filteredvalues[i].value;
-                                        sums[index].total.maxdate = filteredvalues[i].date;
-                                    }
-                                    if (filteredvalues[i].value < sums[index].total.min) {
-                                        sums[index].total.min = filteredvalues[i].value;
-                                        sums[index].total.mindate = filteredvalues[i].date;
-                                    }
-                                }
-                            }
-                            i++;
-                        }
-                    }
-                    return sums;
-                },
+                // getDailyFilteredMinMax(filteredvalues) {
+                //     let sums = [];
+                //     let dayindex;
+                //     let index;
+                //     let value;
+                //     for (dayindex = 0; dayindex < 366; dayindex++) {
+                //         value = { date: new Date(this.defaultyear, 0, dayindex + 1), total: { min: 999999, max: -999999, mindate: null, maxdate: null }, day: 0, month: 0 };
+                //         value.month = value.date.getMonth() + 1;
+                //         value.day = value.date.getDate();
+                //         sums.push(value);
+                //     }
+                //     for (index = 0; index < sums.length; index++) {
+                //         let i = 0;
+                //         while (i < filteredvalues.length) {
+                //             if (sums[index].date.getDate() == filteredvalues[i].date.getDate() &&
+                //                 sums[index].date.getMonth() == filteredvalues[i].date.getMonth()) {
+                //                 if (!(isNaN(filteredvalues[i].value))) {
+                //                     if (filteredvalues[i].value > sums[index].total.max) {
+                //                         sums[index].total.max = filteredvalues[i].value;
+                //                         sums[index].total.maxdate = filteredvalues[i].date;
+                //                     }
+                //                     if (filteredvalues[i].value < sums[index].total.min) {
+                //                         sums[index].total.min = filteredvalues[i].value;
+                //                         sums[index].total.mindate = filteredvalues[i].date;
+                //                     }
+                //                 }
+                //             }
+                //             i++;
+                //         }
+                //     }
+                //     return sums;
+                // },
                 calculateDailyAverages(series) {
 
                     if (this.calculatedDailyAverages.length > 0) return this.calculatedDailyAverages;
@@ -970,7 +943,7 @@
                     // add minimum and maximum values to screen data
                     let minimum = {};
                     let maximum = {};
-                    let minmax = this.getDailyFilteredMinMax(this.readings.filtered);
+                    let minmax = getDailyFilteredMinMaxTS(this.readings.filtered, this.defaultyear);
                     maximum.values = minmax.map(r => {
                         return {
                             value: [r.date, r.total.max],

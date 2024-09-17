@@ -1,8 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.formatFilteredTableTS = exports.filterSeriesTS = void 0;
+exports.getDailyFilteredMinMaxTS = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = void 0;
 function createHalfFilledFiltered(value, date, first, last) {
     return { index: -1, value: value, morning: NaN, evening: NaN, date: date, firstday: first, lastday: last };
+}
+function createFilteredSum() {
+    return { min: 999999, max: -999999, mindate: null, maxdate: null };
 }
 function filterSeriesTS(serie, filterlength) {
     let firstindex = 0;
@@ -85,3 +88,66 @@ function formatFilteredTableTS(readings, filtered) {
     return filtered;
 }
 exports.formatFilteredTableTS = formatFilteredTableTS;
+function getReadingsBetweenTS(startdate, enddate, series) {
+    if (startdate >= enddate)
+        return [];
+    const startyear = startdate.getFullYear();
+    const endyear = enddate.getFullYear();
+    let startyearindex = 0;
+    while (series.data[startyearindex].info.year < startyear)
+        startyearindex++;
+    let endyearindex = startyearindex;
+    while (series.data[endyearindex].info.year < endyear)
+        endyearindex++;
+    let startdayindex = 0;
+    while (series.data[startyearindex].data[startdayindex].datetimeLocal < startdate)
+        startdayindex++;
+    let enddayindex = 0;
+    while (series.data[endyearindex].data[enddayindex].datetimeLocal < enddate)
+        enddayindex++;
+    let yearindex;
+    let dayindex;
+    let firstindex = startdayindex;
+    let readings = [];
+    for (yearindex = startyearindex; yearindex <= endyearindex; yearindex++) {
+        for (dayindex = firstindex; startyearindex === endyearindex ? dayindex < enddayindex : dayindex < series.data[yearindex].data.length; dayindex++) {
+            readings.push(series.data[yearindex].data[dayindex]);
+        }
+        firstindex = 0;
+    }
+    return readings;
+}
+exports.getReadingsBetweenTS = getReadingsBetweenTS;
+function getDailyFilteredMinMaxTS(filteredvalues, defaultyear) {
+    let sums = [];
+    let dayindex;
+    let index;
+    let value;
+    for (dayindex = 0; dayindex < 366; dayindex++) {
+        value = { date: new Date(defaultyear, 0, dayindex + 1), total: createFilteredSum(), day: 0, month: 0 };
+        value.month = value.date.getMonth() + 1;
+        value.day = value.date.getDate();
+        sums.push(value);
+    }
+    for (index = 0; index < sums.length; index++) {
+        let i = 0;
+        while (i < filteredvalues.length) {
+            if (sums[index].date.getDate() == filteredvalues[i].date.getDate() &&
+                sums[index].date.getMonth() == filteredvalues[i].date.getMonth()) {
+                if (!(isNaN(filteredvalues[i].value))) {
+                    if (filteredvalues[i].value > sums[index].total.max) {
+                        sums[index].total.max = filteredvalues[i].value;
+                        sums[index].total.maxdate = filteredvalues[i].date;
+                    }
+                    if (filteredvalues[i].value < sums[index].total.min) {
+                        sums[index].total.min = filteredvalues[i].value;
+                        sums[index].total.mindate = filteredvalues[i].date;
+                    }
+                }
+            }
+            i++;
+        }
+    }
+    return sums;
+}
+exports.getDailyFilteredMinMaxTS = getDailyFilteredMinMaxTS;
