@@ -418,74 +418,77 @@
                     }
                     return chartdata;
                 },
-                findMin(dt, serie) {
-                    let day = dt.getDate();
-                    let month = dt.getMonth() + 1;
-                    let value = serie.find(s => day == s.day && month == s.month);
+                // findMin(dt, serie) {
+                //     let day = dt.getDate();
+                //     let month = dt.getMonth() + 1;
+                //     let value = serie.find(s => day == s.day && month == s.month);
 
-                    return value.morning.min < value.evening.min ? { value: value.morning.min, date: value.morning.mindate } : { value: value.evening.min, date: value.evening.mindate };
-                },
-                findMax(dt, serie) {
-                    let day = dt.getDate();
-                    let month = dt.getMonth() + 1;
-                    let value = serie.find(s => day == s.day && month == s.month);
+                //     return value.morning.min < value.evening.min ? { value: value.morning.min, date: value.morning.mindate } : { value: value.evening.min, date: value.evening.mindate };
+                // },
+                // findMax(dt, serie) {
+                //     let day = dt.getDate();
+                //     let month = dt.getMonth() + 1;
+                //     let value = serie.find(s => day == s.day && month == s.month);
 
-                    return value.morning.max > value.evening.max ? { value: value.morning.max, date: value.morning.maxdate } : { value: value.evening.max, date: value.evening.maxdate };
-                },
+                //     return value.morning.max > value.evening.max ? { value: value.morning.max, date: value.morning.maxdate } : { value: value.evening.max, date: value.evening.maxdate };
+                // },
                 createLastYearsSeriedata(series) {
-                    const seriedata = {
-                        data: null,
-                        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }], legend: { items: this.monthnames } }
-                    };
                     if (!series || !series.data || series.data.length == 0) {
                         return seriedata;
                     }
+
                     const lastdate = this.getDate(series.data[series.data.length - 1].data[series.data[series.data.length - 1].data.length - 1].date);
                     const firstdate = new Date(lastdate.getFullYear() - 1, lastdate.getMonth(), lastdate.getDate());
                     const readings = getReadingsBetweenTS(firstdate, lastdate, series);
-
-                    let morning = {};
-                    let evening = {};
-                    let minimum = {};
-                    let maximum = {};
-                    morning.values = readings.map(r => ({
-                        value: [this.getDate(r.date), r.morning],
-                        tooltip: `Aamu ${this.getDateTxt(this.getDate(r.date))} ${r.morning}`,
-                    }));
-                    morning.location = series.data[0].info.location;
-                    morning.year = firstdate.getFullYear();
-                    morning.name = "Aamu";
-                    evening.values = readings.map(r => ({
-                        value: [this.getDate(r.date), r.evening],
-                        tooltip: `Ilta ${this.getDateTxt(this.getDate(r.date))} ${r.evening}`,
-                    }));
-                    evening.location = morning.location;
-                    evening.year = lastdate.getFullYear();
-                    evening.name = "Ilta";
-
-                    // add minimum and maximum values to screen data
-                    let sums = this.calculateDailyAverages(series);
-                    maximum.values = morning.values.map(r => {
-                        let value = this.findMax(r.value[0], sums);
-                        return {
-                            value: [r.value[0], value.value],
-                            tooltip: `Maksimi ${this.getDateTxt(this.getDate(value.date))} ${value.value}`,
-                        }
-                    });
-                    maximum.name = 'Maksimi';
-                    minimum.values = morning.values.map(r => {
-                        let value = this.findMin(r.value[0], sums);
-                        return {
-                            value: [r.value[0], value.value],
-                            tooltip: `Minimi ${this.getDateTxt(this.getDate(value.date))} ${value.value}`,
-                        }
-                    });
-                    minimum.name = 'Minimi';
-
-                    seriedata.data = [morning, evening, minimum, maximum];
-
-                    return seriedata;
+                
+                    return {
+                        data: createLastYearsSeriedataTS(readings, series, 2024, this.defaultyear),
+                        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }], legend: { items: this.monthnames } }
+                    };
                 },
+
+                //     let morning = {};
+                //     let evening = {};
+                //     let minimum = {};
+                //     let maximum = {};
+                //     morning.values = readings.map(r => ({
+                //         value: [this.getDate(r.date), r.morning],
+                //         tooltip: `Aamu ${this.getDateTxt(this.getDate(r.date))} ${r.morning}`,
+                //     }));
+                //     morning.location = series.data[0].info.location;
+                //     morning.year = firstdate.getFullYear();
+                //     morning.name = "Aamu";
+                //     evening.values = readings.map(r => ({
+                //         value: [this.getDate(r.date), r.evening],
+                //         tooltip: `Ilta ${this.getDateTxt(this.getDate(r.date))} ${r.evening}`,
+                //     }));
+                //     evening.location = morning.location;
+                //     evening.year = lastdate.getFullYear();
+                //     evening.name = "Ilta";
+
+                //     // add minimum and maximum values to screen data
+                //     let sums = this.calculateDailyAverages(series);
+                //     maximum.values = morning.values.map(r => {
+                //         let value = this.findMax(r.value[0], sums);
+                //         return {
+                //             value: [r.value[0], value.value],
+                //             tooltip: `Maksimi ${this.getDateTxt(this.getDate(value.date))} ${value.value}`,
+                //         }
+                //     });
+                //     maximum.name = 'Maksimi';
+                //     minimum.values = morning.values.map(r => {
+                //         let value = this.findMin(r.value[0], sums);
+                //         return {
+                //             value: [r.value[0], value.value],
+                //             tooltip: `Minimi ${this.getDateTxt(this.getDate(value.date))} ${value.value}`,
+                //         }
+                //     });
+                //     minimum.name = 'Minimi';
+
+                //     seriedata.data = [morning, evening, minimum, maximum];
+
+                //     return seriedata;
+                // },
                 createDailyDiffdata(series) {
                     let differencies = series.data.map(yearserie => ({
                         values: yearserie.data.map(s => {
