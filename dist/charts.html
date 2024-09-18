@@ -73,6 +73,7 @@
             <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph3" :title="trendtitles"></trendgraph>
             <monthtable :monthlydata="months"></monthtable>
+            <trendgraph :active="false" :elemid="testgraph11" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph5" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph6" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph7" :title="trendtitles"></trendgraph>
@@ -100,6 +101,7 @@
                     testgraph8: 'GraphLocation8',
                     testgraph9: 'GraphLocation9',
                     testgraph10: 'GraphLocation10',
+                    testgraph11: 'GraphLocation11',
                     trendtitles: [],
                     calculatedMonthlytrends: [],
                     calculatedDailyAverages: [],
@@ -120,6 +122,7 @@
                 this.createChart(this.testgraph2, 'Päivittäinen keskiarvo', temperatures, this.createAllYearsAverageSeriedata);
                 this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, this.createAllYearsSeriedata);
                 this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, this.createLastYearsSeriedata);
+                this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, this.createYearlyTrendSeriedata);
                 this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, this.createMonthlySummerTrendSeriedata);
                 this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, this.createMonthlyWinterTrendSeriedata);
                 this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, this.createMonthlyFallTrendSeriedata);
@@ -533,11 +536,13 @@
                     let n = 0;
                     valuearray.forEach(values => {
                         values.data.forEach(reading => {
-                            n++;
-                            sumx += reading.year;
-                            sumy += reading.value;
-                            sumxy += reading.value * reading.year;
-                            sumxsqr += reading.year * reading.year;
+                            if (!isNaN(reading.value)) {
+                                n++;
+                                sumx += reading.year;
+                                sumy += reading.value;
+                                sumxy += reading.value * reading.year;
+                                sumxsqr += reading.year * reading.year;
+                            }
                         })
                     })
                     k = (n * sumxy - sumx * sumy) / (n * sumxsqr - sumx * sumx);
@@ -665,6 +670,40 @@
                     this.calculatedDailyAverages = sums;
                     return sums;
                 },
+                createYearlyTrendSeriedata(series) {
+                    let yearsums = [];
+                    let monthlytrenddata = this.calculateMonthlyTrends(series);
+                    monthlytrenddata.forEach(month => {
+                        month.data.forEach((m, i) => {
+                            if (!yearsums[m.year]) yearsums[m.year] = {sum: 0, count: 0};
+                            yearsums[m.year].year = m.year;
+                            yearsums[m.year].count++;
+                            yearsums[m.year].sum += m.value;
+                        })
+                    });
+                    let yearlyaverages = yearsums.map(y => (
+                        { value: [new Date(y.year, 0, 1), this.roundNumber(y.count == 12 ? y.sum/y.count: NaN, 2)], 
+                            tooltip: `Vuosikeskiarvo ${y.year} ${y.count == 12 ? this.roundNumber(y.sum/y.count, 1): ''}` })
+                    )
+                    yearlyaverages = yearlyaverages.filter(val => val);
+                    let yearlyserie = {
+                        month: 0,
+                        data: yearlyaverages.map(val => ({
+                            month:0,
+                            value: Number(val.value[1]),
+                            year: Number(val.value[0].getFullYear()),
+                        })),
+                    }
+                    const trend = this.calculateTrend([yearlyserie]);
+                    let yearlytrend = series.data.map((ser, serieindex) => (
+                        { value: [new Date(ser.info.year, 0, 1), this.roundNumber(ser.info.year * trend.k + trend.b, 1)], 
+                            tooltip: `Suuntaus ${ser.info.year} ${this.roundNumber(ser.info.year * trend.k + trend.b, 1)}` })
+                    )
+                    const yearlyvalues = { values: yearlyaverages, location: series.data[0].info.location, year: 0, name: `Vuosikeskiarvo` };
+                    const trendvalues = {location: '', name: `Suuntaus ${trend.k > 0 ? '+' : ''}${this.roundNumber(trend.k * 10, 1)}°C/10v`, values: yearlytrend, year: 0};
+
+                    return { data: [yearlyvalues, trendvalues], params: { rangeoffset: 1, showlegend: true} };
+                },
                 getSeasonTrends(series, monthnumbers, monthnames) {
                     let monthlytrenddata = this.calculateMonthlyTrends(series);
 
@@ -679,10 +718,9 @@
                         }
                     });
                     let summertrend = this.calculateTrend([monthlytrenddata[monthnumbers[0] - 1], monthlytrenddata[monthnumbers[1] - 1], monthlytrenddata[monthnumbers[2] - 1]]);
-                    let newvalues = [];
-                    series.data.map((ser, serieindex) => {
-                        newvalues.push({ value: [new Date(ser.info.year, 0, 1), this.roundNumber(ser.info.year * summertrend.k + summertrend.b, 2)], tooltip: `${ser.info.year} Suuntaus ${this.roundNumber(ser.info.year * summertrend.k + summertrend.b, 2)}` });
-                    });
+                    let newvalues = series.data.map((ser, serieindex) => (
+                        { value: [new Date(ser.info.year, 0, 1), this.roundNumber(ser.info.year * summertrend.k + summertrend.b, 2)], tooltip: `${ser.info.year} Suuntaus ${this.roundNumber(ser.info.year * summertrend.k + summertrend.b, 2)}` })
+                    )
                     datavalues.push({ values: newvalues, location: series.data[0].info.location, year: 0, name: `Trendi ${summertrend.k > 0 ? '+' : ''}${this.roundNumber(summertrend.k * 10, 1)}°C/10v` });
                     return datavalues;
                 },
@@ -728,6 +766,7 @@
                     let index;
                     let months = [];
                     let dailyvalues = this.createAllYearsAverageSeriedata(series);
+                    // calculate monthly averages
                     dailyvalues.data.forEach((yeardata, ind) => {
                         let tempvalue;
                         let month;
