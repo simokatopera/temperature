@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createLastYearsSeriedataTS = exports.getDailyFilteredMinMaxTS = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = void 0;
+exports.createLinearContTableTS = exports.calculateDailyAveragesTS = exports.createDefaultYearTable = exports.createLastYearsSeriedataTS = exports.getDailyFilteredMinMaxTS = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = void 0;
 function createHalfFilledFiltered(value, date, first, last) {
     return { index: -1, value: value, morning: NaN, evening: NaN, date: date, firstday: first, lastday: last };
 }
 function createFilteredSum() {
     return { min: 999999, max: -999999, mindate: null, maxdate: null };
 }
+let dailyAveragesCalculated = null;
 function filterSeriesTS(serie, filterlength) {
     let firstindex = 0;
     let lastindex = 0;
@@ -186,7 +187,7 @@ function getDate(date) {
 function isNumeric(obj) {
     return !Array.isArray(obj) && (obj - parseFloat(obj) + 1) >= 0;
 }
-function createLastYearsSeriedataTS(readings, series, year, defaultyear) {
+function createLastYearsSeriedataTS(readings, sums) {
     let data = [];
     let morning = createGraphSerie();
     let evening = createGraphSerie();
@@ -196,15 +197,14 @@ function createLastYearsSeriedataTS(readings, series, year, defaultyear) {
         value: createValue(r.datetimeLocal, r.morning),
         tooltip: `Aamu ${getDateTxt(r.datetimeLocal)} ${r.morning}`,
     }));
-    morning.year = year;
+    morning.year = 0;
     morning.name = "Aamu";
     evening.values = readings.map((r) => ({
         value: createValue(r.datetimeLocal, r.evening),
         tooltip: `Ilta ${getDateTxt(r.datetimeLocal)} ${r.evening}`,
     }));
-    evening.year = year;
+    evening.year = 0;
     evening.name = "Ilta";
-    let sums = calculateDailyAveragesTS(series, defaultyear);
     maximum.values = morning.values.map(r => {
         let value = findMax(r.value[0], sums);
         return {
@@ -230,7 +230,7 @@ function createYearCalcValue(date) {
         date: date,
         morning: createMinMaxCalc(),
         evening: createMinMaxCalc(),
-        total: createMinMaxCalc(),
+        difference: createMinMaxCalc(),
         day: 0, month: 0
     };
 }
@@ -247,7 +247,10 @@ function createDefaultYearTable(defaultyear) {
     }
     return sums;
 }
+exports.createDefaultYearTable = createDefaultYearTable;
 function calculateDailyAveragesTS(series, defaultyear) {
+    if (dailyAveragesCalculated)
+        return dailyAveragesCalculated;
     let sums = createDefaultYearTable(defaultyear);
     for (let yearindex = 0; yearindex < series.data.length; yearindex++) {
         for (let dayindex = 0; dayindex < series.data[yearindex].data.length; dayindex++) {
@@ -260,8 +263,6 @@ function calculateDailyAveragesTS(series, defaultyear) {
                 if (dayreadings.morning !== undefined && isNumeric(dayreadings.morning)) {
                     foundsum.morning.count += 1;
                     foundsum.morning.sum += dayreadings.morning;
-                    foundsum.total.count += 1;
-                    foundsum.total.sum += dayreadings.morning;
                     if (dayreadings.morning < foundsum.morning.min) {
                         foundsum.morning.min = dayreadings.morning;
                         foundsum.morning.mindate = dayreadings.datetimeLocal;
@@ -274,8 +275,6 @@ function calculateDailyAveragesTS(series, defaultyear) {
                 if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening)) {
                     foundsum.evening.count += 1;
                     foundsum.evening.sum += dayreadings.evening;
-                    foundsum.total.count += 1;
-                    foundsum.total.sum += dayreadings.evening;
                     if (dayreadings.evening < foundsum.evening.min) {
                         foundsum.evening.min = dayreadings.evening;
                         foundsum.evening.mindate = dayreadings.datetimeLocal;
@@ -288,13 +287,15 @@ function calculateDailyAveragesTS(series, defaultyear) {
                 if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening) &&
                     dayreadings.morning !== undefined && isNumeric(dayreadings.morning)) {
                     let value = (dayreadings.morning + dayreadings.evening) / 2;
-                    if (value < foundsum.total.min) {
-                        foundsum.total.min = value;
-                        foundsum.total.mindate = dayreadings.datetimeLocal;
+                    foundsum.difference.count++;
+                    foundsum.difference.sum += value;
+                    if (value < foundsum.difference.min) {
+                        foundsum.difference.min = value;
+                        foundsum.difference.mindate = dayreadings.datetimeLocal;
                     }
-                    if (value > foundsum.total.max) {
-                        foundsum.total.max = value;
-                        foundsum.total.maxdate = dayreadings.datetimeLocal;
+                    if (value > foundsum.difference.max) {
+                        foundsum.difference.max = value;
+                        foundsum.difference.maxdate = dayreadings.datetimeLocal;
                     }
                 }
             }
@@ -307,9 +308,47 @@ function calculateDailyAveragesTS(series, defaultyear) {
         if (sums[dayindex].evening.count > 0) {
             sums[dayindex].evening.average = sums[dayindex].evening.sum / sums[dayindex].evening.count;
         }
-        if (sums[dayindex].total.count > 0) {
-            sums[dayindex].total.average = sums[dayindex].total.sum / sums[dayindex].total.count;
-        }
     }
+    if (!dailyAveragesCalculated)
+        dailyAveragesCalculated = sums;
     return sums;
 }
+exports.calculateDailyAveragesTS = calculateDailyAveragesTS;
+function createTemperatureValue(day, value) {
+    return { value: value, average: NaN, date: day, morning: NaN, evening: NaN };
+}
+function createLinearContTableTS(series) {
+    let tbl = [];
+    for (let year = series.data[0].info.year; year <= series.data[series.data.length - 1].info.year; year++) {
+        const lastday = year % 4 == 0 ? 366 : 365;
+        for (let day = 1; day <= lastday; day++)
+            tbl.push(createTemperatureValue(new Date(year, 0, day), NaN));
+    }
+    let currindex = 0;
+    series.data.forEach((yearserie) => {
+        while (currindex < tbl.length && tbl[currindex].date.getFullYear() < yearserie.info.year)
+            currindex++;
+        if (currindex < tbl.length) {
+            for (let currdateindex = 0; currdateindex < yearserie.data.length; currdateindex++) {
+                if (yearserie.info.year === tbl[currindex].date.getFullYear()) {
+                    const t = yearserie.data[currdateindex].datetimeLocal;
+                    while (currindex < tbl.length && tbl[currindex].date < t)
+                        currindex++;
+                    if (currindex < tbl.length) {
+                        if (t.getDate() === tbl[currindex].date.getDate()) {
+                            if (yearserie.data[currdateindex].evening !== undefined && yearserie.data[currdateindex].morning !== undefined) {
+                                const value = (yearserie.data[currdateindex].evening + yearserie.data[currdateindex].morning) / 2;
+                                tbl[currindex].value = value;
+                                tbl[currindex].morning = yearserie.data[currdateindex].morning;
+                                tbl[currindex].evening = yearserie.data[currdateindex].evening;
+                                currindex++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+    return tbl;
+}
+exports.createLinearContTableTS = createLinearContTableTS;

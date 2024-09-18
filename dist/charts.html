@@ -418,140 +418,30 @@
                     }
                     return chartdata;
                 },
-                // findMin(dt, serie) {
-                //     let day = dt.getDate();
-                //     let month = dt.getMonth() + 1;
-                //     let value = serie.find(s => day == s.day && month == s.month);
-
-                //     return value.morning.min < value.evening.min ? { value: value.morning.min, date: value.morning.mindate } : { value: value.evening.min, date: value.evening.mindate };
-                // },
-                // findMax(dt, serie) {
-                //     let day = dt.getDate();
-                //     let month = dt.getMonth() + 1;
-                //     let value = serie.find(s => day == s.day && month == s.month);
-
-                //     return value.morning.max > value.evening.max ? { value: value.morning.max, date: value.morning.maxdate } : { value: value.evening.max, date: value.evening.maxdate };
-                // },
                 createLastYearsSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) {
                         return seriedata;
                     }
 
+                    let sums = calculateDailyAveragesTS(series, this.defaultyear);
                     const lastdate = this.getDate(series.data[series.data.length - 1].data[series.data[series.data.length - 1].data.length - 1].date);
                     const firstdate = new Date(lastdate.getFullYear() - 1, lastdate.getMonth(), lastdate.getDate());
                     const readings = getReadingsBetweenTS(firstdate, lastdate, series);
-                
+                    const data = createLastYearsSeriedataTS(readings, sums)
+                    data.forEach(d => {
+                        d.year = lastdate.getFullYear();
+                        d.location = series.data[0].info.location;
+                    })
                     return {
-                        data: createLastYearsSeriedataTS(readings, series, 2024, this.defaultyear),
+                        data: data,
                         params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }], legend: { items: this.monthnames } }
                     };
                 },
-
-                //     let morning = {};
-                //     let evening = {};
-                //     let minimum = {};
-                //     let maximum = {};
-                //     morning.values = readings.map(r => ({
-                //         value: [this.getDate(r.date), r.morning],
-                //         tooltip: `Aamu ${this.getDateTxt(this.getDate(r.date))} ${r.morning}`,
-                //     }));
-                //     morning.location = series.data[0].info.location;
-                //     morning.year = firstdate.getFullYear();
-                //     morning.name = "Aamu";
-                //     evening.values = readings.map(r => ({
-                //         value: [this.getDate(r.date), r.evening],
-                //         tooltip: `Ilta ${this.getDateTxt(this.getDate(r.date))} ${r.evening}`,
-                //     }));
-                //     evening.location = morning.location;
-                //     evening.year = lastdate.getFullYear();
-                //     evening.name = "Ilta";
-
-                //     // add minimum and maximum values to screen data
-                //     let sums = this.calculateDailyAverages(series);
-                //     maximum.values = morning.values.map(r => {
-                //         let value = this.findMax(r.value[0], sums);
-                //         return {
-                //             value: [r.value[0], value.value],
-                //             tooltip: `Maksimi ${this.getDateTxt(this.getDate(value.date))} ${value.value}`,
-                //         }
-                //     });
-                //     maximum.name = 'Maksimi';
-                //     minimum.values = morning.values.map(r => {
-                //         let value = this.findMin(r.value[0], sums);
-                //         return {
-                //             value: [r.value[0], value.value],
-                //             tooltip: `Minimi ${this.getDateTxt(this.getDate(value.date))} ${value.value}`,
-                //         }
-                //     });
-                //     minimum.name = 'Minimi';
-
-                //     seriedata.data = [morning, evening, minimum, maximum];
-
-                //     return seriedata;
-                // },
                 createDailyDiffdata(series) {
-                    let differencies = series.data.map(yearserie => ({
-                        values: yearserie.data.map(s => {
-                            let val = undefined;
-                            let dt = new Date(s.datetimeUtc);
-                            dt = new Date(this.defaultyear, dt.getMonth(), dt.getDate());
-                            if (s.evening !== undefined && s.morning !== undefined) {
-                                val = s.evening - s.morning;
-                            }
-                            return {
-                                value: [dt, val],
-                                tooltip: `${yearserie.info.location} ${new Date(s.datetimeUtc).getDate()}.${new Date(s.datetimeUtc).getMonth() + 1}.${new Date(s.datetimeUtc).getFullYear()} ${val === undefined ? '-' : this.roundNumber(val, 1)}°`,
-                                datetimeUtc: s.datetimeUtc,
-                            }
-                        }),
-                        location: yearserie.info.location,
-                        year: yearserie.info.year,
-                        name: yearserie.info.year.toString(),
-                    }))
+                    let sums = calculateDailyAveragesTS(series, this.defaultyear);
+
                     // create table for daily average calculation
-                    let sums = [];
-                    let dayindex;
-                    let yearindex;
-                    let index;
-                    let value;
-
-                    for (dayindex = 0; dayindex < 366; dayindex++) {
-                        value = { date: new Date(this.defaultyear, 0, dayindex + 1), difference: { sum: 0, count: 0, average: NaN, min: 999999, max: -999999, maxday: null, minday: null }, day: 0, month: 0 };
-                        value.month = value.date.getMonth() + 1;
-                        value.day = value.date.getDate();
-                        sums.push(value);
-                    }
-                    // calculate averages, fin mins and maxsis
-                    let dayreadings;
-                    let dt;
-                    let month;
-                    let day;
-                    for (yearindex = 0; yearindex < differencies.length; yearindex++) {
-                        for (dayindex = 0; dayindex < differencies[yearindex].values.length; dayindex++) {
-                            dayreadings = differencies[yearindex].values[dayindex];
-                            dt = new Date(dayreadings.datetimeUtc);
-                            month = dt.getMonth() + 1;
-                            day = dt.getDate();
-                            let foundsum = sums.find(s => s.day == day && s.month == month);
-                            if (foundsum) {
-                                if (dayreadings.value[1] !== undefined && this.isNumeric(dayreadings.value[1])) {
-                                    foundsum.difference.count += 1;
-                                    foundsum.difference.sum += dayreadings.value[1];
-                                    if (dayreadings.value[1] < foundsum.difference.min) {
-                                        foundsum.difference.min = dayreadings.value[1];
-                                        const tempdate = new Date(dayreadings.datetimeUtc);
-                                        foundsum.difference.minday = new Date(tempdate);
-                                    }
-                                    if (dayreadings.value[1] > foundsum.difference.max) {
-                                        foundsum.difference.max = dayreadings.value[1];
-                                        const tempdate = new Date(dayreadings.datetimeUtc);
-                                        foundsum.difference.maxday = new Date(tempdate);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
+                    //let sums = [];
                     // add average, minimum, maximum curves
                     let averagevalues = sums.map(daydata => {
                         let value = daydata.difference.count > 0 ? daydata.difference.sum / daydata.difference.count : NaN;
@@ -566,12 +456,13 @@
                         year: 0,
                         name: 'Keskiarvo'
                     };
+                    let differencies = [];
                     differencies.push(averages);
                     let maximum = {
                         values: sums.map((daydata, i) => {
                             return {
                                 value: [daydata.date, daydata.difference.max],
-                                tooltip: `Maksimi ${series.data[0].info.location} ${this.getDateTxt(daydata.difference.maxday)} ${this.roundNumber(daydata.difference.max, 1)}°`,
+                                tooltip: `Maksimi ${series.data[0].info.location} ${this.getDateTxt(daydata.difference.maxdate)} ${this.roundNumber(daydata.difference.max, 1)}°`,
                             }
                         }),
                         location: series.data[0].info.location,
@@ -582,7 +473,7 @@
                     let minimum = {
                         values: sums.map(daydata => ({
                             value: [daydata.date, daydata.difference.min],
-                            tooltip: `Minimi ${series.data[0].info.location} ${this.getDateTxt(daydata.difference.minday)} ${this.roundNumber(daydata.difference.min, 1)}°`,
+                            tooltip: `Minimi ${series.data[0].info.location} ${this.getDateTxt(daydata.difference.mindate)} ${this.roundNumber(daydata.difference.min, 1)}°`,
                         })),
                         location: series.data[0].info.location,
                         year: 0,
@@ -625,8 +516,12 @@
                     return !Array.isArray(obj) && (obj - parseFloat(obj) + 1) >= 0;
                 },
                 roundNumber(value, num) {
-                    if (this.isNumeric(value)) return value.toFixed(num);
-                    return 'NaN';
+                    if (this.isNumeric(value)) {
+                        if (typeof value === 'number') return value.toFixed(num);
+                        else return value;
+                    }
+                    if (isNaN(value)) return 'NaN';
+                    return 'kummaa'
                 },
                 calculateTrend(valuearray) {
                     let k = 0;
@@ -688,40 +583,7 @@
 
                     return monthlytrenddata;
                 },
-                // getDailyFilteredMinMax(filteredvalues) {
-                //     let sums = [];
-                //     let dayindex;
-                //     let index;
-                //     let value;
-                //     for (dayindex = 0; dayindex < 366; dayindex++) {
-                //         value = { date: new Date(this.defaultyear, 0, dayindex + 1), total: { min: 999999, max: -999999, mindate: null, maxdate: null }, day: 0, month: 0 };
-                //         value.month = value.date.getMonth() + 1;
-                //         value.day = value.date.getDate();
-                //         sums.push(value);
-                //     }
-                //     for (index = 0; index < sums.length; index++) {
-                //         let i = 0;
-                //         while (i < filteredvalues.length) {
-                //             if (sums[index].date.getDate() == filteredvalues[i].date.getDate() &&
-                //                 sums[index].date.getMonth() == filteredvalues[i].date.getMonth()) {
-                //                 if (!(isNaN(filteredvalues[i].value))) {
-                //                     if (filteredvalues[i].value > sums[index].total.max) {
-                //                         sums[index].total.max = filteredvalues[i].value;
-                //                         sums[index].total.maxdate = filteredvalues[i].date;
-                //                     }
-                //                     if (filteredvalues[i].value < sums[index].total.min) {
-                //                         sums[index].total.min = filteredvalues[i].value;
-                //                         sums[index].total.mindate = filteredvalues[i].date;
-                //                     }
-                //                 }
-                //             }
-                //             i++;
-                //         }
-                //     }
-                //     return sums;
-                // },
                 calculateDailyAverages(series) {
-
                     if (this.calculatedDailyAverages.length > 0) return this.calculatedDailyAverages;
                     let sums = [];
                     let dayindex;
@@ -894,43 +756,8 @@
 
                     return dailyvalues;
                 },
-                createLinearContTable(series) {
-                    let tbl = [];
-                    let year;
-                    for (year = series.data[0].info.year; year <= series.data[series.data.length - 1].info.year; year++) {
-                        let day;
-                        const lastday = year % 4 == 0 ? 366 : 365;
-                        for (day = 1; day <= lastday; day++) tbl.push({ value: NaN, average: NaN, date: new Date(year, 0, day) });
-                    }
-                    let currindex = 0;
-                    series.data.forEach((yearserie, i) => {
-                        let currdateindex;
-                        while (currindex < tbl.length && tbl[currindex].date.getFullYear() < yearserie.info.year) currindex++;
-                        if (currindex < tbl.length) {
-                            for (currdateindex = 0; currdateindex < yearserie.data.length; currdateindex++) {
-                                if (yearserie.info.year === tbl[currindex].date.getFullYear()) {
-                                    const t = yearserie.data[currdateindex].datetimeLocal;
-                                    while (currindex < tbl.length && tbl[currindex].date < t) currindex++;
-                                    if (currindex < tbl.length) {
-                                        if (t.getDate() === tbl[currindex].date.getDate()) {
-                                            if (yearserie.data[currdateindex].evening !== undefined && yearserie.data[currdateindex].morning !== undefined) {
-                                                const value = (yearserie.data[currdateindex].evening + yearserie.data[currdateindex].morning) / 2;
-                                                tbl[currindex].value = value;
-                                                tbl[currindex].morning = yearserie.data[currdateindex].morning;
-                                                tbl[currindex].evening = yearserie.data[currdateindex].evening;
-                                                currindex++;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    })
-                    return tbl;
-                },
                 createAllYearsFilteredSeriedata(series) {
-
-                    const tbl = this.createLinearContTable(series);
+                    const tbl = createLinearContTableTS(series);
                     let valuearray = [];
                     //const filtered = this.filterSeriesTS(tbl, this.readings.filtersize);
                     this.readings.filtered = filterSeriesTS(tbl, this.readings.filtersize);
@@ -993,7 +820,6 @@
                         }
                     }
                     if (loc === null) loc = '';
-
                     let valuearray1 = sums.map(s => ({
                         value: [s.date, s.morning.average],
                         tooltip: `Aamu ${this.getDateTxt(s.date, true)} ${this.roundNumber(s.morning.average, 2)}`,
@@ -1005,6 +831,14 @@
                     let valuearray3 = sums.map(s => ({
                         value: [s.date, s.total.average],
                         tooltip: `Keskiarvo ${this.getDateTxt(s.date, true)} ${this.roundNumber(s.total.average, 2)}`,
+                    }))
+                    let valuearray4 = sums.map(s => ({
+                        value: [s.date, s.total.max],
+                        tooltip: `Korkein ${this.getDateTxt(this.getDate(s.total.maxdate), false)} ${this.roundNumber(s.total.max, 2)}`,
+                    }))
+                    let valuearray5 = sums.map(s => ({
+                        value: [s.date, s.total.min],
+                        tooltip: `Matalin ${this.getDateTxt(this.getDate(s.total.mindate), false)} ${this.roundNumber(s.total.min, 2)}`,
                     }))
                     let returnvalues1 = {
                         values: valuearray1,
@@ -1024,8 +858,20 @@
                         year: 0,
                         name: 'Keskiarvo',
                     }
+                    let returnvalues4 = {
+                        values: valuearray4,
+                        location: loc,
+                        year: 0,
+                        name: 'Korkein',
+                    }
+                    let returnvalues5 = {
+                        values: valuearray5,
+                        location: loc,
+                        year: 0,
+                        name: 'Matalin',
+                    }
                     const seriedata = {
-                        data: [returnvalues1, returnvalues2, returnvalues3],
+                        data: [returnvalues1, returnvalues2, returnvalues3, returnvalues4, returnvalues5],
                         params: null
                     };
                     return seriedata;
