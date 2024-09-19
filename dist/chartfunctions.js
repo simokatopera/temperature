@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createLinearContTableTS = exports.calculateDailyAveragesTS = exports.createDefaultYearTable = exports.createLastYearsSeriedataTS = exports.getDailyFilteredMinMaxTS = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = void 0;
+exports.calculateYearlyEstimatesTS = exports.createLinearContTableTS = exports.calculateDailyAveragesTS = exports.createDefaultYearTable = exports.createLastYearsSeriedataTS = exports.getDailyFilteredMinMaxTS = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = void 0;
 function createHalfFilledFiltered(value, date, first, last) {
     return { index: -1, value: value, morning: NaN, evening: NaN, date: date, firstday: first, lastday: last };
 }
@@ -66,7 +66,7 @@ function formatFilteredTableTS(readings, filtered) {
                     filtered[index].morning = NaN;
                     filtered[index].evening = NaN;
                     dayindex++;
-                    if (dayindex > readings[yearindex].data.length) {
+                    if (dayindex >= readings[yearindex].data.length) {
                         dayindex = 0;
                         yearindex++;
                     }
@@ -352,3 +352,33 @@ function createLinearContTableTS(series) {
     return tbl;
 }
 exports.createLinearContTableTS = createLinearContTableTS;
+function calculateYearlyEstimatesTS(yearindexes, years) {
+    if (yearindexes.length) {
+        let sum = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let count = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        years.forEach(year => {
+            for (let i = 0; i < year.months.length; i++) {
+                if (!isNaN(year.months[i].average)) {
+                    sum[i] += year.months[i].average;
+                    count[i]++;
+                }
+            }
+        });
+        for (let index = 0; index < yearindexes.length; index++) {
+            let msum = 0;
+            let mcount = 0;
+            years[yearindexes[index]].months.forEach((m, monthindex) => {
+                if (isNaN(m.average)) {
+                    mcount++;
+                    msum += count[monthindex] > 0 ? sum[monthindex] / count[monthindex] : 0;
+                }
+                else {
+                    msum += m.average;
+                    mcount++;
+                }
+            });
+            years[yearindexes[index]].yearaverage = mcount > 0 ? msum / mcount : NaN;
+        }
+    }
+}
+exports.calculateYearlyEstimatesTS = calculateYearlyEstimatesTS;

@@ -253,12 +253,14 @@
                             <thead>
                                 <tr>
                                     <th></th><th v-for="month in this.$root.monthnames">{{ month }}</th>
+                                    <th>Koko vuosi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="item in monthlydata">
                                     <td>{{ item.year }}</td> 
                                     <td v-for="m in item.months">{{ isNaN(m.average) ? '-' : this.$root.roundNumber(m.average, 1) }}</td>
+                                    <td>{{this.$root.roundNumber(item.yearaverage, 1)}}</td>
                                 </tr>                                
                             </tbody>
                         </table>
@@ -742,9 +744,9 @@
                     return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
                 },
                 calculateMonthlyAverages(series) {
+                    let i;
                     this.months = series.data.map(yearserie => {
                         let monthtbl = [];
-                        let i;
                         for (i = 0; i < 12; i++) monthtbl.push({ sum: 0, count: 0 });
                         for (i = 0; i < yearserie.data.length; i++) {
                             let month = yearserie.data[i].datetimeLocal.getMonth();
@@ -754,13 +756,32 @@
                                 monthtbl[month].count++;
                             }
                         }
+                        let yearlysum = 0;
+                        let yearlycount = 0;
+                        let monthcount = 0;
+                        for (i = 0; i < monthtbl.length; i++) {
+                            if (monthtbl[i].count > 0) {
+                                monthcount++;
+                                yearlysum += monthtbl[i].sum;
+                                yearlycount += monthtbl[i].count;
+                            }
+                        }
+                        yearlycount++;
                         return {
                             year: yearserie.info.year,
+                            monthcount: monthcount,
+                            yearcount: yearlycount,
+                            yearsum: yearlysum,
                             months: monthtbl.map(m => ({
                                 average: m.count == 0 ? NaN : m.sum / m.count,
                             })),
                         }
                     })
+                    for (i = 0; i < this.months.length; i++) {
+                        this.months[i].yearaverage = this.months[i].monthcount == 12 ? this.months[i].yearsum/this.months[i].yearcount : NaN;
+                    }   
+                    let indexes = this.months.map((y, i) => isNaN(y.yearaverage) ? i : -1).filter(v => v !== -1);
+                    calculateYearlyEstimatesTS(indexes, this.months)     
                 },
                 createAllYearsMonthlyAverageSeriedata(series) {
                     let index;
@@ -798,7 +819,6 @@
                 createAllYearsFilteredSeriedata(series) {
                     const tbl = createLinearContTableTS(series);
                     let valuearray = [];
-                    //const filtered = this.filterSeriesTS(tbl, this.readings.filtersize);
                     this.readings.filtered = filterSeriesTS(tbl, this.readings.filtersize);
                     let curryear = 0;
                     this.readings.filtered.forEach((f, ii) => {
@@ -879,36 +899,11 @@
                         value: [s.date, s.total.min],
                         tooltip: `Matalin ${this.getDateTxt(this.getDate(s.total.mindate), false)} ${this.roundNumber(s.total.min, 2)}`,
                     }))
-                    let returnvalues1 = {
-                        values: valuearray1,
-                        location: loc,
-                        year: 0,
-                        name: 'Aamu',
-                    }
-                    let returnvalues2 = {
-                        values: valuearray2,
-                        location: loc,
-                        year: 0,
-                        name: 'Ilta',
-                    }
-                    let returnvalues3 = {
-                        values: valuearray3,
-                        location: loc,
-                        year: 0,
-                        name: 'Keskiarvo',
-                    }
-                    let returnvalues4 = {
-                        values: valuearray4,
-                        location: loc,
-                        year: 0,
-                        name: 'Korkein',
-                    }
-                    let returnvalues5 = {
-                        values: valuearray5,
-                        location: loc,
-                        year: 0,
-                        name: 'Matalin',
-                    }
+                    let returnvalues1 = { values: valuearray1, location: loc, year: 0, name: 'Aamu'}
+                    let returnvalues2 = { values: valuearray2, location: loc, year: 0, name: 'Ilta'}
+                    let returnvalues3 = { values: valuearray3, location: loc, year: 0, name: 'Keskiarvo' }
+                    let returnvalues4 = { values: valuearray4, location: loc, year: 0, name: 'Korkein' }
+                    let returnvalues5 = { values: valuearray5, location: loc, year: 0, name: 'Matalin' }
                     const seriedata = {
                         data: [returnvalues1, returnvalues2, returnvalues3, returnvalues4, returnvalues5],
                         params: null

@@ -122,7 +122,7 @@ export function formatFilteredTableTS(readings: DbTemperature[], filtered: Filte
                     filtered[index].morning = NaN;
                     filtered[index].evening = NaN;
                     dayindex++;
-                    if (dayindex > readings[yearindex].data.length) {
+                    if (dayindex >= readings[yearindex].data.length) {
                         dayindex = 0;
                         yearindex++;
                     }
@@ -451,4 +451,36 @@ export function createLinearContTableTS(series: TemperatureMsg) {
         }
     })
     return tbl;
+}
+
+export function calculateYearlyEstimatesTS(yearindexes: number[], years: any[]) {
+    if (yearindexes.length) {
+        let sum: number[]=[0,0,0,0,0,0,0,0,0,0,0,0];
+        let count: number[]=[0,0,0,0,0,0,0,0,0,0,0,0];
+        
+        years.forEach(year => {
+            for (let i: number = 0; i < year.months.length; i++) {
+                if (!isNaN(year.months[i].average)) {
+                    sum[i] += year.months[i].average;
+                    count[i]++;
+                }
+            }
+        })
+        for (let index = 0; index < yearindexes.length; index++) {
+            let msum = 0;
+            let mcount = 0;
+            years[yearindexes[index]].months.forEach((m, monthindex) => {
+                if (isNaN(m.average)) {
+                    mcount++;
+                    msum += count[monthindex] > 0 ? sum[monthindex]/count[monthindex] : 0;
+                }
+                else {
+                    msum += m.average;
+                    mcount++;
+                }
+            })
+            years[yearindexes[index]].yearaverage = mcount > 0 ? msum/mcount: NaN;
+        }
+
+    }
 }
