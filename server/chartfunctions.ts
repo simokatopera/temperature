@@ -289,6 +289,15 @@ function findMax(dt: Date, serie: YearCalcValue[]): any {
 //     }
 //     return NaN;
 // }
+
+function roundNumber(value, num) {
+    if (isNumeric(value)) {
+        if (typeof value === 'number') return value.toFixed(num);
+        else return value;
+    }
+    if (isNaN(value)) return 'NaN';
+    return 'kummaa'
+}
 interface GraphChartData {
     value: any[2];
     tooltip: string
@@ -484,7 +493,21 @@ export function createLinearContTableTS(series: TemperatureMsg) {
     return tbl;
 }
 
-export function calculateYearlyEstimatesTS(yearindexes: number[], years: any[]) {
+interface YearlyAverage {
+    monthcount: number;
+    year: number;
+    yearaverage: number;
+    yearsum: number;
+    months: MonthlyAverage[];
+    estimate: boolean;
+}
+export function createYearlyAverage(year: number, monthcount: number, yearsum: number, yearaverage: number, months: MonthlyAverage[]): YearlyAverage {
+    return {year: year, monthcount: monthcount, yearsum: yearsum, yearaverage: yearaverage, months: months, estimate: false}
+}
+interface MonthlyAverage {
+    average: number;
+}
+export function calculateYearlyEstimatesTS(yearindexes: number[], years: YearlyAverage[]) {
     if (yearindexes.length) {
         let sum: number[]=[0,0,0,0,0,0,0,0,0,0,0,0];
         let count: number[]=[0,0,0,0,0,0,0,0,0,0,0,0];
@@ -501,18 +524,145 @@ export function calculateYearlyEstimatesTS(yearindexes: number[], years: any[]) 
             let msum = 0;
             let mcount = 0;
             years[yearindexes[index]].months.forEach((m, monthindex) => {
+                mcount++;
                 if (isNaN(m.average)) {
-                    mcount++;
                     msum += count[monthindex] > 0 ? sum[monthindex]/count[monthindex] : 0;
                 }
                 else {
                     msum += m.average;
-                    mcount++;
                 }
             })
             years[yearindexes[index]].yearaverage = mcount > 0 ? msum/mcount: NaN;
             years[yearindexes[index]].estimate = true;
         }
-
     }
 }
+
+export function calculateMonthlyAveragesTS(series: TemperatureMsg): YearlyAverage[] {
+    let months = series.data.map(yearserie => {
+        let monthtbl = [];
+        for (let i = 0; i < 12; i++) monthtbl.push({ morningsum: 0, morningcount: 0, eveningsum: 0, eveningcount: 0, count: 0, average: NaN});
+        for (let i = 0; i < yearserie.data.length; i++) {
+            let month = yearserie.data[i].datetimeLocal.getMonth();
+            if (!isNaN(yearserie.data[i].morning) && yearserie.data[i].morning !== undefined) {
+                monthtbl[month].morningsum += yearserie.data[i].morning;
+                monthtbl[month].morningcount++;
+            }
+            if (!isNaN(yearserie.data[i].evening) && yearserie.data[i].evening !== undefined) {
+                monthtbl[month].eveningsum += yearserie.data[i].evening;
+                monthtbl[month].eveningcount++;
+            }
+        }
+        let yearlysum = 0;
+        let monthcount = 0;
+        for (let i = 0; i < monthtbl.length; i++) {
+            if (monthtbl[i].morningcount > 0 || monthtbl[i].eveningcount > 0) {
+                monthcount++;
+                let morning = monthtbl[i].morningsum/ (monthtbl[i].morningcount > 0 ? monthtbl[i].morningcount : 1)
+                let evening = monthtbl[i].eveningsum/ (monthtbl[i].eveningcount > 0 ? monthtbl[i].eveningcount : 1);
+                yearlysum += (morning + evening) / 2;
+                monthtbl[i].average = (morning + evening)/2;
+                monthtbl[i].count += monthtbl[i].eveningcount + monthtbl[i].morningcount;
+            }
+        }
+        let data = createYearlyAverage(yearserie.info.year, monthcount, yearlysum, monthcount == 12 ? yearlysum/monthcount : NaN, 
+                        monthtbl.map(m => ({average: m.average})));
+        return data;
+    })
+    calculateYearlyEstimatesTS(months.map((y, i) => isNaN(y.yearaverage) ? i : -1).filter(v => v !== -1), months);
+
+    return months;
+}
+
+export function getDiffCurveDataTS(sums, lastyear, lastcurve) {
+    let curves = [];
+    curves.push({name: 'Keskiarvo', showyear: false,
+        data: sums.map(daydata => ({value: daydata.difference.count > 0 ? daydata.difference.sum / daydata.difference.count : NaN, date1: daydata.date, date2: daydata.date}))})
+
+    curves.push({name: 'Maksimi',  showyear: true,
+        data: sums.map(daydata => ({value: daydata.difference.max, date1: daydata.date, date2: daydata.difference.maxdate}))});
+
+    curves.push({name: 'Minimi',  showyear: true,
+        data: sums.map(daydata => ({value: daydata.difference.min, date1: daydata.date, date2: daydata.difference.mindate}))});
+
+    // use average value when showing single year
+    curves.push({name: lastyear, showyear: true, 
+        data: lastcurve.map(daydata => ({value: daydata.difference.average, date1: daydata.date, date2: daydata.difference.mindate}))});
+
+    return curves;
+}
+// export function calculateDailyAverages(series) {
+//     if (this.calculatedDailyAverages.length > 0) return this.calculatedDailyAverages;
+//     let sums = createSumTableTS(this.defaultyear);
+//     let dayindex;
+//     let yearindex;
+//     let currentday;
+//     let currentdate;
+//     let month;
+//     let day;
+//     for (yearindex = 0; yearindex < series.data.length; yearindex++) {
+//         for (dayindex = 0; dayindex < series.data[yearindex].data.length; dayindex++) {
+//             currentday = series.data[yearindex].data[dayindex];
+//             currentdate = new Date(currentday.datetimeUtc);
+//             month = currentdate.getMonth() + 1;
+//             day = currentdate.getDate();
+//             let daytoupdate = sums.find(s => s.day == day && s.month == month);
+//             if (daytoupdate) {
+//                 //kkk
+//                 if (currentday.morning !== undefined && this.isNumeric(currentday.morning)) {
+//                     daytoupdate.morning.count += 1;
+//                     daytoupdate.morning.sum += currentday.morning;
+//                     daytoupdate.total.count += 1;
+//                     daytoupdate.total.sum += currentday.morning;
+//                     if (currentday.morning < daytoupdate.morning.min) {
+//                         daytoupdate.morning.min = currentday.morning;
+//                         daytoupdate.morning.mindate = currentday.date;
+//                     }
+//                     if (currentday.morning > daytoupdate.morning.max) {
+//                         daytoupdate.morning.max = currentday.morning;
+//                         daytoupdate.morning.maxdate = currentday.date;
+//                     }
+//                 }
+//                 if (currentday.evening !== undefined && this.isNumeric(currentday.evening)) {
+//                     daytoupdate.evening.count += 1;
+//                     daytoupdate.evening.sum += currentday.evening;
+//                     daytoupdate.total.count += 1;
+//                     daytoupdate.total.sum += currentday.evening;
+//                     if (currentday.evening < daytoupdate.evening.min) {
+//                         daytoupdate.evening.min = currentday.evening;
+//                         daytoupdate.evening.mindate = currentday.date;
+//                     }
+//                     if (currentday.evening > daytoupdate.evening.max) {
+//                         daytoupdate.evening.max = currentday.evening;
+//                         daytoupdate.evening.maxdate = currentday.date;
+//                     }
+//                 }
+//                 if (currentday.evening !== undefined && this.isNumeric(currentday.evening) &&
+//                     currentday.morning !== undefined && this.isNumeric(currentday.morning)) {
+//                     let value = (currentday.morning + currentday.evening) / 2;
+//                     if (value < daytoupdate.total.min) {
+//                         daytoupdate.total.min = value;
+//                         daytoupdate.total.mindate = currentday.date;
+//                     }
+//                     if (value > daytoupdate.total.max) {
+//                         daytoupdate.total.max = value;
+//                         daytoupdate.total.maxdate = currentday.date;
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     for (dayindex = 0; dayindex < sums.length; dayindex++) {
+//         if (sums[dayindex].morning.count > 0) {
+//             sums[dayindex].morning.average = sums[dayindex].morning.sum / sums[dayindex].morning.count;
+//         }
+//         if (sums[dayindex].evening.count > 0) {
+//             sums[dayindex].evening.average = sums[dayindex].evening.sum / sums[dayindex].evening.count;
+//         }
+//         if (sums[dayindex].total.count > 0) {
+//             sums[dayindex].total.average = sums[dayindex].total.sum / sums[dayindex].total.count;
+//         }
+//     }
+//     this.calculatedDailyAverages = sums;
+//     return sums;
+// }
