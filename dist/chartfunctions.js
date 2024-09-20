@@ -1,13 +1,38 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateYearlyEstimatesTS = exports.createLinearContTableTS = exports.calculateDailyAveragesTS = exports.createDefaultYearTable = exports.createLastYearsSeriedataTS = exports.getDailyFilteredMinMaxTS = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = void 0;
+exports.calculateYearlyEstimatesTS = exports.createLinearContTableTS = exports.calculateDailyAveragesTS = exports.createLastYearsSeriedataTS = exports.getDailyFilteredMinMaxTS = exports.createSumTableTS = exports.createDefaultYearTable = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = void 0;
+const TempMinDefaultValue = 99999;
+const TempMaxDefaultValue = -99999;
 function createHalfFilledFiltered(value, date, first, last) {
     return { index: -1, value: value, morning: NaN, evening: NaN, date: date, firstday: first, lastday: last };
 }
+function createMinMaxCalcValue() {
+    return { sum: 0, count: 0, average: NaN, min: 999999, max: -999999, mindate: null, maxdate: null };
+}
+function createYearCalcValue(date, day, month) {
+    return {
+        date: date,
+        morning: createMinMaxCalcValue(),
+        evening: createMinMaxCalcValue(),
+        difference: createMinMaxCalcValue(),
+        day: day, month: month
+    };
+}
+function createFilteredCalc(date) {
+    return { date: date, day: date.getDate(), month: date.getMonth() + 1, total: createFilteredSum(), morning: createFilteredSum(), evening: createFilteredSum() };
+}
 function createFilteredSum() {
-    return { min: 999999, max: -999999, mindate: null, maxdate: null };
+    return { min: 999999, max: -999999, mindate: null, maxdate: null, sum: 0, count: 0, average: NaN };
 }
 let dailyAveragesCalculated = null;
+function getTempMinDefaultValue() {
+    return TempMinDefaultValue;
+}
+exports.getTempMinDefaultValue = getTempMinDefaultValue;
+function getTempMaxDefaultValue() {
+    return TempMaxDefaultValue;
+}
+exports.getTempMaxDefaultValue = getTempMaxDefaultValue;
 function filterSeriesTS(serie, filterlength) {
     let firstindex = 0;
     let lastindex = 0;
@@ -36,6 +61,16 @@ function filterSeriesTS(serie, filterlength) {
     return filtered;
 }
 exports.filterSeriesTS = filterSeriesTS;
+function increaseDayIndex(dayindex, yearindex, maxlen) {
+    dayindex++;
+    if (dayindex >= maxlen) {
+        dayindex = 0;
+        yearindex++;
+    }
+    let a = dayindex;
+    let b = yearindex;
+    return { a, b };
+}
 function formatFilteredTableTS(readings, filtered) {
     let index;
     let dayindex = 0;
@@ -55,21 +90,17 @@ function formatFilteredTableTS(readings, filtered) {
             if (y1 == y2 && m1 == m2 && d1 == d2) {
                 filtered[index].morning = readings[yearindex].data[dayindex].morning;
                 filtered[index].evening = readings[yearindex].data[dayindex].evening;
-                dayindex++;
-                if (dayindex >= readings[yearindex].data.length) {
-                    dayindex = 0;
-                    yearindex++;
-                }
+                let { a, b } = increaseDayIndex(dayindex, yearindex, readings[yearindex].data.length);
+                dayindex = a;
+                yearindex = b;
             }
             else {
                 while (yearindex < readings.length && dayindex < readings[yearindex].data.length) {
                     filtered[index].morning = NaN;
                     filtered[index].evening = NaN;
-                    dayindex++;
-                    if (dayindex >= readings[yearindex].data.length) {
-                        dayindex = 0;
-                        yearindex++;
-                    }
+                    let { a, b } = increaseDayIndex(dayindex, yearindex, readings[yearindex].data.length);
+                    dayindex = a;
+                    yearindex = b;
                 }
             }
         }
@@ -119,17 +150,27 @@ function getReadingsBetweenTS(startdate, enddate, series) {
     return readings;
 }
 exports.getReadingsBetweenTS = getReadingsBetweenTS;
-function getDailyFilteredMinMaxTS(filteredvalues, defaultyear) {
+function createDefaultYearTable(defaultyear) {
     let sums = [];
-    let dayindex;
-    let index;
-    let value;
-    for (dayindex = 0; dayindex < 366; dayindex++) {
-        value = { date: new Date(defaultyear, 0, dayindex + 1), total: createFilteredSum(), day: 0, month: 0 };
-        value.month = value.date.getMonth() + 1;
-        value.day = value.date.getDate();
-        sums.push(value);
+    for (let dayindex = 0; dayindex < 366; dayindex++) {
+        let newdate = new Date(defaultyear, 0, dayindex + 1);
+        sums.push(createYearCalcValue(newdate, newdate.getDate(), newdate.getMonth() + 1));
     }
+    return sums;
+}
+exports.createDefaultYearTable = createDefaultYearTable;
+function createSumTableTS(defaultyear) {
+    let sums = [];
+    for (let dayindex = 0; dayindex < 366; dayindex++) {
+        let newdate = new Date(defaultyear, 0, dayindex + 1);
+        sums.push(createFilteredCalc(newdate));
+    }
+    return sums;
+}
+exports.createSumTableTS = createSumTableTS;
+function getDailyFilteredMinMaxTS(filteredvalues, defaultyear) {
+    let sums = createSumTableTS(defaultyear);
+    let index;
     for (index = 0; index < sums.length; index++) {
         let i = 0;
         while (i < filteredvalues.length) {
@@ -225,34 +266,20 @@ function createLastYearsSeriedataTS(readings, sums) {
     return data;
 }
 exports.createLastYearsSeriedataTS = createLastYearsSeriedataTS;
-function createYearCalcValue(date) {
-    return {
-        date: date,
-        morning: createMinMaxCalc(),
-        evening: createMinMaxCalc(),
-        difference: createMinMaxCalc(),
-        day: 0, month: 0
-    };
-}
-function createMinMaxCalc() {
-    return { sum: 0, count: 0, average: NaN, min: 999999, max: -999999, mindate: null, maxdate: null };
-}
-function createDefaultYearTable(defaultyear) {
-    let sums = [];
-    for (let dayindex = 0; dayindex < 366; dayindex++) {
-        let value = createYearCalcValue(new Date(defaultyear, 0, dayindex + 1));
-        value.month = value.date.getMonth() + 1;
-        value.day = value.date.getDate();
-        sums.push(value);
-    }
-    return sums;
-}
-exports.createDefaultYearTable = createDefaultYearTable;
-function calculateDailyAveragesTS(series, defaultyear) {
-    if (dailyAveragesCalculated)
-        return dailyAveragesCalculated;
+function calculateDailyAveragesTS(series, defaultyear, year = null) {
+    if (dailyAveragesCalculated && dailyAveragesCalculated.year == year)
+        return dailyAveragesCalculated.data;
     let sums = createDefaultYearTable(defaultyear);
-    for (let yearindex = 0; yearindex < series.data.length; yearindex++) {
+    let firstindex = 0;
+    let lastindex = series.data.length;
+    if (year) {
+        let i = 0;
+        while (i < series.data.length && series.data[i].info.year != year)
+            i++;
+        firstindex = i;
+        lastindex = firstindex + 1;
+    }
+    for (let yearindex = firstindex; yearindex < lastindex; yearindex++) {
         for (let dayindex = 0; dayindex < series.data[yearindex].data.length; dayindex++) {
             const dayreadings = series.data[yearindex].data[dayindex];
             const dt = new Date(dayreadings.datetimeUtc);
@@ -286,7 +313,7 @@ function calculateDailyAveragesTS(series, defaultyear) {
                 }
                 if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening) &&
                     dayreadings.morning !== undefined && isNumeric(dayreadings.morning)) {
-                    let value = (dayreadings.morning + dayreadings.evening) / 2;
+                    let value = dayreadings.evening - dayreadings.morning;
                     foundsum.difference.count++;
                     foundsum.difference.sum += value;
                     if (value < foundsum.difference.min) {
@@ -303,14 +330,17 @@ function calculateDailyAveragesTS(series, defaultyear) {
     }
     for (let dayindex = 0; dayindex < sums.length; dayindex++) {
         if (sums[dayindex].morning.count > 0) {
-            sums[dayindex].morning.average = sums[dayindex].morning.sum / sums[dayindex].morning.count;
+            sums[dayindex].morning.average = sums[dayindex].morning.sum / (sums[dayindex].morning.count > 0 ? sums[dayindex].morning.count : 1);
         }
         if (sums[dayindex].evening.count > 0) {
-            sums[dayindex].evening.average = sums[dayindex].evening.sum / sums[dayindex].evening.count;
+            sums[dayindex].evening.average = sums[dayindex].evening.sum / (sums[dayindex].evening.count > 0 ? sums[dayindex].evening.count : 1);
+        }
+        if (sums[dayindex].difference.count > 0) {
+            sums[dayindex].difference.average = sums[dayindex].difference.sum / (sums[dayindex].difference.count > 0 ? sums[dayindex].difference.count : 1);
         }
     }
     if (!dailyAveragesCalculated)
-        dailyAveragesCalculated = sums;
+        dailyAveragesCalculated = { data: sums, year: year };
     return sums;
 }
 exports.calculateDailyAveragesTS = calculateDailyAveragesTS;
@@ -378,6 +408,7 @@ function calculateYearlyEstimatesTS(yearindexes, years) {
                 }
             });
             years[yearindexes[index]].yearaverage = mcount > 0 ? msum / mcount : NaN;
+            years[yearindexes[index]].estimate = true;
         }
     }
 }
