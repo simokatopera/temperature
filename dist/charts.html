@@ -103,8 +103,9 @@
                     testgraph10: 'GraphLocation10',
                     testgraph11: 'GraphLocation11',
                     trendtitles: [],
-                    calculatedMonthlytrends: [],
+                    //calculatedMonthlytrends: [],
                     calculatedDailyAverages: [],
+                    //allYearsAverageSeriedata: {data: []},
                     defaultyear: 1976,
                     months: [],
                     readings: { values: [], filtered: [], filtersize: 10 },
@@ -129,7 +130,7 @@
                 this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, this.createMonthlySpringTrendSeriedata);
                 this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
 
-                this.calculateMonthlyAverages(temperatures);
+                this.months = this.calculateMonthlyAverages(temperatures);
                 formatFilteredTableTS(temperatures.data, this.readings.filtered);
             },
             components: {
@@ -535,53 +536,9 @@
 
                     return { k, b }
                 },
-                calculateMonthlyTrends(series) {
-                    if (this.calculatedMonthlytrends.length > 0) return this.calculatedMonthlytrends;
-
-                    let i;
-                    let monthlyaverages = [];
-                    series.data.map((year, yearindex) => {
-                        monthlyaverages.push({ year: year.info.year, data: [] });
-                        for (i = 0; i < 12; i++) {
-                            monthlyaverages[yearindex].data.push({ morningsum: 0, morningcount: 0, eveningsum: 0, eveningcount: 0, month: i + 1 });
-                        }
-                        year.data.map(tempdata => {
-                            let monthindex = this.getDate(tempdata.date).getMonth();
-                            if (tempdata.morning !== undefined) {
-                                monthlyaverages[yearindex].data[monthindex].morningcount++;
-                                monthlyaverages[yearindex].data[monthindex].morningsum += tempdata.morning;
-                            }
-                            if (tempdata.evening !== undefined) {
-                                monthlyaverages[yearindex].data[monthindex].eveningcount++;
-                                monthlyaverages[yearindex].data[monthindex].eveningsum += tempdata.evening;
-                            }
-                        })
-                    });
-                    //kkk
-                    monthlyaverages.forEach(m => {
-                        m.data.forEach((d, i) => {
-                            d.average = (d.morningsum / (d.morningcount > 0 ? d.morningcount : 1) + (d.eveningsum / (d.eveningcount > 0 ? d.eveningcount : 1))) / 2;
-                        })
-                    })
-
-                    let monthlytrenddata = [];
-                    let monthindex;
-                    for (monthindex = 0; monthindex < 12; monthindex++) {
-                        monthlytrenddata.push({ month: monthindex + 1, data: [] });
-                        let monthlyvalues = monthlyaverages.map((year, index) => {
-                            if (year.data[monthindex].eveningcount > 0 || year.data[monthindex].morningcount > 0) {
-                                let value = (year.data[monthindex].eveningsum + year.data[monthindex].morningsum) / (year.data[monthindex].eveningcount + year.data[monthindex].morningcount);
-                                monthlytrenddata[monthindex].data.push({ year: year.year, month: monthindex + 1, value: value });
-                            }
-                        })
-                    }
-                    this.calculatedMonthlytrends = monthlytrenddata;
-
-                    return monthlytrenddata;
-                },
                 createYearlyTrendSeriedata(series) {
                     let yearsums = [];
-                    let monthlytrenddata = this.calculateMonthlyTrends(series);
+                    let monthlytrenddata = calculateMonthlyTrendsTS(series);
                     monthlytrenddata.forEach(month => {
                         month.data.forEach((m, i) => {
                             if (!yearsums[m.year]) yearsums[m.year] = {year: m.year, sum: 0, count: 0};
@@ -613,15 +570,13 @@
                     return { data: [yearlyvalues, trendvalues], params: { rangeoffset: 1, showlegend: true} };
                 },
                 getSeasonTrends(series, monthnumbers, monthnames) {
-                    let monthlytrenddata = this.calculateMonthlyTrends(series);
-
+                    let monthlytrenddata = calculateMonthlyTrendsTS(series);
                     let datavalues = [];
-                    let v = monthlytrenddata.map(month => {
+                    monthlytrenddata.forEach(month => {
                         if (month.month == monthnumbers[0] || month.month == monthnumbers[1] || month.month == monthnumbers[2]) {
-                            let values = [];
-                            let t = month.data.map(value => {
-                                values.push({ value: [new Date(value.year, 0, 1), this.roundNumber(value.value, 2)], tooltip: `${value.year} ${value.month} ${this.roundNumber(value.value, 2)}` });
-                            });
+                            let values = month.data.map(value => (
+                                { value: [new Date(value.year, 0, 1), this.roundNumber(value.value, 2)], tooltip: `${value.year} ${value.month} ${this.roundNumber(value.value, 2)}` }
+                            ));
                             datavalues.push({ values: values, location: series.data[0].info.location, year: 0, name: monthnames[datavalues.length] });
                         }
                     });
@@ -650,40 +605,49 @@
                     return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
                 },
                 calculateMonthlyAverages(series) {
-                    this.months = calculateMonthlyAveragesTS(series);
+                    return calculateMonthlyAveragesTS(series);
                 },
                 createAllYearsMonthlyAverageSeriedata(series) {
                     let index;
-                    let months = [];
-                    let dailyvalues = this.createAllYearsAverageSeriedata(series);
-                    // calculate monthly averages
-                    dailyvalues.data.forEach((yeardata, ind) => {
-                        let tempvalue;
-                        let month;
-                        months.push([]);
-                        for (index = 0; index < 12; index++) months[ind].push({ sum: 0, count: 0, average: NaN });
-                        yeardata.values.forEach(dailyValues => {
-                            month = dailyValues.value[0].getMonth();
-                            tempvalue = dailyValues.value[1];
-                            if (tempvalue) {
-                                months[ind][month].count++;
-                                months[ind][month].sum += tempvalue;
-                            }
+                    let months = [];                   
+                    let monthly = calculateMonthlyAveragesTS(series);
+                    // find highest and lowest months
+                    let monthhighest = [];
+                    let monthlowest = [];
+                    for (index = 0; index < 12; index++) {
+                        monthhighest.push({value: -9999, year: 0, month: 0, date: 0});
+                        monthlowest.push({value: 9999, year: 0, month: 0, date: 0})
+                    }
+                    monthly.forEach(year => {
+                        year.months.forEach((m, i) => {
+                            if (m.average > monthhighest[i].value){monthhighest[i].value = m.average, monthhighest[i].year = year.year, monthhighest[i].month = i};
+                            if (m.average < monthlowest[i].value) {monthlowest[i].value = m.average, monthlowest[i].year = year.year, monthlowest[i].month = i};
                         })
-                        months[ind].forEach(m => { if (m.count > 0) m.average = m.sum / m.count; })
                     })
-                    dailyvalues.data.forEach((monthdata, datasetindex) => {
-                        let newvalues = [];
-                        let y = monthdata.values[0].value[0].getFullYear();
-                        let monthindex;
-                        for (monthindex = 0; monthindex < months[datasetindex].length; monthindex++) {
-                            let newdate = new Date(y, monthindex, 1);
-                            newvalues.push({ tooltip: `${monthdata.name}  ${this.roundNumber(months[datasetindex][monthindex].average, 2)}`, value: [newdate, months[datasetindex][monthindex].average] });
-                        }
-                        monthdata.values = newvalues;
-                    })
+                    let valueshigh = monthhighest.map(high => ({
+                        value: [new Date(this.defaultyear, high.month, 1), high.value], 
+                        tooltip: `Korkein ${getDateTxt(new Date(high.year, high.month, 1))} ${roundNumber(high.value, 1)}`
+                    }))
 
-                    return dailyvalues;
+                    let valueslow = monthlowest.map(low => ({
+                        value: [new Date(this.defaultyear, low.month, 1), low.value], 
+                        tooltip: `Matalin ${getDateTxt(new Date(low.year, low.month, 1))} ${roundNumber(low.value, 1)}`
+                    }))
+                    let valuesthisyear = [];
+                    if (monthly[monthly.length-1].year == new Date().getFullYear()) {
+                        valuesthisyear = monthly[monthly.length-1].months.map((m, i) => ({
+                            value: [new Date(this.defaultyear, i, 1), m.average], 
+                            tooltip: `Matalin ${getDateTxt(new Date(monthly[monthly.length-1].year, i, 1))} ${roundNumber(m.average, 1)}`
+                        }));
+                    }
+                    let datavalues = [];
+                    datavalues.push({values: valueshigh, name: 'Korkein', location: series.data[0].info.location, year: 0})
+                    datavalues.push({values: valueslow, name: 'Matalin', location: series.data[0].info.location, year: 0})
+                    datavalues.push({values: valuesthisyear, name: monthly[monthly.length-1].year.toString, location: series.data[0].info.location, year: 0})
+
+                    let returnvalue = {data: datavalues, params: null};
+
+                    return returnvalue;
                 },
                 createAllYearsFilteredSeriedata(series) {
                     const tbl = createLinearContTableTS(series);
@@ -737,6 +701,7 @@
                     return seriedata;
                 },
                 createAllYearsAverageSeriedata(series) {
+                    //if (this.allYearsAverageSeriedata.data.length) return this.allYearsAverageSeriedata;
                     let dayindex, index;
                     let sums = calculateDailyAveragesTS(series, this.defaultyear);
                     let loc = null;
@@ -776,6 +741,7 @@
                         data: [returnvalues1, returnvalues2, returnvalues3, returnvalues4, returnvalues5],
                         params: null
                     };
+                    //this.allYearsAverageSeriedata = seriedata;
                     return seriedata;
                 },
                 getSelection(seriedata, selectedseries) {
