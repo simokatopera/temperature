@@ -29,20 +29,6 @@ interface Filtered {
 function createHalfFilledFiltered(value: number, morning: number, evening: number, date: Date, first: Date, last: Date, diffvalue: number, datetimeUtc: Date, datetimeLocal: Date): Filtered {
     return {index: -1, morning: morning, evening: evening,value: value, date: date, firstday: first, lastday: last, diffvalue: diffvalue, datetimeUtc: datetimeUtc, datetimeLocal: datetimeLocal}
 }
-interface Temperature {
-    date: Date;
-    value: number;
-    average: number;
-    difference: number;
-    diffaverage: number;
-    morning: number;
-    evening: number;
-    datetimeLocal: Date;
-    datetimeUtc: Date;
-}
-function createTemperature(date: Date, value: number, morning: number, evening: number, average: number, difference: number, diffaverage: number, datetimeLocal: Date, datetimeUtc: Date): Temperature {
-    return {date: date, value: value, morning: morning, evening: evening, average: average, difference: difference, diffaverage: diffaverage, datetimeLocal: datetimeLocal, datetimeUtc: datetimeUtc}
-}
 interface TemperatureMsg {
     data: DbTemperature[];
     statusCode: number;
@@ -55,9 +41,6 @@ interface DbTemperature {
     data: DbData[];
     info: Info;
 }
-// export function addDbTemperature(info): DbTemperature {
-//     return { data: [], info: {}}
-// }
 interface Info {
     location: string;
     year: number;
@@ -84,6 +67,7 @@ interface YearCalcValue {
     evening: MinMaxCalc;
     difference: MinMaxCalc;
     total: MinMaxCalc;
+    dayindex: number;
 }
 interface MinMaxCalc {
     sum: number;
@@ -98,14 +82,15 @@ function createMinMaxCalcValue(): MinMaxCalc {
     return {sum: 0, count: 0, average: NaN, min: 999999, max: -999999, mindate: null, maxdate: null}
 }
 
-function createYearCalcValue(date: Date): YearCalcValue {
+function createYearCalcValue(date: Date, dayindex: number): YearCalcValue {
     return { 
         date: date,
         morning: createMinMaxCalcValue(), 
         evening: createMinMaxCalcValue(), 
         difference: createMinMaxCalcValue(), 
         total: createMinMaxCalcValue(), 
-        day: date.getDate(), month: date.getMonth() + 1
+        day: date.getDate(), month: date.getMonth() + 1,
+        dayindex: dayindex,
     };
 }
 
@@ -117,7 +102,7 @@ export function getTempMinDefaultValue() {
 export function getTempMaxDefaultValue() {
     return TempMaxDefaultValue;
 }
-export function filterSeriesTS(serie: Temperature[], filterlength: number): Filtered[] {
+export function filterSeriesTS(serie: TemperatureValue[], filterlength: number): Filtered[] {
     let firstindex: number = 0;
     let lastindex: number = 0;
     let negoffset: number = filterlength % 2 ? -filterlength / 2 + 0.5 : -filterlength / 2;
@@ -145,7 +130,7 @@ export function filterSeriesTS(serie: Temperature[], filterlength: number): Filt
     return filtered;
 }
 
-function increaseDayIndex(dayindex: number, yearindex: number, maxlen: number) {
+function increaseDayIndex(dayindex: number, yearindex: number, maxlen: number): {a: number, b: number} {
     dayindex++;
     if (dayindex >= maxlen) {
         dayindex = 0;
@@ -236,7 +221,7 @@ export function createDefaultYearTable(defaultyear: number): YearCalcValue [] {
     let sums: YearCalcValue[] = [];
     for (let dayindex = 0; dayindex < 366; dayindex++) {
         let newdate: Date = new Date(defaultyear, 0, dayindex + 1);
-        sums.push(createYearCalcValue(newdate));
+        sums.push(createYearCalcValue(newdate, dayindex));
     }
     return sums;
 }
@@ -244,40 +229,40 @@ export function createSumTableTS(defaultyear: number): YearCalcValue[] {
     let sums: YearCalcValue[] = [];
     for (let dayindex: number = 0; dayindex < 366; dayindex++) {
         let newdate: Date = new Date(defaultyear, 0, dayindex + 1);
-        sums.push(createYearCalcValue(newdate));
+        sums.push(createYearCalcValue(newdate, dayindex));
     }
     return sums;
 }
 
 export function getDailyFilteredMinMaxTS(filteredvalues: Filtered[], defaultyear: number): YearCalcValue[] {
     let sums = createSumTableTS(defaultyear);
-    for (let index = 0; index < sums.length; index++) {
-        for (let i = 0; i < filteredvalues.length; i++) {
-            if (sums[index].date.getDate() == filteredvalues[i].date.getDate() &&
-                sums[index].date.getMonth() == filteredvalues[i].date.getMonth()) {
-                if (!(isNaN(filteredvalues[i].value))) {
-                    if (filteredvalues[i].value > sums[index].total.max) {
-                        sums[index].total.max = filteredvalues[i].value;
-                        sums[index].total.maxdate = filteredvalues[i].date;
+    sums.forEach((s) => {
+        filteredvalues.forEach((f) => {
+            if (s.date.getDate() == f.date.getDate() &&
+                s.date.getMonth() == f.date.getMonth()) {
+                if (!(isNaN(f.value))) {
+                    if (f.value > s.total.max) {
+                        s.total.max = f.value;
+                        s.total.maxdate = f.date;
                     }
-                    if (filteredvalues[i].value < sums[index].total.min) {
-                        sums[index].total.min = filteredvalues[i].value;
-                        sums[index].total.mindate = filteredvalues[i].date;
+                    if (f.value < s.total.min) {
+                        s.total.min = f.value;
+                        s.total.mindate = f.date;
                     }
                 }
-                if (!(isNaN(filteredvalues[i].diffvalue))) {
-                    if (filteredvalues[i].diffvalue > sums[index].difference.max) {
-                        sums[index].difference.max = filteredvalues[i].diffvalue;
-                        sums[index].difference.maxdate = filteredvalues[i].date;
+                if (!(isNaN(f.diffvalue))) {
+                    if (f.diffvalue > s.difference.max) {
+                        s.difference.max = f.diffvalue;
+                        s.difference.maxdate = f.date;
                     }
-                    if (filteredvalues[i].diffvalue < sums[index].difference.min) {
-                        sums[index].difference.min = filteredvalues[i].diffvalue;
-                        sums[index].difference.mindate = filteredvalues[i].date;
+                    if (f.diffvalue < s.difference.min) {
+                        s.difference.min = f.diffvalue;
+                        s.difference.mindate = f.date;
                     }
                 }
             }
-        }
-    }
+        })
+    })    
     return sums;
 }
 interface ValueDatePair {
@@ -320,8 +305,11 @@ interface GraphSerie {
     year: number;
     values: GraphChartData[];
 }
-function createGraphSerie(): GraphSerie {
+function createGraphSerieEmpty(): GraphSerie {
     return {name: '', location: '', year: 0, values: []}
+}
+export function createGraphSerie(name: string, location: string, year: number, values: GraphChartData[]): GraphSerie {
+    return {name: name, location: location, year: year, values: values}
 }
 
 function getDateTxt(date: Date | number): string {
@@ -342,10 +330,10 @@ function isNumeric(obj: any): boolean {
 
 export function createLastYearsSeriedataTS(readings: DbData[], sums: YearCalcValue[]): GraphSerie[] {
     let data: GraphSerie[] = [];
-    let morning: GraphSerie = createGraphSerie();
-    let evening: GraphSerie = createGraphSerie();
-    let minimum: GraphSerie = createGraphSerie();
-    let maximum: GraphSerie = createGraphSerie();
+    let morning: GraphSerie = createGraphSerieEmpty();
+    let evening: GraphSerie = createGraphSerieEmpty();
+    let minimum: GraphSerie = createGraphSerieEmpty();
+    let maximum: GraphSerie = createGraphSerieEmpty();
     morning.values = readings.map((r: DbData) => ({
         value: createValue(r.datetimeLocal, r.morning),
         tooltip: `Aamu ${getDateTxt(r.datetimeLocal)} ${r.morning}`,
@@ -396,31 +384,40 @@ export function calculateDailyAveragesTS(series: TemperatureMsg, defaultyear: nu
         lastindex = firstindex + 1;
     }
     for (let yearindex: number = firstindex; yearindex < lastindex; yearindex++) {
+        let sumindex = 0;
         for (let dayindex: number = 0; dayindex < series.data[yearindex].data.length; dayindex++) {
             const dayreadings: DbData = series.data[yearindex].data[dayindex];
-            const dt: Date = new Date(dayreadings.datetimeUtc);
+            const dt: Date = new Date(dayreadings.datetimeLocal);
             const month = dt.getMonth() + 1;
             const day = dt.getDate();
-            const foundsum = sums.find(s => s.day == day && s.month == month);
+            // which is faster ------
+            //const foundsum = sums.find(s => s.day == day && s.month == month);
+            let foundsum;
+            while (sumindex < sums.length && (sums[sumindex].day != day || sums[sumindex].month != month)) {
+                sumindex++;
+            }
+            if (sumindex < sums.length) foundsum = sums[sumindex];
+            // ---------
             if (foundsum) {
+                sumindex++;
                 if (dayreadings.morning !== undefined && isNumeric(dayreadings.morning)) {
                     foundsum.morning.count += 1;
                     foundsum.morning.sum += dayreadings.morning;
                     if (dayreadings.morning < foundsum.morning.min) {
                         foundsum.morning.min = dayreadings.morning;
                         foundsum.morning.mindate = dayreadings.datetimeLocal;
+                        if (dayreadings.morning < foundsum.total.min) {
+                            foundsum.total.min = dayreadings.morning;
+                            foundsum.total.mindate = dayreadings.datetimeLocal;
+                        }
                     }
                     if (dayreadings.morning > foundsum.morning.max) {
                         foundsum.morning.max = dayreadings.morning;
                         foundsum.morning.maxdate = dayreadings.datetimeLocal;
-                    }
-                    if (dayreadings.morning < foundsum.total.min) {
-                        foundsum.total.min = dayreadings.morning;
-                        foundsum.total.mindate = dayreadings.datetimeLocal;
-                    }
-                    if (dayreadings.morning > foundsum.total.max) {
-                        foundsum.total.max = dayreadings.morning;
-                        foundsum.total.maxdate = dayreadings.datetimeLocal;
+                        if (dayreadings.morning > foundsum.total.max) {
+                            foundsum.total.max = dayreadings.morning;
+                            foundsum.total.maxdate = dayreadings.datetimeLocal;
+                        }
                     }
                 }
                 if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening)) {
@@ -429,19 +426,20 @@ export function calculateDailyAveragesTS(series: TemperatureMsg, defaultyear: nu
                     if (dayreadings.evening < foundsum.evening.min) {
                         foundsum.evening.min = dayreadings.evening;
                         foundsum.evening.mindate = dayreadings.datetimeLocal;
+                        if (dayreadings.evening < foundsum.total.min) {
+                            foundsum.total.min = dayreadings.evening;
+                            foundsum.total.mindate = dayreadings.datetimeLocal;
+                        }
                     }
                     if (dayreadings.evening > foundsum.evening.max) {
                         foundsum.evening.max = dayreadings.evening;
                         foundsum.evening.maxdate = dayreadings.datetimeLocal;
+                        if (dayreadings.evening > foundsum.total.max) {
+                            foundsum.total.max = dayreadings.evening;
+                            foundsum.total.maxdate = dayreadings.datetimeLocal;
+                        }
                     }
-                    if (dayreadings.evening < foundsum.total.min) {
-                        foundsum.total.min = dayreadings.evening;
-                        foundsum.total.mindate = dayreadings.datetimeLocal;
-                    }
-                    if (dayreadings.evening > foundsum.total.max) {
-                        foundsum.total.max = dayreadings.evening;
-                        foundsum.total.maxdate = dayreadings.datetimeLocal;
-                    }
+
                 }
                 if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening) &&
                     dayreadings.morning !== undefined && isNumeric(dayreadings.morning)) {
@@ -636,11 +634,6 @@ export function getDiffCurveDataTS(allfiltered: Filtered[], sums: YearCalcValue[
     curves.push(createDiffData('Keskiarvo', false, sums.map(daydata => (
         createDiffValue(daydata.difference.count > 0 ? daydata.difference.sum / daydata.difference.count : NaN, daydata.date, daydata.date)
         ))));
-// debugger
-//     let tbl: Filtered[] = sums.map(daydata => (
-//         createHalfFilledFiltered( daydata.total.max, NaN, NaN, daydata.date, null, null, NaN, null, null)
-//     ))
-    
 
     curves.push(createDiffData('Maksimi', true, sums.map(daydata => (
         createDiffValue(daydata.difference.max, daydata.date, daydata.difference.maxdate)
@@ -658,24 +651,6 @@ export function getDiffCurveDataTS(allfiltered: Filtered[], sums: YearCalcValue[
         ))));
     return curves;
 }
-
-// export function getDiffCurveDataTS(sums: YearCalcValue[], lastyear: number, lastcurve: YearCalcValue[]): DiffData[] {
-//     let curves: DiffData[] = [];
-//     curves.push(createDiffData('Keskiarvo', false, sums.map(daydata => (
-//         createDiffValue(daydata.difference.count > 0 ? daydata.difference.sum / daydata.difference.count : NaN, daydata.date, daydata.date)
-//         ))));
-//     curves.push(createDiffData('Maksimi', true, sums.map(daydata => (
-//         createDiffValue(daydata.difference.max, daydata.date, daydata.difference.maxdate)
-//         ))));
-//     curves.push(createDiffData('Minimi', true, sums.map(daydata => (
-//         createDiffValue(daydata.difference.min, daydata.date, daydata.difference.mindate)
-//         ))));
-//     curves.push(createDiffData(lastyear.toString(), true, lastcurve.map(daydata => (
-//         createDiffValue(daydata.difference.average, daydata.date, daydata.difference.mindate)
-//         ))));
-
-//     return curves;
-// }
 
 let calculatedMonthlytrends = [];
 
@@ -739,7 +714,7 @@ export function calculateMonthlyTrendsTS(series: TemperatureMsg): MonthDataPair[
             }
         })
     });
-    //kkk
+
     monthlyaverages.forEach(m => {
         m.data.forEach(d => {
             d.average = (d.morningsum / (d.morningcount > 0 ? d.morningcount : 1) + (d.eveningsum / (d.eveningcount > 0 ? d.eveningcount : 1))) / 2;

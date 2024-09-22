@@ -1,13 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateMonthlyTrendsTS = exports.getDiffCurveDataTS = exports.calculateMonthlyAveragesTS = exports.calculateYearlyEstimatesTS = exports.createYearlyAverage = exports.createLinearContTableTS = exports.calculateDailyAveragesTS = exports.createLastYearsSeriedataTS = exports.getDailyFilteredMinMaxTS = exports.createSumTableTS = exports.createDefaultYearTable = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = exports.createDbData = exports.createInfo = exports.createTemperatureMsg = void 0;
+exports.calculateMonthlyTrendsTS = exports.getDiffCurveDataTS = exports.calculateMonthlyAveragesTS = exports.calculateYearlyEstimatesTS = exports.createYearlyAverage = exports.createLinearContTableTS = exports.calculateDailyAveragesTS = exports.createLastYearsSeriedataTS = exports.createGraphSerie = exports.getDailyFilteredMinMaxTS = exports.createSumTableTS = exports.createDefaultYearTable = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = exports.createDbData = exports.createInfo = exports.createTemperatureMsg = void 0;
 const TempMinDefaultValue = 99999;
 const TempMaxDefaultValue = -99999;
 function createHalfFilledFiltered(value, morning, evening, date, first, last, diffvalue, datetimeUtc, datetimeLocal) {
     return { index: -1, morning: morning, evening: evening, value: value, date: date, firstday: first, lastday: last, diffvalue: diffvalue, datetimeUtc: datetimeUtc, datetimeLocal: datetimeLocal };
-}
-function createTemperature(date, value, morning, evening, average, difference, diffaverage, datetimeLocal, datetimeUtc) {
-    return { date: date, value: value, morning: morning, evening: evening, average: average, difference: difference, diffaverage: diffaverage, datetimeLocal: datetimeLocal, datetimeUtc: datetimeUtc };
 }
 function createTemperatureMsg() {
     return { data: [], statusCode: 0, message: '' };
@@ -24,14 +21,15 @@ exports.createDbData = createDbData;
 function createMinMaxCalcValue() {
     return { sum: 0, count: 0, average: NaN, min: 999999, max: -999999, mindate: null, maxdate: null };
 }
-function createYearCalcValue(date) {
+function createYearCalcValue(date, dayindex) {
     return {
         date: date,
         morning: createMinMaxCalcValue(),
         evening: createMinMaxCalcValue(),
         difference: createMinMaxCalcValue(),
         total: createMinMaxCalcValue(),
-        day: date.getDate(), month: date.getMonth() + 1
+        day: date.getDate(), month: date.getMonth() + 1,
+        dayindex: dayindex,
     };
 }
 let dailyAveragesCalculated = null;
@@ -170,7 +168,7 @@ function createDefaultYearTable(defaultyear) {
     let sums = [];
     for (let dayindex = 0; dayindex < 366; dayindex++) {
         let newdate = new Date(defaultyear, 0, dayindex + 1);
-        sums.push(createYearCalcValue(newdate));
+        sums.push(createYearCalcValue(newdate, dayindex));
     }
     return sums;
 }
@@ -179,40 +177,40 @@ function createSumTableTS(defaultyear) {
     let sums = [];
     for (let dayindex = 0; dayindex < 366; dayindex++) {
         let newdate = new Date(defaultyear, 0, dayindex + 1);
-        sums.push(createYearCalcValue(newdate));
+        sums.push(createYearCalcValue(newdate, dayindex));
     }
     return sums;
 }
 exports.createSumTableTS = createSumTableTS;
 function getDailyFilteredMinMaxTS(filteredvalues, defaultyear) {
     let sums = createSumTableTS(defaultyear);
-    for (let index = 0; index < sums.length; index++) {
-        for (let i = 0; i < filteredvalues.length; i++) {
-            if (sums[index].date.getDate() == filteredvalues[i].date.getDate() &&
-                sums[index].date.getMonth() == filteredvalues[i].date.getMonth()) {
-                if (!(isNaN(filteredvalues[i].value))) {
-                    if (filteredvalues[i].value > sums[index].total.max) {
-                        sums[index].total.max = filteredvalues[i].value;
-                        sums[index].total.maxdate = filteredvalues[i].date;
+    sums.forEach((s) => {
+        filteredvalues.forEach((f) => {
+            if (s.date.getDate() == f.date.getDate() &&
+                s.date.getMonth() == f.date.getMonth()) {
+                if (!(isNaN(f.value))) {
+                    if (f.value > s.total.max) {
+                        s.total.max = f.value;
+                        s.total.maxdate = f.date;
                     }
-                    if (filteredvalues[i].value < sums[index].total.min) {
-                        sums[index].total.min = filteredvalues[i].value;
-                        sums[index].total.mindate = filteredvalues[i].date;
+                    if (f.value < s.total.min) {
+                        s.total.min = f.value;
+                        s.total.mindate = f.date;
                     }
                 }
-                if (!(isNaN(filteredvalues[i].diffvalue))) {
-                    if (filteredvalues[i].diffvalue > sums[index].difference.max) {
-                        sums[index].difference.max = filteredvalues[i].diffvalue;
-                        sums[index].difference.maxdate = filteredvalues[i].date;
+                if (!(isNaN(f.diffvalue))) {
+                    if (f.diffvalue > s.difference.max) {
+                        s.difference.max = f.diffvalue;
+                        s.difference.maxdate = f.date;
                     }
-                    if (filteredvalues[i].diffvalue < sums[index].difference.min) {
-                        sums[index].difference.min = filteredvalues[i].diffvalue;
-                        sums[index].difference.mindate = filteredvalues[i].date;
+                    if (f.diffvalue < s.difference.min) {
+                        s.difference.min = f.diffvalue;
+                        s.difference.mindate = f.date;
                     }
                 }
             }
-        }
-    }
+        });
+    });
     return sums;
 }
 exports.getDailyFilteredMinMaxTS = getDailyFilteredMinMaxTS;
@@ -242,9 +240,13 @@ function roundNumber(value, num) {
 function createValue(d, v) {
     return [d, v];
 }
-function createGraphSerie() {
+function createGraphSerieEmpty() {
     return { name: '', location: '', year: 0, values: [] };
 }
+function createGraphSerie(name, location, year, values) {
+    return { name: name, location: location, year: year, values: values };
+}
+exports.createGraphSerie = createGraphSerie;
 function getDateTxt(date) {
     if (typeof date !== "object")
         return '-??-';
@@ -264,10 +266,10 @@ function isNumeric(obj) {
 }
 function createLastYearsSeriedataTS(readings, sums) {
     let data = [];
-    let morning = createGraphSerie();
-    let evening = createGraphSerie();
-    let minimum = createGraphSerie();
-    let maximum = createGraphSerie();
+    let morning = createGraphSerieEmpty();
+    let evening = createGraphSerieEmpty();
+    let minimum = createGraphSerieEmpty();
+    let maximum = createGraphSerieEmpty();
     morning.values = readings.map((r) => ({
         value: createValue(r.datetimeLocal, r.morning),
         tooltip: `Aamu ${getDateTxt(r.datetimeLocal)} ${r.morning}`,
@@ -314,31 +316,38 @@ function calculateDailyAveragesTS(series, defaultyear, year = null) {
         lastindex = firstindex + 1;
     }
     for (let yearindex = firstindex; yearindex < lastindex; yearindex++) {
+        let sumindex = 0;
         for (let dayindex = 0; dayindex < series.data[yearindex].data.length; dayindex++) {
             const dayreadings = series.data[yearindex].data[dayindex];
-            const dt = new Date(dayreadings.datetimeUtc);
+            const dt = new Date(dayreadings.datetimeLocal);
             const month = dt.getMonth() + 1;
             const day = dt.getDate();
-            const foundsum = sums.find(s => s.day == day && s.month == month);
+            let foundsum;
+            while (sumindex < sums.length && (sums[sumindex].day != day || sums[sumindex].month != month)) {
+                sumindex++;
+            }
+            if (sumindex < sums.length)
+                foundsum = sums[sumindex];
             if (foundsum) {
+                sumindex++;
                 if (dayreadings.morning !== undefined && isNumeric(dayreadings.morning)) {
                     foundsum.morning.count += 1;
                     foundsum.morning.sum += dayreadings.morning;
                     if (dayreadings.morning < foundsum.morning.min) {
                         foundsum.morning.min = dayreadings.morning;
                         foundsum.morning.mindate = dayreadings.datetimeLocal;
+                        if (dayreadings.morning < foundsum.total.min) {
+                            foundsum.total.min = dayreadings.morning;
+                            foundsum.total.mindate = dayreadings.datetimeLocal;
+                        }
                     }
                     if (dayreadings.morning > foundsum.morning.max) {
                         foundsum.morning.max = dayreadings.morning;
                         foundsum.morning.maxdate = dayreadings.datetimeLocal;
-                    }
-                    if (dayreadings.morning < foundsum.total.min) {
-                        foundsum.total.min = dayreadings.morning;
-                        foundsum.total.mindate = dayreadings.datetimeLocal;
-                    }
-                    if (dayreadings.morning > foundsum.total.max) {
-                        foundsum.total.max = dayreadings.morning;
-                        foundsum.total.maxdate = dayreadings.datetimeLocal;
+                        if (dayreadings.morning > foundsum.total.max) {
+                            foundsum.total.max = dayreadings.morning;
+                            foundsum.total.maxdate = dayreadings.datetimeLocal;
+                        }
                     }
                 }
                 if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening)) {
@@ -347,18 +356,18 @@ function calculateDailyAveragesTS(series, defaultyear, year = null) {
                     if (dayreadings.evening < foundsum.evening.min) {
                         foundsum.evening.min = dayreadings.evening;
                         foundsum.evening.mindate = dayreadings.datetimeLocal;
+                        if (dayreadings.evening < foundsum.total.min) {
+                            foundsum.total.min = dayreadings.evening;
+                            foundsum.total.mindate = dayreadings.datetimeLocal;
+                        }
                     }
                     if (dayreadings.evening > foundsum.evening.max) {
                         foundsum.evening.max = dayreadings.evening;
                         foundsum.evening.maxdate = dayreadings.datetimeLocal;
-                    }
-                    if (dayreadings.evening < foundsum.total.min) {
-                        foundsum.total.min = dayreadings.evening;
-                        foundsum.total.mindate = dayreadings.datetimeLocal;
-                    }
-                    if (dayreadings.evening > foundsum.total.max) {
-                        foundsum.total.max = dayreadings.evening;
-                        foundsum.total.maxdate = dayreadings.datetimeLocal;
+                        if (dayreadings.evening > foundsum.total.max) {
+                            foundsum.total.max = dayreadings.evening;
+                            foundsum.total.maxdate = dayreadings.datetimeLocal;
+                        }
                     }
                 }
                 if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening) &&
