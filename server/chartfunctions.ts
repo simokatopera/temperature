@@ -17,40 +17,64 @@ interface Reading {
 interface Filtered {
     index: number;
     value: number;
+    diffvalue: number;
     morning: number;
     evening: number;
     date: Date;
     firstday: Date;
     lastday: Date;
+    datetimeUtc: Date;
+    datetimeLocal: Date;
 }
-function createHalfFilledFiltered(value: number, date: Date, first: Date, last: Date): Filtered {
-    return {index: -1, value: value, morning: NaN, evening: NaN, date: date, firstday: first, lastday: last}
+function createHalfFilledFiltered(value: number, morning: number, evening: number, date: Date, first: Date, last: Date, diffvalue: number, datetimeUtc: Date, datetimeLocal: Date): Filtered {
+    return {index: -1, morning: morning, evening: evening,value: value, date: date, firstday: first, lastday: last, diffvalue: diffvalue, datetimeUtc: datetimeUtc, datetimeLocal: datetimeLocal}
 }
 interface Temperature {
     date: Date;
     value: number;
     average: number;
+    difference: number;
+    diffaverage: number;
+    morning: number;
+    evening: number;
+    datetimeLocal: Date;
+    datetimeUtc: Date;
+}
+function createTemperature(date: Date, value: number, morning: number, evening: number, average: number, difference: number, diffaverage: number, datetimeLocal: Date, datetimeUtc: Date): Temperature {
+    return {date: date, value: value, morning: morning, evening: evening, average: average, difference: difference, diffaverage: diffaverage, datetimeLocal: datetimeLocal, datetimeUtc: datetimeUtc}
 }
 interface TemperatureMsg {
     data: DbTemperature[];
-    statusCode; number;
+    statusCode: number;
     message: string;
-
+}
+export function createTemperatureMsg(): TemperatureMsg {
+    return {data: [], statusCode: 0, message: ''}
 }
 interface DbTemperature {
     data: DbData[];
     info: Info;
 }
+// export function addDbTemperature(info): DbTemperature {
+//     return { data: [], info: {}}
+// }
 interface Info {
     location: string;
     year: number;
+}
+export function createInfo(location: string, year: number): Info {
+    return {location: location, year: year}
 }
 interface DbData {
     date: string;
     morning: number;
     evening: number;
+    difference: number;
     datetimeLocal: Date;
     datetimeUtc: Date;
+}
+export function createDbData(date: string, morning: number, evening: number, difference: number, datetimeLocal: Date, datetimeUtc: Date): DbData {
+     return {date: date, morning: morning, evening: evening, difference: difference, datetimeLocal: datetimeLocal, datetimeUtc: datetimeUtc}
 }
 interface YearCalcValue {
     date: Date;
@@ -106,13 +130,17 @@ export function filterSeriesTS(serie: Temperature[], filterlength: number): Filt
             while (lastindex < serie.length && serie[lastindex].date < last) lastindex++;
             let sum: number = 0;
             let dec: number = 0;
+            let diffsum: number = 0;
+            let diffdec: number = 0;
             for (let index: number = firstindex; index < lastindex; index++) {
                 if (isNaN(serie[index].value)) dec++;
                 else sum += serie[index].value;
+                if (isNaN(serie[index].difference)) diffdec++;
+                else diffsum += serie[index].difference;
             }
-            return createHalfFilledFiltered( sum / (lastindex - firstindex - dec), ss.date, first, last );
+            return createHalfFilledFiltered( sum / (lastindex - firstindex - dec), ss.morning, ss.evening, ss.date, first, last, diffsum / (lastindex - firstindex - diffdec), ss.datetimeUtc, ss.datetimeLocal );
         }
-        return createHalfFilledFiltered( NaN, ss.date, null, null);
+        return createHalfFilledFiltered( NaN, NaN, NaN, ss.date, null, null, NaN, null, null);
     })
     return filtered;
 }
@@ -235,6 +263,16 @@ export function getDailyFilteredMinMaxTS(filteredvalues: Filtered[], defaultyear
                     if (filteredvalues[i].value < sums[index].total.min) {
                         sums[index].total.min = filteredvalues[i].value;
                         sums[index].total.mindate = filteredvalues[i].date;
+                    }
+                }
+                if (!(isNaN(filteredvalues[i].diffvalue))) {
+                    if (filteredvalues[i].diffvalue > sums[index].difference.max) {
+                        sums[index].difference.max = filteredvalues[i].diffvalue;
+                        sums[index].difference.maxdate = filteredvalues[i].date;
+                    }
+                    if (filteredvalues[i].diffvalue < sums[index].difference.min) {
+                        sums[index].difference.min = filteredvalues[i].diffvalue;
+                        sums[index].difference.mindate = filteredvalues[i].date;
                     }
                 }
             }
@@ -376,6 +414,14 @@ export function calculateDailyAveragesTS(series: TemperatureMsg, defaultyear: nu
                         foundsum.morning.max = dayreadings.morning;
                         foundsum.morning.maxdate = dayreadings.datetimeLocal;
                     }
+                    if (dayreadings.morning < foundsum.total.min) {
+                        foundsum.total.min = dayreadings.morning;
+                        foundsum.total.mindate = dayreadings.datetimeLocal;
+                    }
+                    if (dayreadings.morning > foundsum.total.max) {
+                        foundsum.total.max = dayreadings.morning;
+                        foundsum.total.maxdate = dayreadings.datetimeLocal;
+                    }
                 }
                 if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening)) {
                     foundsum.evening.count += 1;
@@ -387,6 +433,14 @@ export function calculateDailyAveragesTS(series: TemperatureMsg, defaultyear: nu
                     if (dayreadings.evening > foundsum.evening.max) {
                         foundsum.evening.max = dayreadings.evening;
                         foundsum.evening.maxdate = dayreadings.datetimeLocal;
+                    }
+                    if (dayreadings.evening < foundsum.total.min) {
+                        foundsum.total.min = dayreadings.evening;
+                        foundsum.total.mindate = dayreadings.datetimeLocal;
+                    }
+                    if (dayreadings.evening > foundsum.total.max) {
+                        foundsum.total.max = dayreadings.evening;
+                        foundsum.total.maxdate = dayreadings.datetimeLocal;
                     }
                 }
                 if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening) &&
@@ -430,15 +484,21 @@ interface TemperatureValue {
     average: number;
     morning: number;
     evening: number;
+    difference: number;
+    datetimeUtc: Date;
+    datetimeLocal: Date;
 }
-function createTemperatureValue(day: Date, value: number): TemperatureValue {
-    return { value: value, average: NaN, date: day, morning: NaN, evening: NaN }
+function createTemperatureValue(day: Date, value: number, datetimeUtc: Date, datetimeLocal: Date): TemperatureValue {
+    return { value: value, average: NaN, date: day, morning: NaN, evening: NaN, difference: NaN, datetimeUtc: datetimeUtc, datetimeLocal: datetimeLocal}
 }
+let linearContTableCreated = [];
+
 export function createLinearContTableTS(series: TemperatureMsg): TemperatureValue[] {
+    if (linearContTableCreated.length) return linearContTableCreated;
     let tbl:TemperatureValue[] = [];
     for (let year: number = series.data[0].info.year; year <= series.data[series.data.length - 1].info.year; year++) {
         const lastday = year % 4 == 0 ? 366 : 365;
-        for (let day: number = 1; day <= lastday; day++) tbl.push(createTemperatureValue(new Date(year, 0, day), NaN));
+        for (let day: number = 1; day <= lastday; day++) tbl.push(createTemperatureValue(new Date(year, 0, day), NaN, null, null));
     }
     let currindex: number = 0;
     series.data.forEach((yearserie: DbTemperature) => {
@@ -455,6 +515,9 @@ export function createLinearContTableTS(series: TemperatureMsg): TemperatureValu
                                 tbl[currindex].value = value;
                                 tbl[currindex].morning = yearserie.data[currdateindex].morning;
                                 tbl[currindex].evening = yearserie.data[currdateindex].evening;
+                                tbl[currindex].difference = yearserie.data[currdateindex].evening - yearserie.data[currdateindex].morning;;
+                                tbl[currindex].datetimeUtc = yearserie.data[currdateindex].datetimeUtc;
+                                tbl[currindex].datetimeLocal = yearserie.data[currdateindex].datetimeLocal;
                                 currindex++;
                             }
                         }
@@ -463,7 +526,7 @@ export function createLinearContTableTS(series: TemperatureMsg): TemperatureValu
             }
         }
     })
-    
+    linearContTableCreated = tbl;
     return tbl;
 }
 
@@ -568,23 +631,51 @@ function createDiffValue(value: number, date1: Date, date2: Date): DiffValue {
     return {date1: date1, date2: date2, value: value}
 }
 
-export function getDiffCurveDataTS(sums: YearCalcValue[], lastyear: number, lastcurve: YearCalcValue[]): DiffData[] {
+export function getDiffCurveDataTS(allfiltered: Filtered[], sums: YearCalcValue[], lastyear: number, defaultyear: number): DiffData[] {
     let curves: DiffData[] = [];
     curves.push(createDiffData('Keskiarvo', false, sums.map(daydata => (
         createDiffValue(daydata.difference.count > 0 ? daydata.difference.sum / daydata.difference.count : NaN, daydata.date, daydata.date)
         ))));
+// debugger
+//     let tbl: Filtered[] = sums.map(daydata => (
+//         createHalfFilledFiltered( daydata.total.max, NaN, NaN, daydata.date, null, null, NaN, null, null)
+//     ))
+    
+
     curves.push(createDiffData('Maksimi', true, sums.map(daydata => (
         createDiffValue(daydata.difference.max, daydata.date, daydata.difference.maxdate)
         ))));
     curves.push(createDiffData('Minimi', true, sums.map(daydata => (
         createDiffValue(daydata.difference.min, daydata.date, daydata.difference.mindate)
         ))));
-    curves.push(createDiffData(lastyear.toString(), true, lastcurve.map(daydata => (
-        createDiffValue(daydata.difference.average, daydata.date, daydata.difference.mindate)
-        ))));
 
+    let lastyeardata = allfiltered.filter(f => {
+        if (f.date.getFullYear() == lastyear) return f;
+    })
+
+    curves.push(createDiffData(`${lastyear.toString()} (suod)`, true, lastyeardata.map(daydata => (
+        createDiffValue(daydata.diffvalue, new Date(defaultyear, daydata.date.getMonth(), daydata.date.getDate()), daydata.date)
+        ))));
     return curves;
 }
+
+// export function getDiffCurveDataTS(sums: YearCalcValue[], lastyear: number, lastcurve: YearCalcValue[]): DiffData[] {
+//     let curves: DiffData[] = [];
+//     curves.push(createDiffData('Keskiarvo', false, sums.map(daydata => (
+//         createDiffValue(daydata.difference.count > 0 ? daydata.difference.sum / daydata.difference.count : NaN, daydata.date, daydata.date)
+//         ))));
+//     curves.push(createDiffData('Maksimi', true, sums.map(daydata => (
+//         createDiffValue(daydata.difference.max, daydata.date, daydata.difference.maxdate)
+//         ))));
+//     curves.push(createDiffData('Minimi', true, sums.map(daydata => (
+//         createDiffValue(daydata.difference.min, daydata.date, daydata.difference.mindate)
+//         ))));
+//     curves.push(createDiffData(lastyear.toString(), true, lastcurve.map(daydata => (
+//         createDiffValue(daydata.difference.average, daydata.date, daydata.difference.mindate)
+//         ))));
+
+//     return curves;
+// }
 
 let calculatedMonthlytrends = [];
 

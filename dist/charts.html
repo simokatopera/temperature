@@ -396,8 +396,8 @@
                 },
                 getDateTxtNoYear(date, daymonth) {
                     if (date == null) return '';
-                    if (date.getMonth() == 11 && date.getDate()==20 && date.getFullYear() == 2014)
-                        debugger
+                    //if (date.getMonth() == 11 && date.getDate()==20 && date.getFullYear() == 2014)
+                    //    debugger
                     const year = date.getFullYear();
                     const month = date.getMonth() + 1;
                     const day = date.getDate();
@@ -466,11 +466,13 @@
                 },
 
                 createDailyDiffdata(series) {
+                    const tbl = createLinearContTableTS(series);
+                    if (this.readings.filtered.length == 0) this.readings.filtered = filterSeriesTS(tbl, this.readings.filtersize);
                     let sums = calculateDailyAveragesTS(series, this.defaultyear);
-                    // add average, minimum, maximum lastyear curves
-                    let curvedata = getDiffCurveDataTS(sums, series.data[series.data.length - 1].info.year, calculateDailyAveragesTS(series, this.defaultyear, series.data[series.data.length - 1].info.year));
 
-                    let curves = curvedata.map(c => ({
+                    let curvedata = getDiffCurveDataTS(this.readings.filtered, sums, series.data[series.data.length - 1].info.year, this.defaultyear);
+                    
+                    let curve = curvedata.map(c => ({
                         values: c.data.map(d => ({
                             value: [d.date1, d.value],
                             tooltip: `${c.name} ${series.data[0].info.location} ${c.showyear==true ? this.getDateTxt(d.date2) : this.getDateTxtNoYear(d.date2)} ${roundNumber(d.value, 1)}°`,
@@ -480,9 +482,12 @@
                         location: series.data[series.data.length - 1].info.location,
                     }))
 
+                    const selection = curvedata.map(c => (
+                        c.name
+                    ))
                     const seriedata = {
-                        data: curves,
-                        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { name: 'Maksimi', color: '#777777' }], selection: ['Maksimi', 'Minimi', 'Keskiarvo', series.data[series.data.length - 1].info.year] }
+                        data: curve,
+                        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { name: 'Maksimi', color: '#777777' }], selection: selection }
                     };
                     return seriedata;
                 },
@@ -652,7 +657,7 @@
                 createAllYearsFilteredSeriedata(series) {
                     const tbl = createLinearContTableTS(series);
                     let valuearray = [];
-                    this.readings.filtered = filterSeriesTS(tbl, this.readings.filtersize);
+                    if (this.readings.filtered.length == 0) this.readings.filtered = filterSeriesTS(tbl, this.readings.filtersize);
                     let curryear = 0;
                     this.readings.filtered.forEach((f, ii) => {
                         if (f.date.getFullYear() != curryear) {

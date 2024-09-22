@@ -1,11 +1,26 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateMonthlyTrendsTS = exports.getDiffCurveDataTS = exports.calculateMonthlyAveragesTS = exports.calculateYearlyEstimatesTS = exports.createYearlyAverage = exports.createLinearContTableTS = exports.calculateDailyAveragesTS = exports.createLastYearsSeriedataTS = exports.getDailyFilteredMinMaxTS = exports.createSumTableTS = exports.createDefaultYearTable = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = void 0;
+exports.calculateMonthlyTrendsTS = exports.getDiffCurveDataTS = exports.calculateMonthlyAveragesTS = exports.calculateYearlyEstimatesTS = exports.createYearlyAverage = exports.createLinearContTableTS = exports.calculateDailyAveragesTS = exports.createLastYearsSeriedataTS = exports.getDailyFilteredMinMaxTS = exports.createSumTableTS = exports.createDefaultYearTable = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = exports.createDbData = exports.createInfo = exports.createTemperatureMsg = void 0;
 const TempMinDefaultValue = 99999;
 const TempMaxDefaultValue = -99999;
-function createHalfFilledFiltered(value, date, first, last) {
-    return { index: -1, value: value, morning: NaN, evening: NaN, date: date, firstday: first, lastday: last };
+function createHalfFilledFiltered(value, morning, evening, date, first, last, diffvalue, datetimeUtc, datetimeLocal) {
+    return { index: -1, morning: morning, evening: evening, value: value, date: date, firstday: first, lastday: last, diffvalue: diffvalue, datetimeUtc: datetimeUtc, datetimeLocal: datetimeLocal };
 }
+function createTemperature(date, value, morning, evening, average, difference, diffaverage, datetimeLocal, datetimeUtc) {
+    return { date: date, value: value, morning: morning, evening: evening, average: average, difference: difference, diffaverage: diffaverage, datetimeLocal: datetimeLocal, datetimeUtc: datetimeUtc };
+}
+function createTemperatureMsg() {
+    return { data: [], statusCode: 0, message: '' };
+}
+exports.createTemperatureMsg = createTemperatureMsg;
+function createInfo(location, year) {
+    return { location: location, year: year };
+}
+exports.createInfo = createInfo;
+function createDbData(date, morning, evening, difference, datetimeLocal, datetimeUtc) {
+    return { date: date, morning: morning, evening: evening, difference: difference, datetimeLocal: datetimeLocal, datetimeUtc: datetimeUtc };
+}
+exports.createDbData = createDbData;
 function createMinMaxCalcValue() {
     return { sum: 0, count: 0, average: NaN, min: 999999, max: -999999, mindate: null, maxdate: null };
 }
@@ -43,15 +58,21 @@ function filterSeriesTS(serie, filterlength) {
                 lastindex++;
             let sum = 0;
             let dec = 0;
+            let diffsum = 0;
+            let diffdec = 0;
             for (let index = firstindex; index < lastindex; index++) {
                 if (isNaN(serie[index].value))
                     dec++;
                 else
                     sum += serie[index].value;
+                if (isNaN(serie[index].difference))
+                    diffdec++;
+                else
+                    diffsum += serie[index].difference;
             }
-            return createHalfFilledFiltered(sum / (lastindex - firstindex - dec), ss.date, first, last);
+            return createHalfFilledFiltered(sum / (lastindex - firstindex - dec), ss.morning, ss.evening, ss.date, first, last, diffsum / (lastindex - firstindex - diffdec), ss.datetimeUtc, ss.datetimeLocal);
         }
-        return createHalfFilledFiltered(NaN, ss.date, null, null);
+        return createHalfFilledFiltered(NaN, NaN, NaN, ss.date, null, null, NaN, null, null);
     });
     return filtered;
 }
@@ -179,6 +200,16 @@ function getDailyFilteredMinMaxTS(filteredvalues, defaultyear) {
                         sums[index].total.mindate = filteredvalues[i].date;
                     }
                 }
+                if (!(isNaN(filteredvalues[i].diffvalue))) {
+                    if (filteredvalues[i].diffvalue > sums[index].difference.max) {
+                        sums[index].difference.max = filteredvalues[i].diffvalue;
+                        sums[index].difference.maxdate = filteredvalues[i].date;
+                    }
+                    if (filteredvalues[i].diffvalue < sums[index].difference.min) {
+                        sums[index].difference.min = filteredvalues[i].diffvalue;
+                        sums[index].difference.mindate = filteredvalues[i].date;
+                    }
+                }
             }
         }
     }
@@ -301,6 +332,14 @@ function calculateDailyAveragesTS(series, defaultyear, year = null) {
                         foundsum.morning.max = dayreadings.morning;
                         foundsum.morning.maxdate = dayreadings.datetimeLocal;
                     }
+                    if (dayreadings.morning < foundsum.total.min) {
+                        foundsum.total.min = dayreadings.morning;
+                        foundsum.total.mindate = dayreadings.datetimeLocal;
+                    }
+                    if (dayreadings.morning > foundsum.total.max) {
+                        foundsum.total.max = dayreadings.morning;
+                        foundsum.total.maxdate = dayreadings.datetimeLocal;
+                    }
                 }
                 if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening)) {
                     foundsum.evening.count += 1;
@@ -312,6 +351,14 @@ function calculateDailyAveragesTS(series, defaultyear, year = null) {
                     if (dayreadings.evening > foundsum.evening.max) {
                         foundsum.evening.max = dayreadings.evening;
                         foundsum.evening.maxdate = dayreadings.datetimeLocal;
+                    }
+                    if (dayreadings.evening < foundsum.total.min) {
+                        foundsum.total.min = dayreadings.evening;
+                        foundsum.total.mindate = dayreadings.datetimeLocal;
+                    }
+                    if (dayreadings.evening > foundsum.total.max) {
+                        foundsum.total.max = dayreadings.evening;
+                        foundsum.total.maxdate = dayreadings.datetimeLocal;
                     }
                 }
                 if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening) &&
@@ -350,15 +397,18 @@ function calculateDailyAveragesTS(series, defaultyear, year = null) {
     return sums;
 }
 exports.calculateDailyAveragesTS = calculateDailyAveragesTS;
-function createTemperatureValue(day, value) {
-    return { value: value, average: NaN, date: day, morning: NaN, evening: NaN };
+function createTemperatureValue(day, value, datetimeUtc, datetimeLocal) {
+    return { value: value, average: NaN, date: day, morning: NaN, evening: NaN, difference: NaN, datetimeUtc: datetimeUtc, datetimeLocal: datetimeLocal };
 }
+let linearContTableCreated = [];
 function createLinearContTableTS(series) {
+    if (linearContTableCreated.length)
+        return linearContTableCreated;
     let tbl = [];
     for (let year = series.data[0].info.year; year <= series.data[series.data.length - 1].info.year; year++) {
         const lastday = year % 4 == 0 ? 366 : 365;
         for (let day = 1; day <= lastday; day++)
-            tbl.push(createTemperatureValue(new Date(year, 0, day), NaN));
+            tbl.push(createTemperatureValue(new Date(year, 0, day), NaN, null, null));
     }
     let currindex = 0;
     series.data.forEach((yearserie) => {
@@ -377,6 +427,10 @@ function createLinearContTableTS(series) {
                                 tbl[currindex].value = value;
                                 tbl[currindex].morning = yearserie.data[currdateindex].morning;
                                 tbl[currindex].evening = yearserie.data[currdateindex].evening;
+                                tbl[currindex].difference = yearserie.data[currdateindex].evening - yearserie.data[currdateindex].morning;
+                                ;
+                                tbl[currindex].datetimeUtc = yearserie.data[currdateindex].datetimeUtc;
+                                tbl[currindex].datetimeLocal = yearserie.data[currdateindex].datetimeLocal;
                                 currindex++;
                             }
                         }
@@ -385,6 +439,7 @@ function createLinearContTableTS(series) {
             }
         }
     });
+    linearContTableCreated = tbl;
     return tbl;
 }
 exports.createLinearContTableTS = createLinearContTableTS;
@@ -467,12 +522,16 @@ function createDiffData(name, showyear, data) {
 function createDiffValue(value, date1, date2) {
     return { date1: date1, date2: date2, value: value };
 }
-function getDiffCurveDataTS(sums, lastyear, lastcurve) {
+function getDiffCurveDataTS(allfiltered, sums, lastyear, defaultyear) {
     let curves = [];
     curves.push(createDiffData('Keskiarvo', false, sums.map(daydata => (createDiffValue(daydata.difference.count > 0 ? daydata.difference.sum / daydata.difference.count : NaN, daydata.date, daydata.date)))));
     curves.push(createDiffData('Maksimi', true, sums.map(daydata => (createDiffValue(daydata.difference.max, daydata.date, daydata.difference.maxdate)))));
     curves.push(createDiffData('Minimi', true, sums.map(daydata => (createDiffValue(daydata.difference.min, daydata.date, daydata.difference.mindate)))));
-    curves.push(createDiffData(lastyear.toString(), true, lastcurve.map(daydata => (createDiffValue(daydata.difference.average, daydata.date, daydata.difference.mindate)))));
+    let lastyeardata = allfiltered.filter(f => {
+        if (f.date.getFullYear() == lastyear)
+            return f;
+    });
+    curves.push(createDiffData(`${lastyear.toString()} (suod)`, true, lastyeardata.map(daydata => (createDiffValue(daydata.diffvalue, new Date(defaultyear, daydata.date.getMonth(), daydata.date.getDate()), daydata.date)))));
     return curves;
 }
 exports.getDiffCurveDataTS = getDiffCurveDataTS;
