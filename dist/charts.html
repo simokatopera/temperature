@@ -126,7 +126,7 @@
                 this.calculated.monthlytrends = calculateMonthlyTrendsTS(temperatures);
                 this.calculated.monthlyaverages = calculateMonthlyAveragesTS(temperatures);
                 this.calculated.linearcont = createLinearContTableTS(temperatures);
-                this.readings.filtered = filterSeriesTS(this.calculated.linearcont, this.readings.filtersize)
+                this.readings.filtered = filterSeriesTS(this.calculated.linearcont, this.readings.filtersize);
 
                 this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, this.createAllYearsMonthlyAverageSeriedata);
                 this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, this.createAllYearsFilteredSeriedata);
@@ -324,6 +324,18 @@
                     })
                     return { min: min, max: max }
                 },
+                getSelection(seriedata, selectedseries) {
+                    let selection = {};
+                    seriedata.data.forEach(s => {
+                        selection[s.name] = false;
+                    })
+                    if (selectedseries && selectedseries.length) {
+                        selectedseries.forEach(s => {
+                            selection[s] = true;
+                        })
+                    }
+                    return selection;
+                },                
                 buildChartOptions(title, series) {
                     const monthnames = this.monthnames;
                     let chartoptions = {
@@ -401,14 +413,17 @@
                     if (daymonth === true) return `${day}.${month}`;
                     return `${day}.${month}.${date.getFullYear()}`;
                 },
-                getDateTxtNoYear(date) {
-                    if (date == null) return '';
-                    const year = date.getFullYear();
-                    const month = date.getMonth() + 1;
-                    const day = date.getDate();
-                    return `${day}.${month}`;
+                isNumeric(obj) {
+                    return !Array.isArray(obj) && (obj - parseFloat(obj) + 1) >= 0;
                 },
-                createSeries(series, params) {
+                roundNumber(value, num) {
+                    if (this.isNumeric(value)) {
+                        if (typeof value === 'number') return value.toFixed(num);
+                        else return value;
+                    }
+                    if (isNaN(value)) return 'NaN';
+                    return 'kummaa'
+                },createSeries(series, params) {
                     let chartdata = series.data.map(values => ({
                         type: 'line',
                         symbolSize: 3,
@@ -496,17 +511,7 @@
                     const seriedata = { data: returnvalues, params: { series: [{ name: '', markersize: 1 }] }};
                     return seriedata;
                 },
-                isNumeric(obj) {
-                    return !Array.isArray(obj) && (obj - parseFloat(obj) + 1) >= 0;
-                },
-                roundNumber(value, num) {
-                    if (this.isNumeric(value)) {
-                        if (typeof value === 'number') return value.toFixed(num);
-                        else return value;
-                    }
-                    if (isNaN(value)) return 'NaN';
-                    return 'kummaa'
-                },
+
 
                 createYearlyTrendSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
@@ -562,18 +567,7 @@
                     const seriedata = { data: data, params: null };
                     return seriedata;
                 },
-                getSelection(seriedata, selectedseries) {
-                    let selection = {};
-                    seriedata.data.forEach(s => {
-                        selection[s.name] = false;
-                    })
-                    if (selectedseries && selectedseries.length) {
-                        selectedseries.forEach(s => {
-                            selection[s] = true;
-                        })
-                    }
-                    return selection;
-                },
+
 
                 //initSerieLegends(data) {
                 // let selection = [];

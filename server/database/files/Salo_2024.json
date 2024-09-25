@@ -267,5 +267,7 @@
 	,{ "date": "9/21/2024", "morning": 9.1, "evening": 15.1}
 	,{ "date": "9/22/2024", "morning": -1.0, "evening": 12.4}
 	,{ "date": "9/23/2024", "morning": 7.9, "evening": 17.6}
+	,{ "date": "9/24/2024", "morning": 10.8, "evening": 19.6}
+	,{ "date": "9/25/2024", "morning": 16.5, "evening": 17.0}
 ]}
 
