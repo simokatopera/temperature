@@ -57,6 +57,11 @@
         .actionbutton {
             background-color: lightblue;
         }
+    #daygraph {
+        display: inline-block;
+        width: 400px;
+        height: 380px;
+        }
     </style>
 </head>
 
@@ -66,19 +71,59 @@
             <h1 id="ID_PageTitle">Lämpötilat</h1>
         </div>
         <div id="app" class="page-content">
-            <readings :readings="readings"></readings>
+            <div class="row">
+                <readings :readings="readings" @newday="dayselected"></readings>
+                <div id="daygraph" :style="daydata.data.length>0?'display:inline-block;':'display:none;'">
+                    <!-- <table>
+                        <tr v-for="item in daydata">
+                            <td>{{ item.morning}}</td>  <td>{{ item.evening}}</td>  
+                        </tr>
+                        
+                    </table> -->
+                </div>
+            </div>
+            <!-- <button type="button" id="videoButton" style="margin-left:10px;margin-top:5px"
+                class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#dailyTempModal">DailyTemp
+            </button> -->
             <trendgraph :active="false" :elemid="testgraph10" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph4" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph2" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph3" :title="trendtitles"></trendgraph>
-            <monthtable :monthlydata="calculated.monthlyaverages"></monthtable>
+            <monthtable :monthlydata="calculated.monthlyaverages" :monthnames="monthnames"></monthtable>
             <trendgraph :active="false" :elemid="testgraph11" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph5" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph6" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph7" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph8" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph9" :title="trendtitles"></trendgraph>
+            <!-- Daily tempearature modal start---------------------------------------------------------- -->
+            <div class="modal fade" id="dailyTempModal" tabindex="-1" aria-labelledby="dailyTempModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content dailyTempModal">
+                        <div class="modal-header">
+                            <!-- <h5 class="modal-title" id="dailyTempModalLabel">Videot</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+                        </div>
+                        <div class="modal-body">
+                            <!-- <button type="button" :disabled="gamevideo&&gamevideo.length>4" class="btn btn-secondary" @click="addVideoSet">Lisää</button>
+                            <button type="button" :disabled="gamevideo&&gamevideo.length==0" class="btn btn-secondary" @click="removeVideoSet">Poista</button>
+                            <div v-for="(video,index) in gamevideo">
+                                Erä {{ index+1 }}
+                                <button @click="testVideoLink(video.url)">Test</button>
+                                <input type="text" size="40" min="10" max="40" v-model="video.url" /><br>
+                            </div>
+                        </div> -->
+                        <div class="modal-footer">
+                            <!-- <div id="savevideoloader" class="loader hidden"></div>
+                            <p id="videomsg"></p>
+                            <button type="button" class="btn btn-secondary" @click="saveVideos">Tallenna</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sulje</button> -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Daily temperature modal end----------------------------------------------------------- -->            
         </div>
     </div>
     <script type="module">
@@ -105,6 +150,7 @@
                     trendtitles: [],
                     calculatedDailyAverages: [],
                     defaultyear: 1976,
+                    daydata: {data: [], chart: null},
                     readings: { values: [], filtered: [], filtersize: 10 },
                     monthnames: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
                     monthnamesLong: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
@@ -128,23 +174,25 @@
                 this.calculated.linearcont = createLinearContTableTS(temperatures);
                 this.readings.filtered = filterSeriesTS(this.calculated.linearcont, this.readings.filtersize);
 
-                this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, this.createAllYearsMonthlyAverageSeriedata);
-                this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, this.createAllYearsFilteredSeriedata);
-                this.createChart(this.testgraph2, 'Päivittäinen keskiarvo', temperatures, this.createAllYearsAverageSeriedata);
-                this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, this.createAllYearsSeriedata);
-                this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, this.createLastYearsSeriedata);
-                this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, this.createYearlyTrendSeriedata);
-                this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, this.createMonthlySummerTrendSeriedata);
-                this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, this.createMonthlyWinterTrendSeriedata);
-                this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, this.createMonthlyFallTrendSeriedata);
-                this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, this.createMonthlySpringTrendSeriedata);
-                this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
+               this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, this.createAllYearsMonthlyAverageSeriedata);
+               this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, this.createAllYearsFilteredSeriedata);
+               this.createChart(this.testgraph2, 'Päivittäinen keskiarvo', temperatures, this.createAllYearsAverageSeriedata);
+               this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, this.createAllYearsSeriedata);
+               this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, this.createLastYearsSeriedata);
+               this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, this.createYearlyTrendSeriedata);
+               this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, this.createMonthlySummerTrendSeriedata);
+               this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, this.createMonthlyWinterTrendSeriedata);
+               this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, this.createMonthlyFallTrendSeriedata);
+               this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, this.createMonthlySpringTrendSeriedata);
+               this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
 
                 formatFilteredTableTS(temperatures.data, this.readings.filtered);
+
             },
             components: {
                 readings: {
                     props: ['readings'],
+                    emits: ['newday'],
                     data: function () {
                         return {
                             selected: ref(-1),
@@ -160,8 +208,10 @@
                         setSum(value) {
                             this.sum = value;
                         },
+                        roundNumber(value, num) {
+                            return roundNumber(value, num)
+                        },
                         calcSums() {
-                            let check = this.$root.isNumeric;
                             let setvalue = this.setSum;
                             setTimeout(function () {
                                 let elements = document.getElementsByClassName('xxx active');
@@ -173,7 +223,7 @@
                                 let sum = 0;
                                 let count = 0;
                                 for (index = 0; index < elements.length; index++) {
-                                    if (check(elements[index].innerText)) {
+                                    if (isNumeric(elements[index].innerText)) {
                                         sum += Number(elements[index].innerText);
                                         count++;
                                     }
@@ -192,6 +242,19 @@
                             if (this.selected == item.index) this.selected = -1;
                             else this.selected = item.index;
                             this.calcSums();
+                            if (this.selected == item.index) {
+                                // 
+                                const selectedday = this.readings.filtered[this.selected].datetimeLocal.getDate();
+                                const selectedmonth = this.readings.filtered[this.selected].datetimeLocal.getMonth();
+                                let values = this.readings.filtered.map(r => {
+                                    if (r && r.datetimeLocal && r.datetimeLocal.getDate() == selectedday && r.datetimeLocal.getMonth() == selectedmonth) {
+                                        return {datetimeLocal: r.datetimeLocal, value: r.value, morning: r.morning, evening: r.evening}
+                                    }
+                                    else return null
+                                })
+                                this.$emit('newday', values.filter(v => v !== null));
+                            }
+                            else this.$emit('newday', []);
                         },
                         markIfPressed(item) {
                             if (this.selected < 0) return { active: false };
@@ -211,7 +274,7 @@
                         },
                         saveValuestoFile() {
                             let data = this.readings.filtered.map(line => (
-                                `${this.getDateTxt(line.date)}\t${this.$root.roundNumber(line.morning, 1)}\t${this.$root.roundNumber(line.evening, 1)}\t${this.$root.roundNumber(line.value, 1)}`
+                                `${this.getDateTxt(line.date)}\t${roundNumber(line.morning, 1)}\t${roundNumber(line.evening, 1)}\t${roundNumber(line.value, 1)}`
                             ));
                             let filename = 'readings.txt';
                             this.saveToFile(`Päivämäärä\tAamu\tIlta\tSuodatettu(${this.readings.filtersize})\n${data.join('\n')}`, filename, `Tallennettu tiedostoon ${filename}`, '');
@@ -242,10 +305,10 @@
                             <thead><tr><td></td><td>Aamulämpö</td><td>Iltalämpö</td><td>Suodatettu({{readings.filtersize}})</td><td>Alkupvm</td><td>Loppupvm</td></tr></thead>
                             <tbody>
                                 <tr v-for="item in readings.filtered">
-                                    <td :class="markIfPressed(item)" align="center"> <button class="actionbutton" @click="selectDay(item)" :class="markIfPressed(item)">{{ this.getDateTxt(item.date) }} </button> </td>
-                                    <td class="xxx" :class="markIfSelected(item)"> {{ this.$root.roundNumber(item.morning, 1) }} </td>
-                                    <td class="xxx" :class="markIfSelected(item)"> {{ this.$root.roundNumber(item.evening, 1) }} </td>
-                                    <td :class="markIfPressed(item)"> {{ this.$root.roundNumber(item.value, 1) }} </td>
+                                    <td :class="markIfPressed(item)" align="center"> <button class="actionbutton" @click="selectDay(item)" :class="markIfPressed(item)">{{ getDateTxt(item.date) }} </button> </td>
+                                    <td class="xxx" :class="markIfSelected(item)"> {{ roundNumber(item.morning, 1) }} </td>
+                                    <td class="xxx" :class="markIfSelected(item)"> {{ roundNumber(item.evening, 1) }} </td>
+                                    <td :class="markIfPressed(item)"> {{ roundNumber(item.value, 1) }} </td>
                                     <td> {{ getDateTxt(item.firstday) }} </td>
                                     <td> {{ getDateTxt(item.lastday) }} </td>
                                 </tr>                                
@@ -255,21 +318,26 @@
                         `
                 },
                 monthtable: {
-                    props: ['monthlydata'],
+                    props: ['monthlydata', 'monthnames'],
+                    methods: {
+                        roundNumber(value, num) {
+                            return roundNumber(value, num);
+                        },
+                    },
                     template: `
                         Kuukausittaiset lämpötilat
                         <table class="datatable">
                             <thead>
                                 <tr>
-                                    <th></th><th v-for="month in this.$root.monthnames">{{ month }}</th>
+                                    <th></th><th v-for="month in monthnames">{{ month }}</th>
                                     <th>Koko vuosi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="item in monthlydata">
                                     <td>{{ item.year }}</td> 
-                                    <td v-for="m in item.months">{{ isNaN(m.average) ? '-' : this.$root.roundNumber(m.average, 1) }}</td>
-                                    <td>{{ item.estimate===true ? '(': ''}} {{this.$root.roundNumber(item.yearaverage, 1)}} {{ item.estimate==true?')':''}}</td>
+                                    <td v-for="m in item.months">{{ isNaN(m.average) ? '-' : roundNumber(m.average, 1) }}</td>
+                                    <td>{{ item.estimate===true ? '(': ''}} {{roundNumber(item.yearaverage, 1)}} {{ item.estimate==true?')':''}}</td>
                                 </tr>                                
                             </tbody>
                         </table>
@@ -301,11 +369,15 @@
                         })
                     })
                 },
-                createChart(element, title, temperatures, funct) {
-                    let trendChart = this.initSerie(element);
+                createChart(element, title, data, funct, thischart) {
+                    let trendChart = (thischart ? thischart.trendChart : this.initSerie(element));
                     if (trendChart === null) return;
-                    let serieoptions = this.buildChartOptions(title, funct(temperatures));
-                    trendChart.setOption(serieoptions);
+                    const buildValues = funct(data);
+                    const params = buildValues.params;
+                    let serieOptions = this.buildChartOptions(title, buildValues);
+
+                    trendChart.setOption(serieOptions);
+                    return {trendChart, serieOptions, params};
                 },
                 initSerie(element) {
                     const graphelem = document.getElementById(element);
@@ -386,8 +458,8 @@
                         if (series.params.rangeoffset) {
                             let minmax = this.getMinMaxValue(series);
                             let offset = Number(series.params.rangeoffset);
-                            chartoptions.yAxis.min = this.roundNumber(minmax.min - offset - 1, 0);
-                            chartoptions.yAxis.max = this.roundNumber(minmax.max + offset, 0);
+                            chartoptions.yAxis.min = roundNumber(minmax.min - offset - 1, 0);
+                            chartoptions.yAxis.max = roundNumber(minmax.max + offset, 0);
                         }
                         if (series.params.showlegend) {
                             chartoptions.legend.show = true;
@@ -398,6 +470,23 @@
                     }
 
                     return chartoptions;
+                },
+                dayselected(data) {
+                    // create trend curve
+                    const values = {
+                            data: data.map(d => ({
+                                value: d.value,
+                                year: d.datetimeLocal.getFullYear(),
+                            }))
+                    }
+                    const factors = calculateTrendTS([values]);
+                    let trend = data.map(d => ({
+                        value: d.datetimeLocal.getFullYear() * factors.k + factors.b,
+                        datetimeLocal: d.datetimeLocal,
+                    }))
+                    let series = [data, trend];
+                    this.daydata.data = series;
+                    this.daydata.chart = this.createChart('daygraph', 'Päivän vuosittaisarvot', series, this.createDayGraph, this.daydata.chart);
                 },
                 getDate(date) {
                     let parts = date.split('/');
@@ -413,17 +502,7 @@
                     if (daymonth === true) return `${day}.${month}`;
                     return `${day}.${month}.${date.getFullYear()}`;
                 },
-                isNumeric(obj) {
-                    return !Array.isArray(obj) && (obj - parseFloat(obj) + 1) >= 0;
-                },
-                roundNumber(value, num) {
-                    if (this.isNumeric(value)) {
-                        if (typeof value === 'number') return value.toFixed(num);
-                        else return value;
-                    }
-                    if (isNaN(value)) return 'NaN';
-                    return 'kummaa'
-                },createSeries(series, params) {
+                createSeries(series, params) {
                     let chartdata = series.data.map(values => ({
                         type: 'line',
                         symbolSize: 3,
@@ -460,6 +539,19 @@
                         }
                     }
                     return chartdata;
+                },
+                createDayGraph() {
+                    let datavalues = [];
+                    this.daydata.data.forEach((serie, i) => {
+                        let values = serie.map(dd => (
+                            {value: [dd.datetimeLocal, dd.value], tooltip: `Aamu: ${this.getDateTxt(dd.datetimeLocal, false)} ${dd.value}`}
+                        ))
+                        datavalues.push({values: values, location: '', year: 0});
+                    });
+                    
+
+                    return {data: datavalues, params: null}
+
                 },
                 // ---------------------------------------------------------------------------------------------
                 createLastYearsSeriedata(series) {

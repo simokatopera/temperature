@@ -284,7 +284,7 @@ function findMax(dt: Date, serie: YearCalcValue[]): ValueDatePair {
     return value.morning.max > value.evening.max ? { value: value.morning.max, date: value.morning.maxdate } : { value: value.evening.max, date: value.evening.maxdate };
 }
 
-function roundNumber(value, num: number): string {
+export function roundNumber(value: any, num: number): string {
     if (isNumeric(value)) {
         if (typeof value === 'number') return value.toFixed(num);
         else return value;
@@ -335,7 +335,7 @@ function getDate(date: string): Date | number {
     }
     return NaN;
 }
-function isNumeric(obj: any): boolean {
+export function isNumeric(obj: any): boolean {
     return !Array.isArray(obj) && (obj - parseFloat(obj) + 1) >= 0;
 }
 

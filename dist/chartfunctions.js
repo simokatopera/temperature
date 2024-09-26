@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateMonthlyTrendsTS = exports.createAllyearsAverageSerieTS = exports.createAllYearsFilteredSerieTS = exports.createAllYearsMonthlySeriedataTS = exports.getSeasonTrendsTS = exports.getYearlyTrendTS = exports.calculateTrendTS = exports.getDiffCurveDataTS = exports.calculateMonthlyAveragesTS = exports.calculateYearlyEstimatesTS = exports.createYearlyAverage = exports.createLinearContTableTS = exports.calculateDailyAveragesTS = exports.createLastYearsSeriedataTS = exports.createGraphSerie = exports.createReturnValue = exports.getDailyFilteredMinMaxTS = exports.createSumTableTS = exports.createDefaultYearTable = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = exports.createDbData = exports.createInfo = exports.createTemperatureMsg = void 0;
+exports.calculateMonthlyTrendsTS = exports.createAllyearsAverageSerieTS = exports.createAllYearsFilteredSerieTS = exports.createAllYearsMonthlySeriedataTS = exports.getSeasonTrendsTS = exports.getYearlyTrendTS = exports.calculateTrendTS = exports.getDiffCurveDataTS = exports.calculateMonthlyAveragesTS = exports.calculateYearlyEstimatesTS = exports.createYearlyAverage = exports.createLinearContTableTS = exports.calculateDailyAveragesTS = exports.createLastYearsSeriedataTS = exports.isNumeric = exports.createGraphSerie = exports.createReturnValue = exports.roundNumber = exports.getDailyFilteredMinMaxTS = exports.createSumTableTS = exports.createDefaultYearTable = exports.getReadingsBetweenTS = exports.formatFilteredTableTS = exports.filterSeriesTS = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = exports.createDbData = exports.createInfo = exports.createTemperatureMsg = void 0;
 const TempMinDefaultValue = 99999;
 const TempMaxDefaultValue = -99999;
 function createHalfFilledFiltered(value, morning, evening, date, first, last, diffvalue, datetimeUtc, datetimeLocal) {
@@ -237,6 +237,7 @@ function roundNumber(value, num) {
         return 'NaN';
     return 'kummaa';
 }
+exports.roundNumber = roundNumber;
 function createValue(d, v) {
     return [d, v];
 }
@@ -274,6 +275,7 @@ function getDate(date) {
 function isNumeric(obj) {
     return !Array.isArray(obj) && (obj - parseFloat(obj) + 1) >= 0;
 }
+exports.isNumeric = isNumeric;
 function createLastYearsSeriedataTS(readings, sums, location) {
     let data = [];
     const year = readings[readings.length - 1].datetimeLocal.getFullYear();
