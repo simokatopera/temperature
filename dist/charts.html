@@ -57,6 +57,12 @@
         .actionbutton {
             background-color: lightblue;
         }
+        .actionbutton.active {
+            background-color: red;
+        }
+        .setmargin5 {
+            margin: 5px;
+        }
     #daygraph {
         display: inline-block;
         width: 400px;
@@ -72,14 +78,14 @@
         </div>
         <div id="app" class="page-content">
             <div class="row">
-                <readings :readings="readings" @newday="dayselected"></readings>
-                <div id="daygraph" :style="daydata.data.length>0?'display:inline-block;':'display:none;'">
-                    <!-- <table>
-                        <tr v-for="item in daydata">
-                            <td>{{ item.morning}}</td>  <td>{{ item.evening}}</td>  
-                        </tr>
-                        
-                    </table> -->
+                <div class="col-6">
+                    <readings :readings="readings" @newday="dayselected"></readings>
+                </div>
+                <div class="col-6" :style="daydata.data[0].length>0?'display:inline-block;':'display:none;'">
+                    <button type="button" :disabled="this.scrollday.scroll" class="btn btn-primary setmargin5" @click="rundays">Rullaa</button>
+                    <button type="button" :disabled="!this.scrollday.scroll" class="btn btn-primary setmargin5" @click="stopdays">Pysäytä</button>
+                    <hr>
+                    <div id="daygraph"></div>
                 </div>
             </div>
             <!-- <button type="button" id="videoButton" style="margin-left:10px;margin-top:5px"
@@ -112,8 +118,8 @@
                                 Erä {{ index+1 }}
                                 <button @click="testVideoLink(video.url)">Test</button>
                                 <input type="text" size="40" min="10" max="40" v-model="video.url" /><br>
-                            </div>
-                        </div> -->
+                            </div> -->
+                        </div>
                         <div class="modal-footer">
                             <!-- <div id="savevideoloader" class="loader hidden"></div>
                             <p id="videomsg"></p>
@@ -130,7 +136,13 @@
 
         import { createApp, ref } from 'vue'
 
+        function selectFirstDay() {
+            let button = document.getElementsByClassName('daybutton_0');
+            if (button && button.length) button[0].click();
+            else setTimeout(() => { selectFirstDay(); }, 50);
+        }
         (async function () {
+            setTimeout(() => { selectFirstDay(); }, 50);
         })();
 
         const vueapp = createApp({
@@ -150,8 +162,14 @@
                     trendtitles: [],
                     calculatedDailyAverages: [],
                     defaultyear: 1976,
-                    daydata: {data: [], chart: null},
+                    daydata: {data: [[],[]], chart: null},
                     readings: { values: [], filtered: [], filtersize: 10 },
+                    scrollday: {
+                        firstdate: null,
+                        selecteddate: null,
+                        selecteddayindex: -1,
+                        scroll: false,
+                    },
                     monthnames: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
                     monthnamesLong: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
                     calculated : {
@@ -188,6 +206,10 @@
 
                 formatFilteredTableTS(temperatures.data, this.readings.filtered);
 
+            },
+            updated() {
+                // let button = document.getElementsByClassName('daybutton_0');
+                // if (button && button.length) button[0].click();
             },
             components: {
                 readings: {
@@ -252,14 +274,17 @@
                                     }
                                     else return null
                                 })
-                                this.$emit('newday', values.filter(v => v !== null));
+                                this.$emit('newday', {values: values.filter(v => v !== null), selected: this.selected});
                             }
-                            else this.$emit('newday', []);
+                            else this.$emit('newday', {values: [], selected: -1});
                         },
                         markIfPressed(item) {
                             if (this.selected < 0) return { active: false };
                             if (this.selected == item.index) return { active: true }
                             return { active: false };
+                        },
+                        getClass(index) {
+                            return `daybutton_${index}`;
                         },
                         markIfSelected(item) {
                             if (this.selected < 0) return { active: false };
@@ -299,13 +324,17 @@
                     },
                     template: `
                         Mittaustulokset ja suodatettu arvo
-                        <div><button class="actionbutton" @click="saveValuestoFile">Tallenna lukemat tiedostoon</button></div>
+                        <div><button type="button" class="btn btn-primary" @click="saveValuestoFile">Tallenna lukemat tiedostoon</button></div>
                         <div class="scrollbox">
                         <table class="datatable">
                             <thead><tr><td></td><td>Aamulämpö</td><td>Iltalämpö</td><td>Suodatettu({{readings.filtersize}})</td><td>Alkupvm</td><td>Loppupvm</td></tr></thead>
                             <tbody>
-                                <tr v-for="item in readings.filtered">
-                                    <td :class="markIfPressed(item)" align="center"> <button class="actionbutton" @click="selectDay(item)" :class="markIfPressed(item)">{{ getDateTxt(item.date) }} </button> </td>
+                                <tr v-for="(item, index) in readings.filtered">
+                                    <td :class="markIfPressed(item)" align="center"> 
+                                        <button class="actionbutton" @click="selectDay(item)" :class="markIfPressed(item),getClass(index)">
+                                            {{ getDateTxt(item.date) }} 
+                                        </button> 
+                                    </td>
                                     <td class="xxx" :class="markIfSelected(item)"> {{ roundNumber(item.morning, 1) }} </td>
                                     <td class="xxx" :class="markIfSelected(item)"> {{ roundNumber(item.evening, 1) }} </td>
                                     <td :class="markIfPressed(item)"> {{ roundNumber(item.value, 1) }} </td>
@@ -473,20 +502,57 @@
                 },
                 dayselected(data) {
                     // create trend curve
+                    if (data.selected >= 0) {
+                        this.scrollday.selecteddate = this.scrollday.firstdate = null;
+                        this.scrollday.selecteddayindex = data.selected;
+                        this.scrollday.scroll = false;
+                    }
                     const values = {
-                            data: data.map(d => ({
-                                value: d.value,
-                                year: d.datetimeLocal.getFullYear(),
-                            }))
+                        data: data.values.map(d => ({
+                            value: d.value,
+                            year: d.datetimeLocal.getFullYear(),
+                            datetimeLocal: d.datetimeLocal,
+                        }))
                     }
                     const factors = calculateTrendTS([values]);
-                    let trend = data.map(d => ({
+                    let trend = data.values.map(d => ({
                         value: d.datetimeLocal.getFullYear() * factors.k + factors.b,
                         datetimeLocal: d.datetimeLocal,
                     }))
-                    let series = [data, trend];
+                    let series = [data.values, trend];
                     this.daydata.data = series;
-                    this.daydata.chart = this.createChart('daygraph', 'Päivän vuosittaisarvot', series, this.createDayGraph, this.daydata.chart);
+                    this.daydata.chart = this.createChart('daygraph', `Päivän ${values.data[0].datetimeLocal.getDate()}.${values.data[0].datetimeLocal.getMonth()+1} vuosittaisarvot`, series, this.createDayGraph, this.daydata.chart);
+                },
+                rundays() {
+                    this.scrollday.scroll = true;
+                    this.scrollday.firstdate = this.scrollday.selecteddate = this.readings.filtered[this.scrollday.selecteddayindex].datetimeLocal;
+                    setTimeout(this.scrolldayfunction, 1);
+                },
+                stopdays() {
+                    this.scrollday.scroll = false;
+                    this.scrollday.selecteddate = this.scrollday.firstdate = null;
+                },
+                scrolldayfunction() {
+                    if (this.scrollday.selecteddate === null) return;
+
+                    let newday = new Date(this.scrollday.selecteddate.getFullYear(), this.scrollday.selecteddate.getMonth(), this.scrollday.selecteddate.getDate() - 1);
+                    if (newday <= new Date(this.scrollday.firstdate.getFullYear() - 1, this.scrollday.firstdate.getMonth(), this.scrollday.firstdate.getDate())) {
+                        this.scrollday.selecteddate =  this.scrollday.firstdate;
+                    }
+                    else this.scrollday.selecteddate = newday;
+
+                    const selectedday = this.scrollday.selecteddate.getDate();
+                    const selectedmonth = this.scrollday.selecteddate.getMonth();
+                    let values = this.readings.filtered.map(r => {
+                        if (r && r.datetimeLocal && r.datetimeLocal.getDate() == selectedday && r.datetimeLocal.getMonth() == selectedmonth) {
+                            return {datetimeLocal: r.datetimeLocal, value: r.value, morning: r.morning, evening: r.evening}
+                        }
+                        else return null
+                    })
+                    values = values.filter(v => v !== null);
+
+                    this.dayselected({values: values, selected: -1});
+                    setTimeout(this.scrolldayfunction, 200);
                 },
                 getDate(date) {
                     let parts = date.split('/');
