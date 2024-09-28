@@ -30,21 +30,17 @@
     <script src="chartfunctions.js" defer></script>
 
     <style>
+
         .graphelement {
-            width: 1200px;
+            width: 1100px;
             height: 380px;
         }
-
         .datatable,
         .datatable th,
         .datatable td {
             border: 1px solid;
             text-align: center;
         }
-        /* .datatable button {
-            text-align: center;
-        } */
-
         .active {
             background-color: lightgreen;
         }
@@ -57,12 +53,11 @@
         .setmargin5 {
             margin: 5px;
         }
-    #daygraph {
-        display: inline-block;
-        width: 400px;
-        height: 380px;
+        #daygraph {
+            display: inline-block;
+            width: 400px;
+            height: 380px;
         }
-
         .scrollbox {
             height: 400px;
             width: 520px;
@@ -75,7 +70,6 @@
                 overflow: scroll;
             }            
         } 
-        
         @media screen and (max-width: 800px) {
             .hideifnarrow {display:none}
             .scrollbox {
@@ -83,7 +77,6 @@
                 width: 280px;
                 overflow: scroll;
             }        
-                
         }        
     
     </style>
@@ -106,18 +99,8 @@
                     <div id="daygraph"></div>
                 </div>
             </div>
-            <!-- <button type="button" id="videoButton" style="margin-left:10px;margin-top:5px"
-                class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#dailyTempModal">DailyTemp
-            </button> -->
             <trendgraph :active="false" :elemid="testgraph10" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph4" :title="trendtitles"></trendgraph>
-            <!-- <table>
-                <tr v-for="item in yearlyHiLoReadings">
-                    <td>{{item.year}}</td>
-                    <td>{{item.hicount}}</td>
-                    <td>{{item.locount}}</td>
-                </tr>
-            </table> -->
             <trendgraph :active="false" :elemid="testgraph12" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph2" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
@@ -129,33 +112,6 @@
             <trendgraph :active="false" :elemid="testgraph7" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph8" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph9" :title="trendtitles"></trendgraph>
-            <!-- Daily tempearature modal start---------------------------------------------------------- -->
-            <div class="modal fade" id="dailyTempModal" tabindex="-1" aria-labelledby="dailyTempModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content dailyTempModal">
-                        <div class="modal-header">
-                            <!-- <h5 class="modal-title" id="dailyTempModalLabel">Videot</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
-                        </div>
-                        <div class="modal-body">
-                            <!-- <button type="button" :disabled="gamevideo&&gamevideo.length>4" class="btn btn-secondary" @click="addVideoSet">Lisää</button>
-                            <button type="button" :disabled="gamevideo&&gamevideo.length==0" class="btn btn-secondary" @click="removeVideoSet">Poista</button>
-                            <div v-for="(video,index) in gamevideo">
-                                Erä {{ index+1 }}
-                                <button @click="testVideoLink(video.url)">Test</button>
-                                <input type="text" size="40" min="10" max="40" v-model="video.url" /><br>
-                            </div> -->
-                        </div>
-                        <div class="modal-footer">
-                            <!-- <div id="savevideoloader" class="loader hidden"></div>
-                            <p id="videomsg"></p>
-                            <button type="button" class="btn btn-secondary" @click="saveVideos">Tallenna</button>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sulje</button> -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Daily temperature modal end----------------------------------------------------------- -->            
         </div>
     </div>
     <script type="module">
@@ -551,7 +507,9 @@
                     }))
                     let series = [data.values, trend];
                     this.daydata.data = series;
-                    this.daydata.chart = this.createChart('daygraph', `Päivän ${values.data[0].datetimeLocal.getDate()}.${values.data[0].datetimeLocal.getMonth()+1} vuosittaisarvot`, series, this.createDayGraph, this.daydata.chart);
+                    this.daydata.chart = this.createChart('daygraph', 
+                        `Päivän ${values.data[0].datetimeLocal.getDate()}.${values.data[0].datetimeLocal.getMonth()+1} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`, 
+                        series, this.createDayGraph, this.daydata.chart);
                 },
                 rundays() {
                     this.scrollday.scroll = true;
@@ -644,10 +602,7 @@
                         ))
                         datavalues.push({values: values, location: '', year: 0});
                     });
-                    
-
                     return {data: datavalues, params: null}
-
                 },
                 // ---------------------------------------------------------------------------------------------
                 createLastYearsSeriedata(series) {
@@ -699,8 +654,6 @@
                     const seriedata = { data: returnvalues, params: { series: [{ name: '', markersize: 1 }] }};
                     return seriedata;
                 },
-
-
                 createYearlyTrendSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
@@ -736,8 +689,7 @@
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
                     const datavalues = createAllYearsMonthlySeriedataTS(series, this.calculated.monthlyaverages,this.defaultyear);
-
-                    return {data: datavalues, params: null};
+                    return {data: datavalues, params: {showlegend: true}};
                 },
                 createAllYearsFilteredSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }

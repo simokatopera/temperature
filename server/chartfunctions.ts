@@ -768,7 +768,7 @@ export function createAllYearsMonthlySeriedataTS(series: TemperatureMsg, monthly
     if (monthly[monthly.length - 1].year == new Date().getFullYear()) {
         valuesthisyear = monthly[monthly.length - 1].months.map((m, i) => ({
             value: [new Date(defaultyear, i, 1), m.average],
-            tooltip: `Matalin ${getDateTxt(new Date(monthly[monthly.length - 1].year, i, 1), false)} ${roundNumber(m.average, 1)}`
+            tooltip: `Vuosi ${monthly[monthly.length - 1].year} ${getDateTxt(new Date(monthly[monthly.length - 1].year, i, 1), false)} ${roundNumber(m.average, 1)}`
         }));
     }
     let datavalues = [];
