@@ -111,6 +111,14 @@
             </button> -->
             <trendgraph :active="false" :elemid="testgraph10" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph4" :title="trendtitles"></trendgraph>
+            <!-- <table>
+                <tr v-for="item in yearlyHiLoReadings">
+                    <td>{{item.year}}</td>
+                    <td>{{item.hicount}}</td>
+                    <td>{{item.locount}}</td>
+                </tr>
+            </table> -->
+            <trendgraph :active="false" :elemid="testgraph12" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph2" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph3" :title="trendtitles"></trendgraph>
@@ -177,6 +185,7 @@
                     testgraph9: 'GraphLocation9',
                     testgraph10: 'GraphLocation10',
                     testgraph11: 'GraphLocation11',
+                    testgraph12: 'GraphLocation12',
                     trendtitles: [],
                     calculatedDailyAverages: [],
                     defaultyear: 1976,
@@ -188,6 +197,7 @@
                         selecteddayindex: -1,
                         scroll: false,
                     },
+                    yearlyHiLoReadings: ref([]),
                     monthnames: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
                     monthnamesLong: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
                     calculated : {
@@ -215,12 +225,14 @@
                this.createChart(this.testgraph2, 'Päivittäinen keskiarvo', temperatures, this.createAllYearsAverageSeriedata);
                this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, this.createAllYearsSeriedata);
                this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, this.createLastYearsSeriedata);
+
                this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, this.createYearlyTrendSeriedata);
                this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, this.createMonthlySummerTrendSeriedata);
                this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, this.createMonthlyWinterTrendSeriedata);
                this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, this.createMonthlyFallTrendSeriedata);
                this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, this.createMonthlySpringTrendSeriedata);
                this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
+               this.createChart(this.testgraph12, 'Vuosien korkeimmat ja matalimmat', temperatures, this.createYearlyHighValuedata);
 
                 formatFilteredTableTS(temperatures.data, this.readings.filtered);
 
@@ -628,7 +640,7 @@
                     let datavalues = [];
                     this.daydata.data.forEach((serie, i) => {
                         let values = serie.map(dd => (
-                            {value: [dd.datetimeLocal, dd.value], tooltip: `Aamu: ${this.getDateTxt(dd.datetimeLocal, false)} ${dd.value}`}
+                            {value: [dd.datetimeLocal, dd.value], tooltip: `Päivä: ${this.getDateTxt(dd.datetimeLocal, false)} ${roundNumber(dd.value, 1)}`}
                         ))
                         datavalues.push({values: values, location: '', year: 0});
                     });
@@ -737,9 +749,54 @@
                     };
                     return seriedata;
                 },
+                createYearlyHighValuedata(series) {
+                    if (this.yearlyHiLoReadings.length === 0) {
+                        this.createAllYearsAverageSeriedata(series);
+                    }
+                    let hivalues = this.yearlyHiLoReadings.map(v =>({
+                        value: [new Date(v.year, 0, 1), v.hicount],
+                        tooltip: `Korkein ${v.year} ${v.hicount} kpl`,
+                    }))
+                    let lovalues = this.yearlyHiLoReadings.map(v =>({
+                        value: [new Date(v.year, 0, 1), v.locount],
+                        tooltip: `Matalin ${v.year} ${v.locount} kpl`,
+                    }))
+                    let datavalues = [];
+                    datavalues.push({values: hivalues, location: '', year: 0, name:'Korkein'})
+                    datavalues.push({values: lovalues, location: '', year: 0, name: 'Matalin'})
+
+                    const seriedata = { data: datavalues, params: { showlegend: true} };
+                    return seriedata;  
+                },
                 createAllYearsAverageSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-                    const data = createAllyearsAverageSerieTS(series, this.calculated.sums)
+                    const data = createAllyearsAverageSerieTS(series, this.calculated.sums);
+                    let hiindex = 0;
+                    let loindex = 0;
+                    this.yearlyHiLoReadings = series.data.map(year => ({hicount:0, locount: 0, year:year.info.year}));
+
+                    while (hiindex < data.length && data[hiindex].name != 'Korkein') hiindex++;
+                    if (hiindex < data.length) {
+                        data[hiindex].values.forEach(val => {
+                            let date = val.tooltip.match(/(\d{1,2}).(\d{1,2}).(\d{4}) /);
+                            if (date && date.length == 4) {
+                                const year = Number(date[3]);
+                                let found = this.yearlyHiLoReadings.find(h => h.year==year);
+                                found.hicount++;
+                            }
+                        })
+                    }
+                    while (loindex < data.length && data[loindex].name != 'Matalin') loindex++;
+                    if (loindex < data.length) {
+                        data[loindex].values.forEach(val => {
+                            let date = val.tooltip.match(/(\d{1,2}).(\d{1,2}).(\d{4}) /);
+                            if (date && date.length == 4) {
+                                const year = Number(date[3]);
+                                let found = this.yearlyHiLoReadings.find(h => h.year==year);
+                                found.locount++;
+                            }
+                        })
+                    }
                     const seriedata = { data: data, params: null };
                     return seriedata;
                 },
