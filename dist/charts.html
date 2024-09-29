@@ -160,7 +160,7 @@
                         sums: [],             // YearCalcValue[]
                         monthlytrends: [],    // MonthDataPair[]
                         monthlyaverages: [],  // YearlyAverage[]
-                        linearcont: [],       // TemperatureValue[]
+                        //linearcont: [],       // TemperatureValue[]
                     }
                 }
             },
@@ -173,8 +173,8 @@
                 this.calculated.sums = calculateDailyAveragesTS(temperatures, this.defaultyear);
                 this.calculated.monthlytrends = calculateMonthlyTrendsTS(temperatures);
                 this.calculated.monthlyaverages = calculateMonthlyAveragesTS(temperatures);
-                this.calculated.linearcont = createLinearContTableTS(temperatures);
-                this.readings.filtered = filterSeriesTS(this.calculated.linearcont, this.readings.filtersize);
+                this.readings.values = createLinearContTableTS(temperatures);
+                this.readings.filtered = filterSeriesTS(this.readings.values, this.readings.filtersize);
 
                this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, this.createAllYearsMonthlyAverageSeriedata);
                this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, this.createAllYearsFilteredSeriedata);
@@ -252,11 +252,11 @@
                             this.calcSums();
                             if (this.selected == item.index) {
                                 // 
-                                const selectedday = this.readings.filtered[this.selected].datetimeLocal.getDate();
-                                const selectedmonth = this.readings.filtered[this.selected].datetimeLocal.getMonth();
-                                let values = this.readings.filtered.map(r => {
-                                    if (r && r.datetimeLocal && r.datetimeLocal.getDate() == selectedday && r.datetimeLocal.getMonth() == selectedmonth) {
-                                        return {datetimeLocal: r.datetimeLocal, value: r.value, morning: r.morning, evening: r.evening}
+                                const selectedday = this.readings.filtered[this.selected].date.getDate();
+                                const selectedmonth = this.readings.filtered[this.selected].date.getMonth();
+                                let values = this.readings.values.map(r => {
+                                    if (r && r.date && r.date.getDate() == selectedday && r.date.getMonth() == selectedmonth) {
+                                        return {date: r.date, value: r.value, morning: r.morning, evening: r.evening, datetimeLocal: r.datetimeLocal}
                                     }
                                     else return null
                                 })
@@ -496,19 +496,19 @@
                     const values = {
                         data: data.values.map(d => ({
                             value: d.value,
-                            year: d.datetimeLocal.getFullYear(),
-                            datetimeLocal: d.datetimeLocal,
+                            year: d.date.getFullYear(),
+                            date: d.date,
                         }))
                     }
                     const factors = calculateTrendTS([values]);
                     let trend = data.values.map(d => ({
-                        value: d.datetimeLocal.getFullYear() * factors.k + factors.b,
-                        datetimeLocal: d.datetimeLocal,
+                        value: d.date.getFullYear() * factors.k + factors.b,
+                        date: d.date,
                     }))
                     let series = [data.values, trend];
                     this.daydata.data = series;
                     this.daydata.chart = this.createChart('daygraph', 
-                        `Päivän ${values.data[0].datetimeLocal.getDate()}.${values.data[0].datetimeLocal.getMonth()+1} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`, 
+                        `Päivän ${values.data[0].date.getDate()}.${values.data[0].date.getMonth()+1} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`, 
                         series, this.createDayGraph, this.daydata.chart);
                 },
                 rundays() {
@@ -531,9 +531,9 @@
 
                     const selectedday = this.scrollday.selecteddate.getDate();
                     const selectedmonth = this.scrollday.selecteddate.getMonth();
-                    let values = this.readings.filtered.map(r => {
+                    let values = this.readings.values.map(r => {
                         if (r && r.datetimeLocal && r.datetimeLocal.getDate() == selectedday && r.datetimeLocal.getMonth() == selectedmonth) {
-                            return {datetimeLocal: r.datetimeLocal, value: r.value, morning: r.morning, evening: r.evening}
+                            return {datetimeLocal: r.datetimeLocal, date: r.date, value: r.value, morning: r.morning, evening: r.evening}
                         }
                         else return null
                     })
@@ -598,7 +598,7 @@
                     let datavalues = [];
                     this.daydata.data.forEach((serie, i) => {
                         let values = serie.map(dd => (
-                            {value: [dd.datetimeLocal, dd.value], tooltip: `Päivä: ${this.getDateTxt(dd.datetimeLocal, false)} ${roundNumber(dd.value, 1)}`}
+                            {value: [dd.date, dd.value], tooltip: `Päivä: ${this.getDateTxt(dd.date, false)} ${roundNumber(dd.value, 1)}`}
                         ))
                         datavalues.push({values: values, location: '', year: 0});
                     });
