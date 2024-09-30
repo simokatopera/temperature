@@ -105,7 +105,7 @@
             <trendgraph :active="false" :elemid="testgraph2" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph3" :title="trendtitles"></trendgraph>
-            <monthtable :monthlydata="calculated.monthlyaverages" :monthnames="monthnames"></monthtable>
+            <monthtable :monthlydata="calculated.monthlyaverages.values" :monthnames="monthnames"></monthtable>
             <trendgraph :active="false" :elemid="testgraph11" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph5" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph6" :title="trendtitles"></trendgraph>
@@ -159,7 +159,7 @@
                     calculated : {
                         sums: [],             // YearCalcValue[]
                         monthlytrends: [],    // MonthDataPair[]
-                        monthlyaverages: [],  // YearlyAverage[]
+                        monthlyaverages: {values: [], calculated: []},  // YearlyAverage[]
                         //linearcont: [],       // TemperatureValue[]
                     }
                 }
@@ -334,6 +334,7 @@
                 },
                 monthtable: {
                     props: ['monthlydata', 'monthnames'],
+                    emits: ['lastyear'],
                     methods: {
                         roundNumber(value, num) {
                             return roundNumber(value, num);
@@ -536,8 +537,7 @@
                             return {datetimeLocal: r.datetimeLocal, date: r.date, value: r.value, morning: r.morning, evening: r.evening}
                         }
                         else return null
-                    })
-                    values = values.filter(v => v !== null);
+                    }).filter(v => v !== null);
 
                     this.dayselected({values: values, selected: -1});
                     setTimeout(this.scrolldayfunction, 200);
@@ -688,7 +688,7 @@
                 createAllYearsMonthlyAverageSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                    const datavalues = createAllYearsMonthlySeriedataTS(series, this.calculated.monthlyaverages,this.defaultyear);
+                    const datavalues = createAllYearsMonthlySeriedataTS(series, this.calculated.monthlyaverages.values,this.defaultyear);
                     return {data: datavalues, params: {showlegend: true}};
                 },
                 createAllYearsFilteredSeriedata(series) {

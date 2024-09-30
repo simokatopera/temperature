@@ -527,6 +527,19 @@ export function createLinearContTableTS(series: TemperatureMsg): TemperatureValu
     return tbl;
 }
 
+interface YearlyAveragesEstimates {
+    values: YearlyAverage[],
+    calculated: MonthlyEstimate[],
+}
+function createYearlyAveragesEstimates(values: YearlyAverage[], calculated: MonthlyEstimate[]): YearlyAveragesEstimates {
+    return {values: values, calculated: calculated}
+}
+interface MonthlyEstimate {
+    year: number, month: number, value: number
+}
+function createMonthlyEstimate(year: number, month: number, value: number): MonthlyEstimate {
+    return {year: year, month: month, value: value}
+}
 interface YearlyAverage {
     monthcount: number;
     year: number;
@@ -541,7 +554,8 @@ export function createYearlyAverage(year: number, monthcount: number, yearsum: n
 interface MonthlyAverage {
     average: number;
 }
-export function calculateYearlyEstimatesTS(yearindexes: number[], years: YearlyAverage[]) {
+export function calculateYearlyEstimatesTS(yearindexes: number[], years: YearlyAverage[]): MonthlyEstimate[] {
+    let estimates: MonthlyEstimate[] = [];
     if (yearindexes.length) {
         let sum: number[]=[0,0,0,0,0,0,0,0,0,0,0,0];
         let count: number[]=[0,0,0,0,0,0,0,0,0,0,0,0];
@@ -557,10 +571,13 @@ export function calculateYearlyEstimatesTS(yearindexes: number[], years: YearlyA
         for (let index = 0; index < yearindexes.length; index++) {
             let msum = 0;
             let mcount = 0;
+            const curyear = years[yearindexes[index]].year;
             years[yearindexes[index]].months.forEach((m, monthindex) => {
                 mcount++;
                 if (isNaN(m.average)) {
-                    msum += count[monthindex] > 0 ? sum[monthindex]/count[monthindex] : 0;
+                    let value = count[monthindex] > 0 ? sum[monthindex]/count[monthindex] : 0;
+                    msum += value;
+                    estimates.push(createMonthlyEstimate(curyear, monthindex, value));
                 }
                 else {
                     msum += m.average;
@@ -570,12 +587,13 @@ export function calculateYearlyEstimatesTS(yearindexes: number[], years: YearlyA
             years[yearindexes[index]].estimate = true;
         }
     }
+    return estimates;
 }
 
-let monthlyAveragesTScalculated = [];
+let monthlyAveragesTScalculated = createYearlyAveragesEstimates([], []);
 
-export function calculateMonthlyAveragesTS(series: TemperatureMsg): YearlyAverage[] {
-    if (monthlyAveragesTScalculated.length) return monthlyAveragesTScalculated;
+export function calculateMonthlyAveragesTS(series: TemperatureMsg): YearlyAveragesEstimates {
+    if (monthlyAveragesTScalculated.values.length) return monthlyAveragesTScalculated;
     let months = series.data.map(yearserie => {
         let monthtbl:YearDataValue[] = [];
         for (let i = 0; i < 12; i++) monthtbl.push(createYearDataValue(0));
@@ -606,9 +624,11 @@ export function calculateMonthlyAveragesTS(series: TemperatureMsg): YearlyAverag
                         monthtbl.map(m => ({average: m.average})));
         return data;
     })
-    calculateYearlyEstimatesTS(months.map((y, i) => isNaN(y.yearaverage) ? i : -1).filter(v => v !== -1), months);
-    monthlyAveragesTScalculated = months;
-    return months;
+    const monthlyestimates = calculateYearlyEstimatesTS(months.map((y, i) => isNaN(y.yearaverage) ? i : -1).filter(v => v !== -1), months);
+    monthlyAveragesTScalculated.values = months;
+
+    const returnvalue: YearlyAveragesEstimates = createYearlyAveragesEstimates( months, monthlyestimates);
+    return returnvalue;
 }
 
 interface DiffData {

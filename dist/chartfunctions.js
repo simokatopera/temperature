@@ -455,11 +455,18 @@ function createLinearContTableTS(series) {
     return tbl;
 }
 exports.createLinearContTableTS = createLinearContTableTS;
+function createYearlyAveragesEstimates(values, calculated) {
+    return { values: values, calculated: calculated };
+}
+function createMonthlyEstimate(year, month, value) {
+    return { year: year, month: month, value: value };
+}
 function createYearlyAverage(year, monthcount, yearsum, yearaverage, months) {
     return { year: year, monthcount: monthcount, yearsum: yearsum, yearaverage: yearaverage, months: months, estimate: false };
 }
 exports.createYearlyAverage = createYearlyAverage;
 function calculateYearlyEstimatesTS(yearindexes, years) {
+    let estimates = [];
     if (yearindexes.length) {
         let sum = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let count = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -474,10 +481,13 @@ function calculateYearlyEstimatesTS(yearindexes, years) {
         for (let index = 0; index < yearindexes.length; index++) {
             let msum = 0;
             let mcount = 0;
+            const curyear = years[yearindexes[index]].year;
             years[yearindexes[index]].months.forEach((m, monthindex) => {
                 mcount++;
                 if (isNaN(m.average)) {
-                    msum += count[monthindex] > 0 ? sum[monthindex] / count[monthindex] : 0;
+                    let value = count[monthindex] > 0 ? sum[monthindex] / count[monthindex] : 0;
+                    msum += value;
+                    estimates.push(createMonthlyEstimate(curyear, monthindex, value));
                 }
                 else {
                     msum += m.average;
@@ -487,11 +497,12 @@ function calculateYearlyEstimatesTS(yearindexes, years) {
             years[yearindexes[index]].estimate = true;
         }
     }
+    return estimates;
 }
 exports.calculateYearlyEstimatesTS = calculateYearlyEstimatesTS;
-let monthlyAveragesTScalculated = [];
+let monthlyAveragesTScalculated = createYearlyAveragesEstimates([], []);
 function calculateMonthlyAveragesTS(series) {
-    if (monthlyAveragesTScalculated.length)
+    if (monthlyAveragesTScalculated.values.length)
         return monthlyAveragesTScalculated;
     let months = series.data.map(yearserie => {
         let monthtbl = [];
@@ -523,9 +534,10 @@ function calculateMonthlyAveragesTS(series) {
         let data = createYearlyAverage(yearserie.info.year, monthcount, yearlysum, monthcount == 12 ? yearlysum / monthcount : NaN, monthtbl.map(m => ({ average: m.average })));
         return data;
     });
-    calculateYearlyEstimatesTS(months.map((y, i) => isNaN(y.yearaverage) ? i : -1).filter(v => v !== -1), months);
-    monthlyAveragesTScalculated = months;
-    return months;
+    const monthlyestimates = calculateYearlyEstimatesTS(months.map((y, i) => isNaN(y.yearaverage) ? i : -1).filter(v => v !== -1), months);
+    monthlyAveragesTScalculated.values = months;
+    const returnvalue = createYearlyAveragesEstimates(months, monthlyestimates);
+    return returnvalue;
 }
 exports.calculateMonthlyAveragesTS = calculateMonthlyAveragesTS;
 function createDiffData(name, showyear, data) {
