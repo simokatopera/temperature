@@ -592,7 +592,7 @@ function calculateTrendTS(valuearray) {
     return { k, b };
 }
 exports.calculateTrendTS = calculateTrendTS;
-function getYearlyTrendTS(series, monthlytrend) {
+function getYearlyTrendTS(series, monthlytrend, currentyearestimate) {
     let yearsums = [];
     monthlytrend.forEach(month => {
         month.data.forEach((m, i) => {
@@ -602,9 +602,15 @@ function getYearlyTrendTS(series, monthlytrend) {
             yearsums[m.year].sum += m.value;
         });
     });
-    let yearlyaverages = yearsums.map(y => ({ value: createReturnValue(new Date(y.year, 0, 1), y.count == 12 ? roundNumber(y.sum / y.count, 2) : 'NaN'),
+    let yearlyaverages = yearsums.map(y => ({ value: createReturnValue(new Date(y.year, 0, 1), y.count == 12 ? roundNumber(y.sum / y.count, 1) : 'NaN'),
         tooltip: `Vuosikeskiarvo ${y.year} ${y.count == 12 ? roundNumber(y.sum / y.count, 1) : ''}` }));
     yearlyaverages = yearlyaverages.filter(val => val);
+    if (!isNaN(currentyearestimate) && yearlyaverages[yearlyaverages.length - 1].value[0].getFullYear() == new Date().getFullYear()) {
+        if (yearlyaverages[yearlyaverages.length - 1].value[1] === 'NaN') {
+            yearlyaverages[yearlyaverages.length - 1].value[1] = roundNumber(currentyearestimate, 1);
+            yearlyaverages[yearlyaverages.length - 1].tooltip = yearlyaverages[yearlyaverages.length - 1].tooltip.replace(`Vuosikeskiarvo`, `Arvioitu vuosikeskiarvo`);
+        }
+    }
     let yearlyserie = {
         month: 0,
         data: yearlyaverages.map(val => ({
@@ -625,7 +631,7 @@ function getSeasonTrendsTS(series, monthnumbers, monthnames, monthlytrends) {
     let datavalues = [];
     monthlytrends.forEach(month => {
         if (month.month == monthnumbers[0] || month.month == monthnumbers[1] || month.month == monthnumbers[2]) {
-            let values = month.data.map(value => ({ value: [new Date(value.year, 0, 1), roundNumber(value.value, 2)], tooltip: `${value.year} ${value.month} ${roundNumber(value.value, 2)}` }));
+            let values = month.data.map(value => ({ value: [new Date(value.year, 0, 1), roundNumber(value.value, 1)], tooltip: `${value.year} ${value.month} ${roundNumber(value.value, 1)}` }));
             datavalues.push(createGraphSerie(monthnames[datavalues.length], series.data[0].info.location, 0, values));
         }
     });

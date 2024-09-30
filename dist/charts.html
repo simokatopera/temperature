@@ -583,10 +583,20 @@
                             chartdata.forEach(d => {
                                 let found = params.series.find(p => p.name === d.name);
                                 if (found) {
-                                    //d.showSymbol = false;
-                                    //d.symbol = 'none';
-                                    d.symbolSize = 1;
+                                    d.symbolsize = 1;
                                     if (found.color) d.lineStyle = { color: found.color }
+
+                                    // ?????????? 
+                                    if (found.symbolindex == 'last') {
+                                        if (d.data.length) {
+                                            d.data[d.data.length-1].symbol = found.symbol;
+                                            d.data[d.data.length-1].symbolSize = found.symbolsize;
+                                        }
+                                    }
+                                    else {
+                                        if (found.symbol) d.symbol = found.symbol;
+                                        if (found.symbolsize) d.symbolSize = found.symbolsize;
+                                    }
                                     // d.markPoint = {symbolSize: 0, opacity: 0};
                                 }
                             })
@@ -657,9 +667,13 @@
                 createYearlyTrendSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                    const data = getYearlyTrendTS(series, this.calculated.monthlytrends);
-
-                    return { data: data, params: { rangeoffset: 1, showlegend: true} };
+                    const lastyearestimate = this.calculated.monthlyaverages.values[this.calculated.monthlyaverages.values.length-1].estimate ? this.calculated.monthlyaverages.values[this.calculated.monthlyaverages.values.length-1].yearaverage : NaN;
+                    const data = getYearlyTrendTS(series, this.calculated.monthlytrends, lastyearestimate);
+                    let params = { rangeoffset: 1, showlegend: true};
+                    if (!isNaN(lastyearestimate)) {
+                        params.series = [{ name: data[0].name, symbol: 'arrow', symbolsize: 14, symbolindex: 'last' }];
+                    }
+                    return { data: data, params: params };
                 },
                 createMonthlySummerTrendSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }

@@ -709,7 +709,7 @@ interface YearSum {
     sum: number;
     count: number;
 }
-export function getYearlyTrendTS(series: TemperatureMsg, monthlytrend: MonthDataPair[]): GraphSerie[] {
+export function getYearlyTrendTS(series: TemperatureMsg, monthlytrend: MonthDataPair[], currentyearestimate: number): GraphSerie[] {
     let yearsums: YearSum[] = [];
     monthlytrend.forEach(month => {
         month.data.forEach((m, i) => {
@@ -719,10 +719,16 @@ export function getYearlyTrendTS(series: TemperatureMsg, monthlytrend: MonthData
         })
     });
     let yearlyaverages = yearsums.map(y => (
-        { value: createReturnValue(new Date(y.year, 0, 1), y.count == 12 ? roundNumber(y.sum/y.count, 2) : 'NaN'), 
+        { value: createReturnValue(new Date(y.year, 0, 1), y.count == 12 ? roundNumber(y.sum/y.count, 1) : 'NaN'), 
             tooltip: `Vuosikeskiarvo ${y.year} ${y.count == 12 ? roundNumber(y.sum/y.count, 1): ''}` })
     )
     yearlyaverages = yearlyaverages.filter(val => val);
+    if (!isNaN( currentyearestimate) && yearlyaverages[yearlyaverages.length-1].value[0].getFullYear() == new Date().getFullYear()) {
+        if (yearlyaverages[yearlyaverages.length-1].value[1] === 'NaN') {
+            yearlyaverages[yearlyaverages.length-1].value[1] = roundNumber(currentyearestimate, 1);
+            yearlyaverages[yearlyaverages.length-1].tooltip = yearlyaverages[yearlyaverages.length-1].tooltip.replace(`Vuosikeskiarvo`, `Arvioitu vuosikeskiarvo`);
+        }
+    }   
     let yearlyserie = {
         month: 0,
         data: yearlyaverages.map(val => ({
@@ -731,6 +737,7 @@ export function getYearlyTrendTS(series: TemperatureMsg, monthlytrend: MonthData
             year: Number(val.value[0].getFullYear()),
         })),
     }
+ 
     const trend = calculateTrendTS([yearlyserie]);
     let yearlytrend = series.data.map(ser => (
         { value: createReturnValue(new Date(ser.info.year, 0, 1), roundNumber(ser.info.year * trend.k + trend.b, 1)), 
@@ -746,7 +753,7 @@ export function getSeasonTrendsTS(series: TemperatureMsg, monthnumbers: number[]
     monthlytrends.forEach(month => {
         if (month.month == monthnumbers[0] || month.month == monthnumbers[1] || month.month == monthnumbers[2]) {
             let values = month.data.map(value => (
-                { value: [new Date(value.year, 0, 1), roundNumber(value.value, 2)], tooltip: `${value.year} ${value.month} ${roundNumber(value.value, 2)}` }
+                { value: [new Date(value.year, 0, 1), roundNumber(value.value, 1)], tooltip: `${value.year} ${value.month} ${roundNumber(value.value, 1)}` }
             ));
             datavalues.push( createGraphSerie( monthnames[datavalues.length], series.data[0].info.location, 0, values));
         }
