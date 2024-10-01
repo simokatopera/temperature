@@ -304,15 +304,17 @@ export function createReturnValue(d: Date, s: string): [Date, string] {
 }
 interface GraphSerie {
     name: string;
+    num: number;
     location: string;
     year: number;
     values: GraphChartData[];
+    trend: boolean;
 }
 function createGraphSerieEmpty(): GraphSerie {
-    return {name: '', location: '', year: 0, values: []}
+    return {name: '', location: '', year: 0, values: [], trend: false, num: -1}
 }
-export function createGraphSerie(name: string, location: string, year: number, values: GraphChartData[]): GraphSerie {
-    return {name: name, location: location, year: year, values: values}
+export function createGraphSerie(name: string, location: string, year: number, values: GraphChartData[], num: number, trend: boolean = false): GraphSerie {
+    return {name: name, location: location, year: year, values: values, trend: trend, num: num}
 }
 
 // function getDateTxt(date: Date | number): string {
@@ -345,26 +347,26 @@ export function createLastYearsSeriedataTS(readings: DbData[], sums: YearCalcVal
     let morning: GraphSerie = createGraphSerie('Aamu', location, year, readings.map((r: DbData) => ({
         value: createValue(r.datetimeLocal, r.morning),
         tooltip: `Aamu ${getDateTxt(r.datetimeLocal, false)} ${r.morning}`,
-    })));
+    })), -1);
 
     let evening: GraphSerie = createGraphSerie('llta', location, year, readings.map((r: DbData) => ({
         value: createValue(r.datetimeLocal, r.evening),
         tooltip: `Ilta ${getDateTxt(r.datetimeLocal, false)} ${r.evening}`,
-    })));
+    })), -1);
     let maximum: GraphSerie = createGraphSerie('Maksimi', location, year, morning.values.map(r => {
         let value = findMax(r.value[0], sums);
         return {
             value: createValue(r.value[0], value.value),
             tooltip: `Maksimi ${getDateTxt(value.date, false)} ${value.value}`,
         }
-    }) );
+    }), -1);
     let minimum: GraphSerie = createGraphSerie('Minimi', location, year, morning.values.map(r => {
         let value = findMin(r.value[0], sums);
         return {
             value: createValue(r.value[0], value.value),
             tooltip: `Minimi ${getDateTxt(value.date, false)} ${value.value}`,
         }
-    }));
+    }), -1);
 
     data = [morning, evening, minimum, maximum];
 
@@ -530,9 +532,10 @@ export function createLinearContTableTS(series: TemperatureMsg): TemperatureValu
 interface YearlyAveragesEstimates {
     values: YearlyAverage[],
     calculated: MonthlyEstimate[],
+    averages: number[],
 }
-function createYearlyAveragesEstimates(values: YearlyAverage[], calculated: MonthlyEstimate[]): YearlyAveragesEstimates {
-    return {values: values, calculated: calculated}
+function createYearlyAveragesEstimates(values: YearlyAverage[], calculated: MonthlyEstimate[], averages: number[]): YearlyAveragesEstimates {
+    return {values: values, calculated: calculated, averages: averages}
 }
 interface MonthlyEstimate {
     year: number, month: number, value: number
@@ -590,10 +593,7 @@ export function calculateYearlyEstimatesTS(yearindexes: number[], years: YearlyA
     return estimates;
 }
 
-let monthlyAveragesTScalculated = createYearlyAveragesEstimates([], []);
-
 export function calculateMonthlyAveragesTS(series: TemperatureMsg): YearlyAveragesEstimates {
-    if (monthlyAveragesTScalculated.values.length) return monthlyAveragesTScalculated;
     let months = series.data.map(yearserie => {
         let monthtbl:YearDataValue[] = [];
         for (let i = 0; i < 12; i++) monthtbl.push(createYearDataValue(0));
@@ -624,10 +624,21 @@ export function calculateMonthlyAveragesTS(series: TemperatureMsg): YearlyAverag
                         monthtbl.map(m => ({average: m.average})));
         return data;
     })
-    const monthlyestimates = calculateYearlyEstimatesTS(months.map((y, i) => isNaN(y.yearaverage) ? i : -1).filter(v => v !== -1), months);
-    monthlyAveragesTScalculated.values = months;
+    let averages = [];
+    for (let i = 0; i < 12; i++) averages.push(createYearDataValue(i));
+    months.forEach(year => {
+        for (let i = 0; i < year.months.length; i++) {
+            if (!isNaN(year.months[i].average)) {
+                averages[i].morningsum += year.months[i].average;
+                averages[i].morningcount++;
+            }
+        }
+    })
+    let averageresults = averages.map(a => a.morningcount <= 0 ? NaN : a.morningsum/a.morningcount)
 
-    const returnvalue: YearlyAveragesEstimates = createYearlyAveragesEstimates( months, monthlyestimates);
+    const monthlyestimates = calculateYearlyEstimatesTS(months.map((y, i) => isNaN(y.yearaverage) ? i : -1).filter(v => v !== -1), months);
+
+    const returnvalue: YearlyAveragesEstimates = createYearlyAveragesEstimates( months, monthlyestimates, averageresults);
     return returnvalue;
 }
 
@@ -676,6 +687,8 @@ export function getDiffCurveDataTS(allfiltered: Filtered[], sums: YearCalcValue[
         name: c.name,
         year: 0,
         location: location,
+        num: -1,
+        trend: false,
     }))
 
     return curvedata;
@@ -689,15 +702,17 @@ export function calculateTrendTS(valuearray): {k: number, b: number} {
     let sumxsqr = 0;
     let n = 0;
     valuearray.forEach(values => {
-        values.data.forEach(reading => {
-            if (!isNaN(reading.value)) {
-                n++;
-                sumx += reading.year;
-                sumy += reading.value;
-                sumxy += reading.value * reading.year;
-                sumxsqr += reading.year * reading.year;
-            }
-        })
+        if (values) {
+            values.data.forEach(reading => {
+                if (!isNaN(reading.value)) {
+                    n++;
+                    sumx += reading.year;
+                    sumy += reading.value;
+                    sumxy += reading.value * reading.year;
+                    sumxsqr += reading.year * reading.year;
+                }
+            })
+        }
     })
     k = (n * sumxy - sumx * sumy) / (n * sumxsqr - sumx * sumx);
     b = (sumy - k * sumx) / n;
@@ -743,31 +758,37 @@ export function getYearlyTrendTS(series: TemperatureMsg, monthlytrend: MonthData
         { value: createReturnValue(new Date(ser.info.year, 0, 1), roundNumber(ser.info.year * trend.k + trend.b, 1)), 
             tooltip: `Suuntaus ${ser.info.year} ${roundNumber(ser.info.year * trend.k + trend.b, 1)}` })
     )
-    const yearlyvalues = createGraphSerie(`Vuosikeskiarvo`, series.data[0].info.location, 0, yearlyaverages );
-    const trendvalues = createGraphSerie(`Suuntaus ${trend.k > 0 ? '+' : ''}${roundNumber(trend.k * 10, 1)}°C/10v`, '', 0, yearlytrend);
+    const yearlyvalues = createGraphSerie(`Vuosikeskiarvo`, series.data[0].info.location, 0, yearlyaverages, -1);
+    const trendvalues = createGraphSerie(`Suuntaus ${trend.k > 0 ? '+' : ''}${roundNumber(trend.k * 10, 1)}°C/10v`, '', 0, yearlytrend, -1);
 
     return [yearlyvalues, trendvalues];
 }
 export function getSeasonTrendsTS(series: TemperatureMsg, monthnumbers: number[], monthnames: string[], monthlytrends: MonthDataPair[]): GraphSerie[] {
     let datavalues: GraphSerie[] = [];
     monthlytrends.forEach(month => {
-        if (month.month == monthnumbers[0] || month.month == monthnumbers[1] || month.month == monthnumbers[2]) {
+        let found = monthnumbers.indexOf(month.month);
+        if (found >= 0) {
             let values = month.data.map(value => (
-                { value: [new Date(value.year, 0, 1), roundNumber(value.value, 1)], tooltip: `${value.year} ${value.month} ${roundNumber(value.value, 1)}` }
+                { value: [new Date(value.year, 0, 1), roundNumber(value.value, 1)], tooltip: `${value.year} ${monthnames[found]} ${roundNumber(value.value, 1)}` }
             ));
-            datavalues.push( createGraphSerie( monthnames[datavalues.length], series.data[0].info.location, 0, values));
+            datavalues.push( createGraphSerie( monthnames[datavalues.length], series.data[0].info.location, 0, values, monthnumbers[found]));
         }
     });
-    let trend = calculateTrendTS([monthlytrends[monthnumbers[0] - 1], monthlytrends[monthnumbers[1] - 1], monthlytrends[monthnumbers[2] - 1]]);
+    let trend = calculateTrendTS([monthlytrends[monthnumbers[0] - 1] ?? null, monthlytrends[monthnumbers[1] - 1] ?? null, monthlytrends[monthnumbers[2] - 1]] ?? null);
     let newvalues = series.data.map((ser, serieindex) => (
         { value: [new Date(ser.info.year, 0, 1), roundNumber(ser.info.year * trend.k + trend.b, 2)], tooltip: `${ser.info.year} Suuntaus ${roundNumber(ser.info.year * trend.k + trend.b, 2)}` })
     )
-    datavalues.push( createGraphSerie( `Trendi ${trend.k > 0 ? '+' : ''}${roundNumber(trend.k * 10, 1)}°C/10v`, series.data[0].info.location, 0, newvalues ));
+    if (isNaN(trend.k)) {
+        datavalues.push( createGraphSerie( `Trendi --- °C/10v`, series.data[0].info.location, 0, newvalues, -1, true ));
+    }
+    else {
+        datavalues.push( createGraphSerie( `Trendi ${trend.k > 0 ? '+' : ''}${roundNumber(trend.k * 10, 1)}°C/10v`, series.data[0].info.location, 0, newvalues, -1, true ));
+    }
 
     return datavalues;
 }
 
-export function createAllYearsMonthlySeriedataTS(series: TemperatureMsg, monthlyaverages: YearlyAverage[], defaultyear: number): GraphSerie[] {
+export function createAllYearsMonthlySeriedataTS(series: TemperatureMsg, monthlyaverages: YearlyAverage[], defaultyear: number, monthnames: string[]): GraphSerie[] {
     let monthly = monthlyaverages;
     // find highest and lowest months
     let monthhighest = [];
@@ -784,24 +805,24 @@ export function createAllYearsMonthlySeriedataTS(series: TemperatureMsg, monthly
     })
     let valueshigh: GraphChartData[] = monthhighest.map(high => ({
         value: [new Date(defaultyear, high.month, 1), high.value],
-        tooltip: `Korkein ${getDateTxt(new Date(high.year, high.month, 1), false)} ${roundNumber(high.value, 1)}`
+        tooltip: `Korkein ${high.year} ${monthnames[high.month]} ${roundNumber(high.value, 1)}`
     }))
 
     let valueslow: GraphChartData[] = monthlowest.map(low => ({
         value: [new Date(defaultyear, low.month, 1), low.value],
-        tooltip: `Matalin ${getDateTxt(new Date(low.year, low.month, 1), false)} ${roundNumber(low.value, 1)}`
+        tooltip: `Matalin ${low.year} ${monthnames[low.month]} ${roundNumber(low.value, 1)}`
     }))
     let valuesthisyear: GraphChartData[] = [];
     if (monthly[monthly.length - 1].year == new Date().getFullYear()) {
         valuesthisyear = monthly[monthly.length - 1].months.map((m, i) => ({
             value: [new Date(defaultyear, i, 1), m.average],
-            tooltip: `Vuosi ${monthly[monthly.length - 1].year} ${getDateTxt(new Date(monthly[monthly.length - 1].year, i, 1), false)} ${roundNumber(m.average, 1)}`
+            tooltip: `Vuosi ${monthly[monthly.length - 1].year} ${monthly[monthly.length - 1].year} ${monthnames[i]} ${roundNumber(m.average, 1)}`
         }));
     }
     let datavalues = [];
-    datavalues.push(createGraphSerie( 'Korkein', series.data[0].info.location, 0,  valueshigh))
-    datavalues.push(createGraphSerie( 'Matalin', series.data[0].info.location, 0, valueslow))
-    datavalues.push(createGraphSerie( monthly[monthly.length - 1].year.toString(), series.data[0].info.location, 0, valuesthisyear ))
+    datavalues.push(createGraphSerie( 'Korkein', series.data[0].info.location, 0,  valueshigh, -1))
+    datavalues.push(createGraphSerie( 'Matalin', series.data[0].info.location, 0, valueslow, -1))
+    datavalues.push(createGraphSerie( monthly[monthly.length - 1].year.toString(), series.data[0].info.location, 0, valuesthisyear, -1))
 
     return datavalues;
 }
@@ -812,14 +833,14 @@ export function createAllYearsFilteredSerieTS(series: TemperatureMsg, filtered: 
     filtered.forEach((f: Filtered) => {
         if (f.date.getFullYear() != curryear) {
             curryear = f.date.getFullYear();
-            valuearray.push(createGraphSerie(curryear.toString(), series.data[0].info.location, curryear, []));
+            valuearray.push(createGraphSerie(curryear.toString(), series.data[0].info.location, curryear, [], -1));
         }
         let dt = new Date(defaultyear, f.date.getMonth(), f.date.getDate());
         valuearray[valuearray.length - 1].values.push({ value: [dt, f.value], tooltip: `${getDateTxt(f.date, false)} ${roundNumber(f.value, 1)}` });
     })
     // add minimum and maximum values to screen data
-    let minimum = createGraphSerie('Minimi', series.data[0].info.location, 0, []);
-    let maximum = createGraphSerie('Maksimi', series.data[0].info.location, 0, []);
+    let minimum = createGraphSerie('Minimi', series.data[0].info.location, 0, [], -1);
+    let maximum = createGraphSerie('Maksimi', series.data[0].info.location, 0, [], -1);
     let minmax = getDailyFilteredMinMaxTS(filtered, defaultyear);
     maximum.values = minmax.map(r => {
         return {
@@ -870,11 +891,11 @@ export function createAllyearsAverageSerieTS(series: TemperatureMsg, sums: YearC
         value: [s.date, s.morning.min < s.evening.min ? s.morning.min : s.evening.min],
         tooltip: `Matalin ${getDateTxt(s.morning.min < s.evening.min ? s.morning.mindate : s.evening.mindate, false)} ${roundNumber(s.morning.min < s.evening.min ? s.morning.min : s.evening.min, 2)}`,
     }))
-    let returnvalues1 = createGraphSerie( 'Aamu', loc, 0, valuearraymorning);
-    let returnvalues2 = createGraphSerie( 'Ilta', loc, 0, valuearrayevening);
-    let returnvalues3 = createGraphSerie( 'Keskiarvo', loc, 0, valuearrayaverage);
-    let returnvalues4 = createGraphSerie( 'Korkein', loc, 0, valuearrayhigh);
-    let returnvalues5 = createGraphSerie( 'Matalin', loc, 0, valuearraylow);
+    let returnvalues1 = createGraphSerie( 'Aamu', loc, 0, valuearraymorning, -1);
+    let returnvalues2 = createGraphSerie( 'Ilta', loc, 0, valuearrayevening, -1);
+    let returnvalues3 = createGraphSerie( 'Keskiarvo', loc, 0, valuearrayaverage, -1);
+    let returnvalues4 = createGraphSerie( 'Korkein', loc, 0, valuearrayhigh, -1);
+    let returnvalues5 = createGraphSerie( 'Matalin', loc, 0, valuearraylow, -1);
 
     return [returnvalues1, returnvalues2, returnvalues3, returnvalues4, returnvalues5];
 }

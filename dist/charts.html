@@ -105,7 +105,7 @@
             <trendgraph :active="false" :elemid="testgraph2" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph3" :title="trendtitles"></trendgraph>
-            <monthtable :monthlydata="calculated.monthlyaverages.values" :monthnames="monthnames"></monthtable>
+            <monthtable :monthlydata="calculated.monthlyaverages.values" :monthaverages="calculated.monthlyaverages.averages" :monthnames="monthnames"></monthtable>
             <trendgraph :active="false" :elemid="testgraph11" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph5" :title="trendtitles"></trendgraph>
             <trendgraph :active="false" :elemid="testgraph6" :title="trendtitles"></trendgraph>
@@ -153,21 +153,24 @@
                         selecteddayindex: -1,
                         scroll: false,
                     },
+                    //series: [],
                     yearlyHiLoReadings: ref([]),
                     monthnames: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
-                    monthnamesLong: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
+                    monthnamesLong: ['Tammikuu', 'Helmikuu', 'Maaliskuu', 'Huhtikuu', 'Toukokuu', 'Kesäkuu', 'Heinäkuu', 'Elokuu', 'Syyskuu', 'Lokakuu', 'Marraskuu', 'Joulukuu'],
                     calculated : {
                         sums: [],             // YearCalcValue[]
                         monthlytrends: [],    // MonthDataPair[]
-                        monthlyaverages: {values: [], calculated: []},  // YearlyAverage[]
+                        monthlyaverages: {values: [], calculated: [], averages: []},  // YearlyAverage[]
                         //linearcont: [],       // TemperatureValue[]
-                    }
+                    },
+                    charts: [],
                 }
             },
             async mounted() {
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
                 //years.data = [2021,2022,2023,2024]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
+                this.series = temperatures;
                 this.checkData(temperatures);
 
                 this.calculated.sums = calculateDailyAveragesTS(temperatures, this.defaultyear);
@@ -183,10 +186,19 @@
                this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, this.createLastYearsSeriedata);
 
                this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, this.createYearlyTrendSeriedata);
-               this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, this.createMonthlySummerTrendSeriedata);
-               this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, this.createMonthlyWinterTrendSeriedata);
-               this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, this.createMonthlyFallTrendSeriedata);
-               this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, this.createMonthlySpringTrendSeriedata);
+
+               this.charts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, this.createMonthlySummerTrendSeriedata));
+               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+
+               this.charts.push(this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, this.createMonthlyWinterTrendSeriedata));
+               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+
+               this.charts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, this.createMonthlyFallTrendSeriedata));
+               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+
+               this.charts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, this.createMonthlySpringTrendSeriedata));
+               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+
                this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
                this.createChart(this.testgraph12, 'Vuosien korkeimmat ja matalimmat', temperatures, this.createYearlyHighValuedata);
 
@@ -333,7 +345,7 @@
                         `
                 },
                 monthtable: {
-                    props: ['monthlydata', 'monthnames'],
+                    props: ['monthlydata', 'monthnames', 'monthaverages'],
                     emits: ['lastyear'],
                     methods: {
                         roundNumber(value, num) {
@@ -356,6 +368,12 @@
                                     <td>{{ item.estimate===true ? '(': ''}} {{roundNumber(item.yearaverage, 1)}} {{ item.estimate==true?')':''}}</td>
                                 </tr>                                
                             </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th>Yht</th>
+                                    <th v-for="value in monthaverages">{{ roundNumber(value,1) }}</th>
+                                </tr>
+                            </tfoot>
                         </table>
                         `
                 },
@@ -370,6 +388,46 @@
                 }
             },
             methods: {
+                monthlytrendcallback(params) {
+                    const seriestatus = Object.keys(params.selected).map(k => ({status: params.selected[k], name: k}));
+                    let i = 0;
+                    let j;
+                    let chart = null;
+                    while (!chart && i < this.charts.length) {
+                        j = 0;
+                        while (j < this.charts[i].serieOptions.series.length && !chart) {
+                            let search = seriestatus.find(s => this.charts[i].serieOptions.series[j].trend == false && this.charts[i].serieOptions.series[j].name == s.name);
+                            if (search) chart = this.charts[i];
+                            else j++;
+                        }
+                        if (!chart) i++;
+                    }
+                    if (!chart) return;
+
+                    const series = chart.serieOptions.series.map(d => {
+                        let search = seriestatus.find(s => s.name == d.name);
+                        if (!d.trend && search && search.status === true) {
+                            // serie active
+                            return {
+                                name: d.name,
+                                num: d.num,
+                                data: d.data.map(val => ({
+                                    value: isNumeric(val.value[1]) ? Number(val.value[1]) : NaN,
+                                    year:  val.value[0].getFullYear(),
+                                }))
+                            }
+                        }
+                        return null;
+                    }).filter(v => v !== null);
+
+                    const originaltrendserie = chart.serieOptions.series.find(d => d.trend == true);
+                    const tempserie = {data: chart.serieOptions.series[0].data.map(ss => ({info: {year: ss.value[0].getFullYear(), location: ''}}))};
+                    const datavalues = getSeasonTrendsTS(tempserie, series.map(s => s.num), series.map(s => s.name), this.calculated.monthlytrends);
+                    const newtrendserie = datavalues.find(d => d.trend == true);
+                    originaltrendserie.data = newtrendserie.values.map(v => v);
+                    originaltrendserie.name = newtrendserie.name;
+                    chart.trendChart.setOption(chart.serieOptions);
+                },                
                 checkData(temperatures) {
                     temperatures.data.forEach(t => {
                         const year = t.info.year;
@@ -566,6 +624,8 @@
                             text: `${s.tooltip}`,
                         })),
                         name: values.name,
+                        trend: values.trend,
+                        num: values.num,
                     }))
 
                     if (params) {
@@ -675,11 +735,13 @@
                     }
                     return { data: data, params: params };
                 },
+                createTrendsDataForGivenMonths(series, monthnumbers, monthnames) {
+                    return {data: getSeasonTrendsTS(series, monthnumbers, monthnames, this.calculated.monthlytrends), params: { rangeoffset: 1, showlegend: true } };
+                },
                 createMonthlySummerTrendSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-
-                    const datavalues = getSeasonTrendsTS(series, [6, 7, 8], ['Kesäkuu', 'Heinäkuu', 'Elokuu'], this.calculated.monthlytrends);
-                    return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
+                    const data = this.createTrendsDataForGivenMonths(series, [6, 7, 8], ['Kesäkuu', 'Heinäkuu', 'Elokuu']);
+                    return data;
                 },
                 createMonthlyWinterTrendSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
@@ -696,13 +758,14 @@
                 createMonthlySpringTrendSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                    const datavalues = getSeasonTrendsTS(series, [4, 5, 6], ['Huhtikuu', 'Toukokuu', 'Kesäkuu'], this.calculated.monthlytrends);
+                    const datavalues = getSeasonTrendsTS(series, [3, 4, 5], ['Maaliskuu', 'Huhtikuu', 'Toukokuu'], this.calculated.monthlytrends);
                     return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
                 },
                 createAllYearsMonthlyAverageSeriedata(series) {
                     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                    const datavalues = createAllYearsMonthlySeriedataTS(series, this.calculated.monthlyaverages.values,this.defaultyear);
+                    const datavalues = createAllYearsMonthlySeriedataTS(series, this.calculated.monthlyaverages.values, this.defaultyear, this.monthnamesLong);
+
                     return {data: datavalues, params: {showlegend: true}};
                 },
                 createAllYearsFilteredSeriedata(series) {
