@@ -142,8 +142,7 @@
                     testgraph10: 'GraphLocation10',
                     testgraph11: 'GraphLocation11',
                     testgraph12: 'GraphLocation12',
-                    trendtitles: [],
-                    calculatedDailyAverages: [],
+                    trendtitles: ['Not used'],
                     defaultyear: 1976,
                     daydata: {data: [[],[]], chart: null},
                     readings: { values: [], filtered: [], filtersize: 10 },
@@ -153,7 +152,6 @@
                         selecteddayindex: -1,
                         scroll: false,
                     },
-                    //series: [],
                     yearlyHiLoReadings: ref([]),
                     monthnames: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
                     monthnamesLong: ['Tammikuu', 'Helmikuu', 'Maaliskuu', 'Huhtikuu', 'Toukokuu', 'Kesäkuu', 'Heinäkuu', 'Elokuu', 'Syyskuu', 'Lokakuu', 'Marraskuu', 'Joulukuu'],
@@ -396,6 +394,7 @@
                     while (!chart && i < this.charts.length) {
                         j = 0;
                         while (j < this.charts[i].serieOptions.series.length && !chart) {
+                            // only one serie cheked, maybe should be more
                             let search = seriestatus.find(s => this.charts[i].serieOptions.series[j].trend == false && this.charts[i].serieOptions.series[j].name == s.name);
                             if (search) chart = this.charts[i];
                             else j++;
@@ -421,9 +420,11 @@
                     }).filter(v => v !== null);
 
                     const originaltrendserie = chart.serieOptions.series.find(d => d.trend == true);
+                    if (!originaltrendserie) return;
                     const tempserie = {data: chart.serieOptions.series[0].data.map(ss => ({info: {year: ss.value[0].getFullYear(), location: ''}}))};
                     const datavalues = getSeasonTrendsTS(tempserie, series.map(s => s.num), series.map(s => s.name), this.calculated.monthlytrends);
                     const newtrendserie = datavalues.find(d => d.trend == true);
+                    if (!newtrendserie) return;
                     originaltrendserie.data = newtrendserie.values.map(v => v);
                     originaltrendserie.name = newtrendserie.name;
                     chart.trendChart.setOption(chart.serieOptions);

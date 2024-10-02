@@ -776,7 +776,7 @@ export function getSeasonTrendsTS(series: TemperatureMsg, monthnumbers: number[]
     });
     let trend = calculateTrendTS([monthlytrends[monthnumbers[0] - 1] ?? null, monthlytrends[monthnumbers[1] - 1] ?? null, monthlytrends[monthnumbers[2] - 1]] ?? null);
     let newvalues = series.data.map((ser, serieindex) => (
-        { value: [new Date(ser.info.year, 0, 1), roundNumber(ser.info.year * trend.k + trend.b, 2)], tooltip: `${ser.info.year} Suuntaus ${roundNumber(ser.info.year * trend.k + trend.b, 2)}` })
+        { value: [new Date(ser.info.year, 0, 1), roundNumber(ser.info.year * trend.k + trend.b, 1)], tooltip: `${ser.info.year} Suuntaus ${roundNumber(ser.info.year * trend.k + trend.b, 1)}` })
     )
     if (isNaN(trend.k)) {
         datavalues.push( createGraphSerie( `Trendi --- °C/10v`, series.data[0].info.location, 0, newvalues, -1, true ));
@@ -873,23 +873,23 @@ export function createAllyearsAverageSerieTS(series: TemperatureMsg, sums: YearC
 
     let valuearraymorning: GraphChartData[] = sums.map(s => ({
         value: [s.date, s.morning.average],
-        tooltip: `Aamu ${getDateTxt(s.date, true)} ${roundNumber(s.morning.average, 2)}`,
+        tooltip: `Aamu ${getDateTxt(s.date, true)} ${roundNumber(s.morning.average, 1)}`,
     }))
     let valuearrayevening: GraphChartData[] = sums.map(s => ({
         value: [s.date, s.evening.average],
-        tooltip: `Ilta ${getDateTxt(s.date, true)} ${roundNumber(s.evening.average, 2)}`,
+        tooltip: `Ilta ${getDateTxt(s.date, true)} ${roundNumber(s.evening.average, 1)}`,
     }))
     let valuearrayaverage: GraphChartData[] = sums.map(s => ({
         value: [s.date, (s.morning.average + s.evening.average)/2],
-        tooltip: `Keskiarvo ${getDateTxt(s.date, true)} ${roundNumber((s.morning.average + s.evening.average)/2, 2)}`,
+        tooltip: `Keskiarvo ${getDateTxt(s.date, true)} ${roundNumber((s.morning.average + s.evening.average)/2, 1)}`,
     }))
     let valuearrayhigh: GraphChartData[] = sums.map(s => ({
         value: [s.date, s.morning.max > s.evening.max ? s.morning.max : s.evening.max],
-        tooltip: `Korkein ${getDateTxt(s.morning.max > s.evening.max ? s.morning.maxdate : s.evening.maxdate, false)} ${roundNumber(s.morning.max > s.evening.max ? s.morning.max : s.evening.max, 2)}`,
+        tooltip: `Korkein ${getDateTxt(s.morning.max > s.evening.max ? s.morning.maxdate : s.evening.maxdate, false)} ${roundNumber(s.morning.max > s.evening.max ? s.morning.max : s.evening.max, 1)}`,
     }))
     let valuearraylow: GraphChartData[] = sums.map(s => ({
         value: [s.date, s.morning.min < s.evening.min ? s.morning.min : s.evening.min],
-        tooltip: `Matalin ${getDateTxt(s.morning.min < s.evening.min ? s.morning.mindate : s.evening.mindate, false)} ${roundNumber(s.morning.min < s.evening.min ? s.morning.min : s.evening.min, 2)}`,
+        tooltip: `Matalin ${getDateTxt(s.morning.min < s.evening.min ? s.morning.mindate : s.evening.mindate, false)} ${roundNumber(s.morning.min < s.evening.min ? s.morning.min : s.evening.min, 1)}`,
     }))
     let returnvalues1 = createGraphSerie( 'Aamu', loc, 0, valuearraymorning, -1);
     let returnvalues2 = createGraphSerie( 'Ilta', loc, 0, valuearrayevening, -1);
