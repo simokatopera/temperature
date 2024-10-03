@@ -27,7 +27,7 @@
     <link href="css/loader.css" rel="stylesheet">
     <script src="api/api.js" defer></script>
 
-    <script src="chartfunctions.js" defer></script>
+    <script src="chartfunctions2.js" defer></script>
 
     <style>
 
@@ -167,6 +167,10 @@
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
                 //years.data = [2021,2022,2023,2024]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
+                initTemperature(temperatures);
+
+                calculateTemperatures(temperatures);
+
                 this.series = temperatures;
                 this.checkData(temperatures);
 
