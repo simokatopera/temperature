@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createAllYearsMonthlyAverageSeriedata = exports.getAllReadings = exports.getYearAverages = exports.calculateTemperatures = exports.initTemperature = exports.calculateTrendTS = exports.isNumeric = exports.roundNumber = exports.createDefaultYearTableNew = void 0;
+exports.createAllYearsMonthlyAverageSeriedata = exports.createYearlyFilteredSeriedata = exports.createAllYearsFilteredSeriedata = exports.getAllReadings = exports.getYearAverages = exports.calculateTemperatures = exports.initTemperature = exports.calculateTrendTS = exports.isNumeric = exports.roundNumber = exports.createDefaultYearTableNew = void 0;
 const TempMinDefaultValue = 99999;
 const TempMaxDefaultValue = -99999;
 function createFilteredNew(date, morning, evening, average, difference, filteredmorning, filteredevening, filteredaverage, filtereddifference, filterfirstday, filterlastday) {
@@ -124,6 +124,9 @@ function createReadingDate(value, date) {
 }
 function createGraphItemNew(d, v) {
     return [d, v];
+}
+function createGraphSerieNew(name, location, year, values, trend, index) {
+    return { name: name, location: location, year: year, values: values, trend: trend, index: index };
 }
 function roundNumber(value, num) {
     if (isNumeric(value)) {
@@ -504,6 +507,35 @@ class Temperatures {
     }
 }
 let temperatureClass;
+function createReturnDataValue(date, value, tooltipfunction = null) {
+    return { date: date, value: value, tooltipfunction: tooltipfunction };
+}
+function createReturnDataType(name, values) {
+    return { name: name, values: values };
+}
+function createGraphSerieType(data, params) {
+    return { data: data, params: params };
+}
+function createMinMaxDataType(date, month, highvalue, lowvalue) {
+    return { date: date, month: month, highvalue: highvalue, lowvalue: lowvalue };
+}
+function getFilteredDataYearlyArranged() {
+    const values = temperatureClass.filteredValues.filter(v => !(isNaN(v.morning) || isNaN(v.evening)));
+    let results = [];
+    values.forEach(val => {
+        const year = val.date.getFullYear();
+        if (!results[year])
+            results[year] = [];
+        results[year].push(createReturnDataValue(val.date, val.averagefiltered));
+    });
+    return results.map(res => ({ name: `Vuosi ${res[0].date.getFullYear()}`, values: res, tooltipfunction: null }));
+}
+function getDateTxt(date) {
+    if (date == null || date === undefined || isNaN(date)) {
+        return '????';
+    }
+    return (date) ? `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}` : `-`;
+}
 function initTemperature() {
     temperatureClass = new Temperatures();
 }
@@ -525,6 +557,73 @@ function getAllReadings() {
     return { values: values, filtersize: temperatureClass.filterlength };
 }
 exports.getAllReadings = getAllReadings;
+function createMinMaxDataTypeTable() {
+    let minmaxtable = [];
+    for (let i = 0; i < 366; i++) {
+        const d = new Date(temperatureClass.defaultyear, 0, i + 1);
+        minmaxtable.push(createMinMaxDataType(d.getDate(), d.getMonth(), TempMaxDefaultValue, TempMinDefaultValue));
+    }
+    return minmaxtable;
+}
+function createAllYearsFilteredSeriedata() {
+    const yearlydata = getFilteredDataYearlyArranged();
+    let returnvalues = yearlydata.map(dd => {
+        return createGraphSerieNew(dd.name, '', 0, dd.values.map(value => ({
+            value: createGraphItemNew(value.date, value.value),
+            tooltip: '',
+        })), false, 0);
+    });
+    return createGraphSerieType(returnvalues, { series: [{ name: '', markersize: 1 }] });
+}
+exports.createAllYearsFilteredSeriedata = createAllYearsFilteredSeriedata;
+function createYearlyFilteredSeriedata() {
+    const yearlydata = getFilteredDataYearlyArranged();
+    let curyear = 0;
+    yearlydata.forEach(data => {
+        data.values.forEach(value => {
+            curyear = value.date.getFullYear();
+            value.date = new Date(temperatureClass.defaultyear, value.date.getMonth(), value.date.getDate());
+        });
+    });
+    const minmaxtable = createMinMaxDataTypeTable();
+    yearlydata.forEach(year => {
+        let minmaxindex = 0;
+        year.values.forEach(day => {
+            const date = day.date.getDate();
+            const month = day.date.getMonth();
+            while (minmaxindex < minmaxtable.length && (minmaxtable[minmaxindex].month != month || minmaxtable[minmaxindex].date != date))
+                minmaxindex++;
+            if (minmaxindex < minmaxtable.length) {
+                if (day.value > minmaxtable[minmaxindex].highvalue)
+                    minmaxtable[minmaxindex].highvalue = day.value;
+                if (day.value < minmaxtable[minmaxindex].lowvalue)
+                    minmaxtable[minmaxindex].lowvalue = day.value;
+            }
+        });
+    });
+    yearlydata.push(createReturnDataType('Korkein', minmaxtable.map(minmax => {
+        return createReturnDataValue(new Date(temperatureClass.defaultyear, minmax.month, minmax.date), minmax.highvalue, function (value) {
+            return `Maksimi ${getDateTxt(value.date)} ${roundNumber(value.value, 1)}`;
+        });
+    })));
+    yearlydata.push(createReturnDataType('Matalin', minmaxtable.map(minmax => ({
+        date: new Date(temperatureClass.defaultyear, minmax.month, minmax.date),
+        value: minmax.lowvalue,
+        tooltipfunction: null,
+    }))));
+    let returnvalues = yearlydata.map(dd => {
+        return createGraphSerieNew(dd.name, '', 0, dd.values.map(value => {
+            let tt = value.tooltipfunction !== null ? value.tooltipfunction(value) : '';
+            return {
+                value: createGraphItemNew(value.date, value.value),
+                tooltip: tt,
+            };
+        }), false, 0);
+    });
+    return createGraphSerieType(returnvalues, { showlegend: true,
+        selection: [`Vuosi ${curyear}`, 'Korkein', 'Matalin'], series: [{ name: 'Matalin', color: '#777777' }, { 'name': 'Korkein', color: '#777777' }] });
+}
+exports.createYearlyFilteredSeriedata = createYearlyFilteredSeriedata;
 function createAllYearsMonthlyAverageSeriedata() {
     temperatureClass.getMonthChartValues();
     let datavalues = [];

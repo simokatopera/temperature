@@ -330,7 +330,9 @@ interface GraphSerieNew {
     trend: boolean;
     index: number;
 }
-
+function createGraphSerieNew(name: string, location: string, year: number, values: GraphItemNew[], trend: boolean, index: number): GraphSerieNew {
+    return {name: name, location: location, year: year, values: values, trend: trend, index: index}
+}
 export function roundNumber(value: any, num: number): string {
     if (isNumeric(value)) {
         if (typeof value === 'number') return value.toFixed(num);
@@ -797,6 +799,63 @@ class Temperatures {
 
 let temperatureClass: Temperatures;
 
+//-------------------------------------------------------------------------------------------
+// Data interfaces
+//-------------------------------------------------------------------------------------------
+interface ReturnDataValue {
+    date: Date;
+    value: number;
+    tooltipfunction: any;
+}
+function createReturnDataValue(date: Date, value: number, tooltipfunction: any = null): ReturnDataValue {
+    return {date: date, value: value, tooltipfunction: tooltipfunction}
+}
+interface ReturnDataType {
+    name: string;
+    values: ReturnDataValue[];
+}
+function createReturnDataType(name: string, values: ReturnDataValue[]): ReturnDataType {
+    return {name: name, values: values}
+}
+interface GraphSerieType {
+    data: GraphSerieNew[];
+    params: any;
+}
+function createGraphSerieType(data: GraphSerieNew[], params: any): GraphSerieType {
+    return {data: data, params: params}
+}
+interface MinMaxDataType {
+    date: number;
+    month: number;
+    highvalue: number;
+    lowvalue: number;
+}
+function createMinMaxDataType(date: number, month: number, highvalue: number, lowvalue: number): MinMaxDataType {
+    return {date: date, month: month, highvalue: highvalue, lowvalue: lowvalue}
+}
+
+//-------------------------------------------------------------------------------------------
+// Local functions
+//-------------------------------------------------------------------------------------------
+function getFilteredDataYearlyArranged(): ReturnDataType[] {
+    const values = temperatureClass.filteredValues.filter(v => !(isNaN(v.morning) || isNaN(v.evening)));
+    let results: ReturnDataValue[][] = [];
+    values.forEach(val => {
+        const year = val.date.getFullYear();
+        if (!results[year]) results[year] = [];
+        results[year].push(createReturnDataValue(val.date,val.averagefiltered));
+    })
+    return results.map(res => ({name: `Vuosi ${res[0].date.getFullYear()}`, values: res, tooltipfunction: null}))
+}
+function getDateTxt(date) {
+    if (date == null || date === undefined || isNaN(date)) {
+        return '????';
+    }
+    return (date) ? `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}` : `-`;
+}
+//-------------------------------------------------------------------------------------------
+// Exported functions
+//-------------------------------------------------------------------------------------------
 export function initTemperature() {
     temperatureClass = new Temperatures();
 }
@@ -816,6 +875,78 @@ export function getAllReadings() {
     const values = temperatureClass.filteredValues.filter(v => !(isNaN(v.morning) || isNaN(v.evening))).reverse();
     for (let i = 0; i < values.length; i++) values[i].index = i;
     return {values: values, filtersize: temperatureClass.filterlength}
+}
+
+function createMinMaxDataTypeTable(): MinMaxDataType[] {
+    let minmaxtable: MinMaxDataType[]  = [];
+    for (let i = 0; i < 366; i++) {
+        const d = new Date(temperatureClass.defaultyear, 0, i+1)
+        minmaxtable.push(createMinMaxDataType(d.getDate(), d.getMonth(), TempMaxDefaultValue, TempMinDefaultValue));
+    }
+    return minmaxtable;
+}
+export function createAllYearsFilteredSeriedata(): GraphSerieType {
+    const yearlydata = getFilteredDataYearlyArranged();
+    
+    let returnvalues: GraphSerieNew[] = yearlydata.map(dd => {
+        return createGraphSerieNew(dd.name, '',0, dd.values.map(value => ({
+            value: createGraphItemNew(value.date, value.value), 
+            tooltip: '',
+        })), false, 0)
+    })
+
+    return createGraphSerieType(returnvalues, { series: [{ name: '', markersize: 1 }] });
+}
+export function createYearlyFilteredSeriedata(): GraphSerieType {
+    const yearlydata = getFilteredDataYearlyArranged();
+
+    // move data to default year scale
+    let curyear = 0;
+    yearlydata.forEach(data => {
+        data.values.forEach(value => {
+            curyear = value.date.getFullYear();
+            value.date = new Date(temperatureClass.defaultyear, value.date.getMonth(), value.date.getDate());
+        })
+    })
+    // find daily minimums and maximums
+    const minmaxtable = createMinMaxDataTypeTable();
+    yearlydata.forEach(year => {
+        let minmaxindex = 0;
+        year.values.forEach(day => {
+            const date = day.date.getDate();
+            const month = day.date.getMonth();
+            while (minmaxindex < minmaxtable.length && (minmaxtable[minmaxindex].month != month || minmaxtable[minmaxindex].date != date)) minmaxindex++;
+            if (minmaxindex < minmaxtable.length) {
+                if (day.value > minmaxtable[minmaxindex].highvalue) minmaxtable[minmaxindex].highvalue = day.value;
+                if (day.value < minmaxtable[minmaxindex].lowvalue) minmaxtable[minmaxindex].lowvalue = day.value;
+            }
+        })
+    })
+    // add high and low curves to graphics
+    yearlydata.push(createReturnDataType('Korkein', minmaxtable.map(minmax => {
+        return createReturnDataValue(new Date(temperatureClass.defaultyear, minmax.month, minmax.date),
+            minmax.highvalue, function(value) {
+                    return `Maksimi ${getDateTxt(value.date)} ${roundNumber(value.value, 1)}`;
+                })
+    })));
+    yearlydata.push(createReturnDataType('Matalin', minmaxtable.map(minmax => ({
+        date: new Date(temperatureClass.defaultyear, minmax.month, minmax.date),
+        value: minmax.lowvalue,
+        tooltipfunction: null,
+    }))));
+
+    let returnvalues: GraphSerieNew[] = yearlydata.map(dd => {
+        return createGraphSerieNew(dd.name, '',0, dd.values.map(value => {
+            let tt = value.tooltipfunction !== null ? value.tooltipfunction(value) : '';
+            return {
+                value: createGraphItemNew(value.date, value.value), 
+                tooltip: tt,
+            }
+        }), false, 0)
+    })
+
+    return createGraphSerieType(returnvalues, { showlegend: true, 
+        selection: [`Vuosi ${curyear}`, 'Korkein', 'Matalin'], series: [{ name: 'Matalin', color: '#777777' }, { 'name': 'Korkein', color: '#777777' }] });
 }
 export function createAllYearsMonthlyAverageSeriedata() {
 

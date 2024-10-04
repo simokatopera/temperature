@@ -567,7 +567,7 @@
                     let series = [data.values, trend];
                     this.daydata.data = series;
                     this.daydata.chart = this.createChart('daygraph', 
-                        `Päivän ${values.data[0].date.getDate()}.${values.data[0].date.getMonth()+1} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`, 
+                        `Päivän ${values.data.length ? values.data[0].date.getDate() : ''}.${values.data.length ? values.data[0].date.getMonth()+1 : ''} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`, 
                         series, this.createDayGraph, this.daydata.chart);
                 },
                 rundays() {
