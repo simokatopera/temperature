@@ -49,24 +49,26 @@ interface CalculationResult {
 }
 // -----------------------------------------------------------------
 interface FilteredNew {
+    index: number;
     date: Date;
     morning: number;
     evening: number;
     average: number;
-    filteredmorning: number;
-    filteredevening: number;
-    filteredaverage: number;
-    filtereddifference: number;
-    filterfirstday: Date;
-    filterlastday: Date;
+    morningfiltered: number;
+    eveningfiltered: number;
+    averagefiltered: number;
+    difference: number;
+    differencefiltered: number;
+    firstdayfilter: Date;
+    lastdayfilter: Date;
 }
-function createFilteredNew(date: Date, morning: number, evening: number, average: number, 
+function createFilteredNew(date: Date, morning: number, evening: number, average: number, difference: number,
     filteredmorning: number, filteredevening: number, filteredaverage: number, filtereddifference: number, 
     filterfirstday: Date, filterlastday: Date): FilteredNew {
-    return {date: date, morning: morning, evening: evening, average: average, filteredmorning: filteredmorning, filteredevening: filteredevening, filteredaverage: filteredaverage,filtereddifference: filtereddifference, filterfirstday: filterfirstday, filterlastday: filterlastday}
+    return {date: date, morning: morning, evening: evening, average: average, difference: difference, morningfiltered: filteredmorning, eveningfiltered: filteredevening, averagefiltered: filteredaverage,differencefiltered: filtereddifference, firstdayfilter: filterfirstday, lastdayfilter: filterlastday, index: 0}
 }
 function createDateOnlyFilteredNew(date: Date): FilteredNew {
-    return {date: date, morning: NaN, evening: NaN, average: NaN, filteredmorning: NaN, filteredevening: NaN, filteredaverage: NaN, filtereddifference: NaN, filterfirstday: date, filterlastday: date}
+    return {date: date, morning: NaN, evening: NaN, average: NaN, difference: NaN, morningfiltered: NaN, eveningfiltered: NaN, averagefiltered: NaN, differencefiltered: NaN, firstdayfilter: date, lastdayfilter: date, index: 0}
 }
 interface FilterValueNew {
     date: Date;
@@ -89,39 +91,95 @@ function createAverageDataNew(year: number, location: string): AverageDataNew {
     return {year: year, location: location, averages: null, months: []}
 }
 interface AverageNew {
-    morning: number;
-    evening: number;
+    morning: OneDayValuesNew;
+    evening: OneDayValuesNew;
+    difference: OneDayValuesNew;
     average: number;
-    difference: number;
-    morningcount: number;
-    eveningcount: number;
-    differencecount: number;
 }
-// function createAverageNew(): AverageNew {
-//     return {morning: NaN, evening: NaN, average: NaN, difference: NaN, morningcount: 0, eveningcount: 0, differencecount: 0}
-// }
-function createAverageNew(morning: number, evening: number, average: number, difference: number, morningcount: number, eveningcount: number, differencecount: number): AverageNew {
-    return {morning: morning, evening: evening, average: average, difference: difference, morningcount: morningcount, eveningcount: eveningcount, differencecount: differencecount}
+function createAverageNew2(): AverageNew {
+    return {morning: createOneDayValuesEmptyNew(), evening: createOneDayValuesEmptyNew(), average: 0, difference: createOneDayValuesEmptyNew()}
+}
+function createAverageNew(average: number,morning: OneDayValuesNew, evening: OneDayValuesNew, difference: OneDayValuesNew): AverageNew {
+    return {average: average, morning: morning, evening: evening, difference: difference}
 }
 function calculateAverageNew(counter: AverageCounterNew): AverageNew {
-    let morning = counter.morningcount > 0 ? counter.morningsum/counter.morningcount : NaN;
-    let evening = counter.eveningcount > 0 ? counter.eveningsum/counter.eveningcount : NaN;
-    let difference = counter.differencecount > 0 ? counter.differencesum/counter.differencecount : NaN;
-    let average = isNaN(morning) || isNaN(evening) ? NaN : (morning+evening)/2;
-    return createAverageNew(morning, evening, average, difference, counter.morningcount, counter.eveningcount, counter.differencecount);
+    const morningvalue = counter.morning.count > 0 ? counter.morning.sum/counter.morning.count : NaN;
+    const morningmin = createReadingDate(counter.morning.low, counter.morning.lowdate);
+    const morningmax = createReadingDate(counter.morning.high, counter.morning.highdate);
+    const morning = createOneDayValuesNew(counter.morning.count, morningvalue, morningmin, morningmax);
+
+    const eveningvalue = counter.evening.count > 0 ? counter.evening.sum/counter.evening.count : NaN;
+    const eveningmin = createReadingDate(counter.evening.low, counter.evening.lowdate);
+    const eveningmax = createReadingDate(counter.evening.high, counter.evening.highdate);
+    const evening = createOneDayValuesNew(counter.evening.count, eveningvalue, eveningmin, eveningmax);
+
+    const differencevalue = counter.difference.count > 0 ? counter.difference.sum/counter.difference.count : NaN;
+    const differencemin = createReadingDate(counter.difference.low, counter.difference.lowdate);
+    const differencemax = createReadingDate(counter.difference.high, counter.difference.highdate);
+    const difference = createOneDayValuesNew(counter.difference.count, differencevalue, differencemin, differencemax);
+
+    let average = isNaN(morningvalue) || isNaN(eveningvalue) ? NaN : (morningvalue+eveningvalue)/2;
+
+    let newitem = createAverageNew(average, morning, evening, difference);
+    newitem.morning.max.value = counter.morning.high;
+    newitem.morning.max.date = counter.morning.highdate;
+    newitem.morning.min.value = counter.morning.low;
+    newitem.morning.min.date = counter.morning.lowdate;
+    newitem.evening.max.value = counter.evening.high;
+    newitem.evening.max.date = counter.evening.highdate;
+    newitem.evening.min.value = counter.evening.low;
+    newitem.evening.min.date = counter.evening.lowdate;
+    newitem.difference.max.value = counter.difference.high;
+    newitem.difference.max.date = counter.difference.highdate;
+    newitem.difference.min.value = counter.difference.low;
+    newitem.difference.min.date = counter.difference.lowdate;
+
+    return newitem;
 }
 interface MonthAverageDataNew {
-    index: number;
+    monthno: number;
     averages: AverageNew;
 }
-function createMonthAverageDataNew(index: number, averages: AverageNew): MonthAverageDataNew {
-    return {index: index, averages: averages}
+function createMonthAverageDataNew(monthno: number, averages: AverageNew): MonthAverageDataNew {
+    return {monthno: monthno, averages: averages}
 }
-// function createMonthAverageDataNew(): MonthAverageDataNew[] {
-//     let monthdata: MonthAverageDataNew[] = [];
-//     for (let month = 0; month < 12; month++) monthdata.push({index: month, averages: null});
-//     return monthdata;
-// }
+interface YearlySerieNew {
+    data: YearlySerieDataNew[];
+}    
+interface YearlySerieDataNew {
+    value: number;
+    trend: number;
+    estimate: boolean;
+    estimatevalue: number;
+    year: number;
+}
+interface MonthlyValueNew {
+    monthno: number;
+    morning: MonthlyStatisticsNew;
+    evening: MonthlyStatisticsNew;
+    difference: MonthlyStatisticsNew;
+}
+function createMonthlyValueNew(monthno: number): MonthlyValueNew {
+    return {monthno: monthno, morning: createMonthlyStatisticsNew(), evening: createMonthlyStatisticsNew(), difference: createMonthlyStatisticsNew()};
+}
+interface MonthlyStatisticsNew {
+    average: number;
+    high: number;
+    highdate: Date;
+    low: number;
+    lowdate: Date;
+}
+function setMonthlyStatisticsNew(dest: MonthlyStatisticsNew, source: HiLowNew) {
+    dest.high = source.high;
+    dest.highdate = source.highdate;
+    dest.low = source.low;
+    dest.lowdate = source.lowdate;
+    dest.average = source.count > 0 ? source.sum/source.count : NaN;
+}
+
+function createMonthlyStatisticsNew(): MonthlyStatisticsNew {
+    return {average: NaN, high: NaN, highdate: new Date(0), low: NaN, lowdate: new Date(0)};
+}
 // --------------------------------------------------------
 interface DailyAverageDataNew {
     location: string;
@@ -130,57 +188,81 @@ interface DailyAverageDataNew {
     averages: AverageNew[]; // 366
 }
 // --------------------------------------------------------
+interface HiLowNew {
+    sum: number;
+    count: number;
+    average: number;
+    high: number;
+    highdate: Date;
+    low: number;
+    lowdate: Date;
+}
+function createHiLowNew(): HiLowNew {
+    return {sum: 0, count: 0, average: NaN, high: TempMaxDefaultValue, low: TempMinDefaultValue, highdate: new Date(0), lowdate: new Date(0)}
+}
+interface HiLowYearlyNew {
+    sum: number;
+    count: number;
+    average: number;
+    high: number;
+    highdate: Date;
+    low: number;
+    lowdate: Date;
+    monthlyhigh: number;
+    monthlyhighdate: Date;
+    monthlylow: number;
+    monthlylowdate: Date;
+}
+function createHiLowYearlyNew(): HiLowYearlyNew {
+    return {sum: 0, count: 0, average: NaN, high: TempMaxDefaultValue, low: TempMinDefaultValue, highdate: new Date(0), lowdate: new Date(0),
+        monthlyhigh: TempMaxDefaultValue, monthlylow: TempMinDefaultValue, monthlyhighdate: new Date(0), monthlylowdate: new Date(0) }
+}
 interface AverageCounterNew {
-    morningsum: number;
-    morningcount: number;
-    eveningsum: number;
-    eveningcount: number;
-    differencesum: number;
-    differencecount: number;
-    month: number;
+    year: number;
+    monthno: number;
+    morning: HiLowNew;
+    evening: HiLowNew;
+    difference: HiLowNew;
 }
-function createAverageCounterNew(month: number): AverageCounterNew {
-    return { morningsum: 0, morningcount: 0, eveningsum: 0, eveningcount: 0, differencesum: 0, differencecount: 0, month: month }
+function createAverageCounterNew(year: number, monthno: number): AverageCounterNew {
+    return { year: year, morning: createHiLowNew(), evening: createHiLowNew(), difference: createHiLowNew(), monthno: monthno }
 }
-function createMonthAverageCountersNew(): AverageCounterNew[] {
+interface AverageYearCounterNew {
+    year: number;
+    monthno: number;
+    morning: HiLowYearlyNew;
+    evening: HiLowYearlyNew;
+    difference: HiLowYearlyNew;
+}
+function createAverageYearCounterNew(year: number, monthno: number): AverageYearCounterNew {
+    return { year: year, monthno: monthno, morning: createHiLowYearlyNew(), evening: createHiLowYearlyNew(), difference: createHiLowYearlyNew() }
+}
+function createMonthAverageCountersNew(year: number): AverageCounterNew[] {
     let data: AverageCounterNew[] = [];
-    for (let i = 0; i < 12; i++) data.push(createAverageCounterNew(i + 1));
+    for (let i = 0; i < 12; i++) data.push(createAverageCounterNew( year, i + 1));
     return data;
 }
 // --------------------------------------------------------
-/*
-*/
-
-
-interface Filtered {
-    index: number;
-    value: number;
-    diffvalue: number;
-    morning: number;
-    evening: number;
-    date: Date;
-    firstday: Date;
-    lastday: Date;
-    datetimeUtc: Date;
-    datetimeLocal: Date;
-}
-function createFilledFiltered(value: number, morning: number, evening: number, date: Date, first: Date, last: Date, diffvalue: number, datetimeUtc: Date, datetimeLocal: Date): Filtered {
-    return {index: -1, morning: morning, evening: evening, value: value, date: date, firstday: first, lastday: last, diffvalue: diffvalue, datetimeUtc: datetimeUtc, datetimeLocal: datetimeLocal}
-}
-function createDateFilledFiltered(date: Date): Filtered {
-    return {date: date, index: -1, morning: NaN, evening: NaN, value: NaN, firstday: new Date(0), lastday: new Date(0), diffvalue: NaN, datetimeUtc: new Date(0), datetimeLocal: new Date(0)}
-}
-interface YearCalcValue {
+interface YearCalcValueNew {
     date: Date;
     day: number;
     month: number;
-    morning: MinMaxCalc;
-    evening: MinMaxCalc;
-    difference: MinMaxCalc;
-    total: MinMaxCalc;
-    dayindex: number;
+    morning: MinMaxCalcNew;
+    evening: MinMaxCalcNew;
+    difference: MinMaxCalcNew;
+    total: MinMaxCalcNew;
 }
-interface MinMaxCalc {
+function createYearCalcValueNew(date: Date, dayindex: number): YearCalcValueNew {
+    return { 
+        date: date,
+        morning: createMinMaxCalcNew(), 
+        evening: createMinMaxCalcNew(), 
+        difference: createMinMaxCalcNew(), 
+        total: createMinMaxCalcNew(), 
+        day: date.getDate(), month: date.getMonth() + 1,
+    };
+}
+interface MinMaxCalcNew {
     sum: number;
     count: number;
     average: number
@@ -189,217 +271,64 @@ interface MinMaxCalc {
     mindate: Date;
     maxdate: Date;
 }
-function createMinMaxCalcValue(): MinMaxCalc {
+function createMinMaxCalcNew(): MinMaxCalcNew {
     return {sum: 0, count: 0, average: NaN, min: TempMinDefaultValue, max: TempMaxDefaultValue, mindate: new Date(0), maxdate: new Date(0)}
 }
-
-function createYearCalcValue(date: Date, dayindex: number): YearCalcValue {
-    return { 
-        date: date,
-        morning: createMinMaxCalcValue(), 
-        evening: createMinMaxCalcValue(), 
-        difference: createMinMaxCalcValue(), 
-        total: createMinMaxCalcValue(), 
-        day: date.getDate(), month: date.getMonth() + 1,
-        dayindex: dayindex,
-    };
-}
-
-export function getTempMinDefaultValue() {
-    return TempMinDefaultValue;
-}
-export function getTempMaxDefaultValue() {
-    return TempMaxDefaultValue;
-}
-export function filterSeriesTS(serie: TemperatureValue[], filterlength: number): Filtered[] {
-    let firstindex: number = 0;
-    let lastindex: number = 0;
-    let negoffset: number = filterlength % 2 ? -filterlength / 2 + 0.5 : -filterlength / 2;
-    let posoffset: number = negoffset + filterlength;
-    let filtered: Filtered[] = serie.map(ss => {
-        if (!isNaN(ss.value)) {
-            let first = new Date(ss.date.getFullYear(), ss.date.getMonth(), ss.date.getDate() + negoffset);
-            let last = new Date(ss.date.getFullYear(), ss.date.getMonth(), ss.date.getDate() + posoffset);
-            while (firstindex < serie.length && serie[firstindex].date < first) firstindex++;
-            while (lastindex < serie.length && serie[lastindex].date < last) lastindex++;
-            let sum: number = 0;
-            let dec: number = 0;
-            let diffsum: number = 0;
-            let diffdec: number = 0;
-            for (let index: number = firstindex; index < lastindex; index++) {
-                if (isNaN(serie[index].value)) dec++;
-                else sum += serie[index].value;
-                if (isNaN(serie[index].difference)) diffdec++;
-                else diffsum += serie[index].difference;
-            }
-            return createFilledFiltered( sum / (lastindex - firstindex - dec), ss.morning, ss.evening, ss.date, first, last, diffsum / (lastindex - firstindex - diffdec), ss.datetimeUtc, ss.datetimeLocal );
-        }
-        return createDateFilledFiltered( ss.date);
-    })
-    return filtered;
-}
-
-function increaseDayIndex(dayindex: number, yearindex: number, maxlen: number): {a: number, b: number} {
-    dayindex++;
-    if (dayindex >= maxlen) {
-        dayindex = 0;
-        yearindex++;
-    }
-    let a = dayindex;
-    let b = yearindex;
-    return {a, b}
-}
-
-export function formatFilteredTableTS(readings: DbTemperature[], filtered: Filtered[]): Filtered[] {
-    let index: number;
-    let dayindex: number = 0;
-    let yearindex: number = 0;
-    for (index = 0; index < filtered.length && yearindex < readings.length; index++) {
-        const curdate: Date | undefined = filtered[index].date != null ? filtered[index].date : undefined;
-        if (curdate) {
-            if (curdate < readings[yearindex].data[dayindex].datetimeLocal) {
-                filtered[index].morning = NaN;
-                filtered[index].evening = NaN;
-            }
-            else {
-            let y1 = curdate.getFullYear();
-            let m1 = curdate.getMonth();
-            let d1 = curdate.getDate();
-            let y2 = readings[yearindex].data[dayindex].datetimeLocal.getFullYear();
-            let m2 = readings[yearindex].data[dayindex].datetimeLocal.getMonth();
-            let d2 = readings[yearindex].data[dayindex].datetimeLocal.getDate();
-
-            if (y1 == y2 && m1 == m2 && d1 == d2) {
-                filtered[index].morning = readings[yearindex].data[dayindex].morning;
-                filtered[index].evening = readings[yearindex].data[dayindex].evening;
-                let {a, b} = increaseDayIndex(dayindex, yearindex, readings[yearindex].data.length);
-                dayindex = a;
-                yearindex = b;
-            }
-            else {
-                while (yearindex < readings.length && dayindex < readings[yearindex].data.length) {
-                    filtered[index].morning = NaN;
-                    filtered[index].evening = NaN;
-                    let {a, b} = increaseDayIndex(dayindex, yearindex, readings[yearindex].data.length);
-                    dayindex = a;
-                    yearindex = b;
-                }
-            }
-        }  
-        }
-    }
-    filtered = filtered.reverse();
-    // remove empty values from the beginning and end
-    index = 0;
-    while (index < filtered.length && isNaN(filtered[index].value)) index++;
-    if (index > 0) filtered.splice(0, index);
-    index = filtered.length - 1;
-    while (index < filtered.length && isNaN(filtered[index].value)) index--;
-    if (index > 0) filtered.splice(index + 1);
-    // add index
-    filtered.forEach((r, i) => {r.index = i;});
-
-    return filtered;
-}
-
-export function getReadingsBetweenTS(startdate: Date, enddate: Date, series: TemperatureMsg): DbData[] {
-    if (startdate >= enddate) return [];
-
-    const startyear: number = startdate.getFullYear();
-    const endyear: number = enddate.getFullYear();
-
-    let startyearindex: number = 0;
-    while (series.data[startyearindex].info.year < startyear) startyearindex++;
-    let endyearindex: number = startyearindex;
-    while (series.data[endyearindex].info.year < endyear) endyearindex++;
-
-    let startdayindex: number = 0;
-    while (series.data[startyearindex].data[startdayindex].datetimeLocal < startdate) startdayindex++;
-    let enddayindex: number = 0;
-    while (series.data[endyearindex].data[enddayindex].datetimeLocal < enddate) enddayindex++;
-    let yearindex: number;
-    let dayindex: number;
-    let firstindex = startdayindex;
-    let readings: DbData[] = [];
-    for (yearindex = startyearindex; yearindex <= endyearindex; yearindex++) {
-        for (dayindex = firstindex; startyearindex === endyearindex ? dayindex < enddayindex : dayindex < series.data[yearindex].data.length; dayindex++) {
-            readings.push(series.data[yearindex].data[dayindex]);
-        }
-        firstindex = 0;
-    }
-    return readings;
-}
-export function createDefaultYearTable(defaultyear: number): YearCalcValue [] {
-    let sums: YearCalcValue[] = [];
+export function createDefaultYearTableNew(defaultyear: number): YearCalcValueNew [] {
+    let sums: YearCalcValueNew[] = [];
     for (let dayindex = 0; dayindex < 366; dayindex++) {
         let newdate: Date = new Date(defaultyear, 0, dayindex + 1);
-        sums.push(createYearCalcValue(newdate, dayindex));
+        sums.push(createYearCalcValueNew(newdate, dayindex));
     }
     return sums;
 }
-export function createSumTableTS(defaultyear: number): YearCalcValue[] {
-    let sums: YearCalcValue[] = [];
-    for (let dayindex: number = 0; dayindex < 366; dayindex++) {
-        let newdate: Date = new Date(defaultyear, 0, dayindex + 1);
-        sums.push(createYearCalcValue(newdate, dayindex));
-    }
-    return sums;
+interface DailyValuesNew {
+    date: Date;
+    morning: OneDayValuesNew;
+    evening: OneDayValuesNew;
+    difference: OneDayValuesNew;
+    total: OneDayValuesNew;
 }
-
-export function getDailyFilteredMinMaxTS(filteredvalues: Filtered[], defaultyear: number): YearCalcValue[] {
-    let sums = createSumTableTS(defaultyear);
-    sums.forEach((s) => {
-        filteredvalues.forEach((f) => {
-            if (s.date.getDate() == f.date.getDate() &&
-                s.date.getMonth() == f.date.getMonth()) {
-                if (!(isNaN(f.value))) {
-                    if (f.value > s.total.max) {
-                        s.total.max = f.value;
-                        s.total.maxdate = f.date;
-                    }
-                    if (f.value < s.total.min) {
-                        s.total.min = f.value;
-                        s.total.mindate = f.date;
-                    }
-                }
-                if (!(isNaN(f.diffvalue))) {
-                    if (f.diffvalue > s.difference.max) {
-                        s.difference.max = f.diffvalue;
-                        s.difference.maxdate = f.date;
-                    }
-                    if (f.diffvalue < s.difference.min) {
-                        s.difference.min = f.diffvalue;
-                        s.difference.mindate = f.date;
-                    }
-                }
-            }
-        })
-    })    
-    return sums;
+function createOneDayValuesNew(count: number, average: number, min: ReadingDate, max: ReadingDate): OneDayValuesNew {
+    return {count: count, average: average, min: min, max: max}
 }
-interface ValueDatePair {
+function createDailyValuesNew(date: Date, morning: OneDayValuesNew, evening: OneDayValuesNew, difference: OneDayValuesNew, total: OneDayValuesNew): DailyValuesNew {
+    return {date: date, morning: morning, evening: evening, difference: difference, total: total}
+}
+interface OneDayValuesNew {
+    count: number;
+    average: number
+    min: ReadingDate;
+    max: ReadingDate;
+}
+function createOneDayValuesEmptyNew(): OneDayValuesNew {
+    return {count: 0, average: 0, min: createReadingDateEmpty(), max: createReadingDateEmpty()}
+}
+interface ReadingDate {
     value: number;
     date: Date;
 }
-function createValueDatePair(value: number, date: Date): ValueDatePair {
+function createReadingDateEmpty(): ReadingDate {
+    return {value: 0, date: new Date(0)}
+}
+function createReadingDate(value: number, date: Date): ReadingDate {
     return {value: value, date: date}
 }
-function findMin(dt: Date, serie: YearCalcValue[]): ValueDatePair | null  {
-    let day = dt.getDate();
-    let month = dt.getMonth() + 1;
-    let value = serie.find(s => day == s.day && month == s.month);
-    if (!value) return null;
-    return value.morning.min < value.evening.min ? 
-        createValueDatePair(value.morning.min, value.morning.mindate) : 
-        createValueDatePair(value.evening.min, value.evening.mindate);
+// --------------------------------------------------------
+interface GraphItemNew {
+    value: [Date, number];
+    tooltip: string
+}  
+function createGraphItemNew(d: Date, v: number): [Date, number] {
+    return [d, v];
 }
-function findMax(dt: Date, serie: YearCalcValue[]): ValueDatePair | null {
-    let day = dt.getDate();
-    let month = dt.getMonth() + 1;
-    let value = serie.find(s => day == s.day && month == s.month);
-    if (!value) return null;
-
-    return value.morning.max > value.evening.max ? createValueDatePair( value.morning.max, value.morning.maxdate) : createValueDatePair( value.evening.max, value.evening.maxdate);
+interface GraphSerieNew {
+    name: string;
+    location: string;
+    year: number;
+    values: GraphItemNew[];
+    trend: boolean;
+    index: number;
 }
 
 export function roundNumber(value: any, num: number): string {
@@ -410,403 +339,8 @@ export function roundNumber(value: any, num: number): string {
     if (isNaN(value)) return 'NaN';
     return 'kummaa'
 }
-interface GraphChartData {
-    value: any[2];
-    tooltip: string
-}   
-function createValue(d: Date, v: number): [Date, number] {
-    return [d, v];
-}
-export function createReturnValue(d: Date, s: string): [Date, string] {
-    return [d, s]
-}
-interface GraphSerie {
-    name: string;
-    num: number;
-    location: string;
-    year: number;
-    values: GraphChartData[];
-    trend: boolean;
-}
-function createGraphSerieEmpty(): GraphSerie {
-    return {name: '', location: '', year: 0, values: [], trend: false, num: -1}
-}
-export function createGraphSerie(name: string, location: string, year: number, values: GraphChartData[], num: number, trend: boolean = false): GraphSerie {
-    return {name: name, location: location, year: year, values: values, trend: trend, num: num}
-}
-
-// function getDateTxt(date: Date | number): string {
-//     if (typeof date !== "object") return '-??-';
-//     return (date && date !== undefined) ? `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}` : `-`;
-// }
-function getDateTxt(date: Date, daymonth: boolean): string {
-    if (!date) return '???';
-    if (typeof date !== "object") return '-??-';
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    if (daymonth === true) return `${day}.${month}`;
-    return `${day}.${month}.${date.getFullYear()}`;
-}
-function getDate(date: string): Date | number {
-    if (!date) return NaN;
-    let parts = date.split('/');
-    if (parts && parts.length === 3) {
-        return new Date(Number(parts[2]), Number(parts[0]) - 1, Number(parts[1]));
-    }
-    return NaN;
-}
 export function isNumeric(obj: any): boolean {
     return !Array.isArray(obj) && (obj - parseFloat(obj) + 1) >= 0;
-}
-
-export function createLastYearsSeriedataTS(readings: DbData[], sums: YearCalcValue[], location: string): GraphSerie[] {
-    let data: GraphSerie[] = [];
-    const year = readings[readings.length-1].datetimeLocal.getFullYear();
-    let morning: GraphSerie = createGraphSerie('Aamu', location, year, readings.map((r: DbData) => ({
-        value: createValue(r.datetimeLocal, r.morning),
-        tooltip: `Aamu ${getDateTxt(r.datetimeLocal, false)} ${r.morning}`,
-    })), -1);
-
-    let evening: GraphSerie = createGraphSerie('llta', location, year, readings.map((r: DbData) => ({
-        value: createValue(r.datetimeLocal, r.evening),
-        tooltip: `Ilta ${getDateTxt(r.datetimeLocal, false)} ${r.evening}`,
-    })), -1);
-    let maximum: GraphSerie = createGraphSerie('Maksimi', location, year, morning.values.map(r => {
-        let value = findMax(r.value[0], sums);
-        if (!value) return {value: NaN, tooltip: ''};
-        return {
-            value: createValue(r.value[0], value.value),
-            tooltip: `Maksimi ${getDateTxt(value.date, false)} ${value.value}`,
-        }
-    }), -1);
-    let minimum: GraphSerie = createGraphSerie('Minimi', location, year, morning.values.map(r => {
-        let value = findMin(r.value[0], sums);
-        if (!value) return {value: NaN, tooltip: ''};
-        return {
-            value: createValue(r.value[0], value.value),
-            tooltip: `Minimi ${getDateTxt(value.date, false)} ${value.value}`,
-        }
-    }), -1);
-
-    data = [morning, evening, minimum, maximum];
-
-    return data;
-}
-
-export function calculateDailyAveragesTS(series: TemperatureMsg, defaultyear: number, year: number | null = null): YearCalcValue[] {
-    let sums: YearCalcValue[] = createDefaultYearTable(defaultyear);
-    let firstindex = 0;
-    let lastindex = series.data.length;
-    if (year) {
-        let i: number = 0;
-        while (i < series.data.length && series.data[i].info.year != year) i++;
-        firstindex = i;
-        lastindex = firstindex + 1;
-    }
-    for (let yearindex: number = firstindex; yearindex < lastindex; yearindex++) {
-        let sumindex = 0;
-        for (let dayindex: number = 0; dayindex < series.data[yearindex].data.length; dayindex++) {
-            const dayreadings: DbData = series.data[yearindex].data[dayindex];
-            const dt: Date = new Date(dayreadings.datetimeLocal);
-            const month = dt.getMonth() + 1;
-            const day = dt.getDate();
-            // which is faster ------
-            //const foundsum = sums.find(s => s.day == day && s.month == month);
-            let foundsum;
-            while (sumindex < sums.length && (sums[sumindex].day != day || sums[sumindex].month != month)) {
-                sumindex++;
-            }
-            if (sumindex < sums.length) foundsum = sums[sumindex];
-            // ---------
-            if (foundsum) {
-                sumindex++;
-                if (dayreadings.morning !== undefined && isNumeric(dayreadings.morning)) {
-                    foundsum.morning.count += 1;
-                    foundsum.morning.sum += dayreadings.morning;
-                    if (dayreadings.morning < foundsum.morning.min) {
-                        foundsum.morning.min = dayreadings.morning;
-                        foundsum.morning.mindate = dayreadings.datetimeLocal;
-                        if (dayreadings.morning < foundsum.total.min) {
-                            foundsum.total.min = dayreadings.morning;
-                            foundsum.total.mindate = dayreadings.datetimeLocal;
-                        }
-                    }
-                    if (dayreadings.morning > foundsum.morning.max) {
-                        foundsum.morning.max = dayreadings.morning;
-                        foundsum.morning.maxdate = dayreadings.datetimeLocal;
-                        if (dayreadings.morning > foundsum.total.max) {
-                            foundsum.total.max = dayreadings.morning;
-                            foundsum.total.maxdate = dayreadings.datetimeLocal;
-                        }
-                    }
-                }
-                if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening)) {
-                    foundsum.evening.count += 1;
-                    foundsum.evening.sum += dayreadings.evening;
-                    if (dayreadings.evening < foundsum.evening.min) {
-                        foundsum.evening.min = dayreadings.evening;
-                        foundsum.evening.mindate = dayreadings.datetimeLocal;
-                        if (dayreadings.evening < foundsum.total.min) {
-                            foundsum.total.min = dayreadings.evening;
-                            foundsum.total.mindate = dayreadings.datetimeLocal;
-                        }
-                    }
-                    if (dayreadings.evening > foundsum.evening.max) {
-                        foundsum.evening.max = dayreadings.evening;
-                        foundsum.evening.maxdate = dayreadings.datetimeLocal;
-                        if (dayreadings.evening > foundsum.total.max) {
-                            foundsum.total.max = dayreadings.evening;
-                            foundsum.total.maxdate = dayreadings.datetimeLocal;
-                        }
-                    }
-
-                }
-                if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening) &&
-                    dayreadings.morning !== undefined && isNumeric(dayreadings.morning)) {
-                    let value = dayreadings.evening - dayreadings.morning;
-                    foundsum.difference.count++;
-                    foundsum.difference.sum += value;
-                    if (value < foundsum.difference.min) {
-                        foundsum.difference.min = value;
-                        foundsum.difference.mindate = dayreadings.datetimeLocal;
-                    }
-                    if (value > foundsum.difference.max) {
-                        foundsum.difference.max = value;
-                        foundsum.difference.maxdate = dayreadings.datetimeLocal;
-                    }
-                }
-            }
-        }
-    }
-    for (let dayindex: number = 0; dayindex < sums.length; dayindex++) {
-        if (sums[dayindex].morning.count > 0) {
-            sums[dayindex].morning.average = sums[dayindex].morning.sum / (sums[dayindex].morning.count > 0 ? sums[dayindex].morning.count : 1);
-        }
-        if (sums[dayindex].evening.count > 0) {
-            sums[dayindex].evening.average = sums[dayindex].evening.sum / (sums[dayindex].evening.count > 0 ? sums[dayindex].evening.count : 1);
-        }
-        if (sums[dayindex].difference.count > 0) {
-            sums[dayindex].difference.average = sums[dayindex].difference.sum / (sums[dayindex].difference.count > 0 ? sums[dayindex].difference.count : 1);
-        }
-        if (sums[dayindex].morning.count > 0 && sums[dayindex].evening.count > 0) {
-            sums[dayindex].total.average = (sums[dayindex].morning.average + sums[dayindex].evening.average)/2;
-        }
-    }
-    return sums;
-}
-
-interface TemperatureValue {
-    date: Date;
-    value: number;
-    average: number;
-    morning: number;
-    evening: number;
-    difference: number;
-    datetimeUtc: Date;
-    datetimeLocal: Date;
-}
-function createTemperatureValue(day: Date, value: number, datetimeUtc: Date, datetimeLocal: Date): TemperatureValue {
-    return { value: value, average: NaN, date: day, morning: NaN, evening: NaN, difference: NaN, datetimeUtc: datetimeUtc, datetimeLocal: datetimeLocal}
-}
-
-export function createLinearContTableTS(series: TemperatureMsg): TemperatureValue[] {
-    let tbl:TemperatureValue[] = [];
-    for (let year: number = series.data[0].info.year; year <= series.data[series.data.length - 1].info.year; year++) {
-        const lastday = year % 4 == 0 ? 366 : 365;
-        for (let day: number = 1; day <= lastday; day++) tbl.push(createTemperatureValue(new Date(year, 0, day), NaN, new Date(0), new Date(0)));
-    }
-    let currindex: number = 0;
-    series.data.forEach((yearserie: DbTemperature) => {
-        while (currindex < tbl.length && tbl[currindex].date.getFullYear() < yearserie.info.year) currindex++;
-        if (currindex < tbl.length) {
-            for (let currdateindex: number = 0; currdateindex < yearserie.data.length; currdateindex++) {
-                if (yearserie.info.year === tbl[currindex].date.getFullYear()) {
-                    const t = yearserie.data[currdateindex].datetimeLocal;
-                    while (currindex < tbl.length && tbl[currindex].date < t) currindex++;
-                    if (currindex < tbl.length) {
-                        if (t.getDate() === tbl[currindex].date.getDate()) {
-                            if (yearserie.data[currdateindex].evening !== undefined && yearserie.data[currdateindex].morning !== undefined) {
-                                const value = (yearserie.data[currdateindex].evening + yearserie.data[currdateindex].morning) / 2;
-                                tbl[currindex].value = value;
-                                tbl[currindex].morning = yearserie.data[currdateindex].morning;
-                                tbl[currindex].evening = yearserie.data[currdateindex].evening;
-                                tbl[currindex].difference = yearserie.data[currdateindex].evening - yearserie.data[currdateindex].morning;;
-                                tbl[currindex].datetimeUtc = yearserie.data[currdateindex].datetimeUtc;
-                                tbl[currindex].datetimeLocal = yearserie.data[currdateindex].datetimeLocal;
-                                currindex++;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    })
-    return tbl;
-}
-
-interface YearlyAveragesEstimates {
-    values: YearlyAverage[],
-    calculated: MonthlyEstimate[],
-    averages: number[],
-}
-function createYearlyAveragesEstimates(values: YearlyAverage[], calculated: MonthlyEstimate[], averages: number[]): YearlyAveragesEstimates {
-    return {values: values, calculated: calculated, averages: averages}
-}
-interface MonthlyEstimate {
-    year: number, month: number, value: number
-}
-function createMonthlyEstimate(year: number, month: number, value: number): MonthlyEstimate {
-    return {year: year, month: month, value: value}
-}
-interface YearlyAverage {
-    monthcount: number;
-    year: number;
-    yearaverage: number;
-    yearsum: number;
-    months: MonthlyAverage[];
-    estimate: boolean;
-}
-export function createYearlyAverage(year: number, monthcount: number, yearsum: number, yearaverage: number, months: MonthlyAverage[]): YearlyAverage {
-    return {year: year, monthcount: monthcount, yearsum: yearsum, yearaverage: yearaverage, months: months, estimate: false}
-}
-interface MonthlyAverage {
-    average: number;
-}
-export function calculateYearlyEstimatesTS(yearindexes: number[], years: YearlyAverage[]): MonthlyEstimate[] {
-    let estimates: MonthlyEstimate[] = [];
-    if (yearindexes.length) {
-        let sum: number[]=[0,0,0,0,0,0,0,0,0,0,0,0];
-        let count: number[]=[0,0,0,0,0,0,0,0,0,0,0,0];
-        
-        years.forEach(year => {
-            for (let i: number = 0; i < year.months.length; i++) {
-                if (!isNaN(year.months[i].average)) {
-                    sum[i] += year.months[i].average;
-                    count[i]++;
-                }
-            }
-        })
-        for (let index = 0; index < yearindexes.length; index++) {
-            let msum = 0;
-            let mcount = 0;
-            const curyear = years[yearindexes[index]].year;
-            years[yearindexes[index]].months.forEach((m, monthindex) => {
-                mcount++;
-                if (isNaN(m.average)) {
-                    let value = count[monthindex] > 0 ? sum[monthindex]/count[monthindex] : 0;
-                    msum += value;
-                    estimates.push(createMonthlyEstimate(curyear, monthindex, value));
-                }
-                else {
-                    msum += m.average;
-                }
-            })
-            years[yearindexes[index]].yearaverage = mcount > 0 ? msum/mcount: NaN;
-            years[yearindexes[index]].estimate = true;
-        }
-    }
-    return estimates;
-}
-
-export function calculateMonthlyAveragesTS(series: TemperatureMsg): YearlyAveragesEstimates {
-    let months = series.data.map(yearserie => {
-        let monthtbl:YearDataValue[] = [];
-        for (let i = 0; i < 12; i++) monthtbl.push(createYearDataValue(0));
-        for (let i = 0; i < yearserie.data.length; i++) {
-            let month = yearserie.data[i].datetimeLocal.getMonth();
-            if (!isNaN(yearserie.data[i].morning) && yearserie.data[i].morning !== undefined) {
-                monthtbl[month].morningsum += yearserie.data[i].morning;
-                monthtbl[month].morningcount++;
-            }
-            if (!isNaN(yearserie.data[i].evening) && yearserie.data[i].evening !== undefined) {
-                monthtbl[month].eveningsum += yearserie.data[i].evening;
-                monthtbl[month].eveningcount++;
-            }
-        }
-        let yearlysum = 0;
-        let monthcount = 0;
-        for (let i = 0; i < monthtbl.length; i++) {
-            if (monthtbl[i].morningcount > 0 || monthtbl[i].eveningcount > 0) {
-                monthcount++;
-                let morning = monthtbl[i].morningsum/ (monthtbl[i].morningcount > 0 ? monthtbl[i].morningcount : 1)
-                let evening = monthtbl[i].eveningsum/ (monthtbl[i].eveningcount > 0 ? monthtbl[i].eveningcount : 1);
-                yearlysum += (morning + evening) / 2;
-                monthtbl[i].average = (morning + evening)/2;
-                monthtbl[i].count += monthtbl[i].eveningcount + monthtbl[i].morningcount;
-            }
-        }
-        let data = createYearlyAverage(yearserie.info.year, monthcount, yearlysum, monthcount == 12 ? yearlysum/monthcount : NaN, 
-                        monthtbl.map(m => ({average: m.average})));
-        return data;
-    })
-    let averages:YearDataValue[] = [];
-    for (let i = 0; i < 12; i++) averages.push(createYearDataValue(i));
-    months.forEach(year => {
-        for (let i = 0; i < year.months.length; i++) {
-            if (!isNaN(year.months[i].average)) {
-                averages[i].morningsum += year.months[i].average;
-                averages[i].morningcount++;
-            }
-        }
-    })
-    let averageresults = averages.map(a => a.morningcount <= 0 ? NaN : a.morningsum/a.morningcount)
-
-    const monthlyestimates = calculateYearlyEstimatesTS(months.map((y, i) => isNaN(y.yearaverage) ? i : -1).filter(v => v !== -1), months);
-
-    const returnvalue: YearlyAveragesEstimates = createYearlyAveragesEstimates( months, monthlyestimates, averageresults);
-    return returnvalue;
-}
-
-interface DiffData {
-    data: DiffValue[],
-    name: string,
-    showyear: boolean,
-}
-function createDiffData(name: string, showyear: boolean, data: DiffValue[]): DiffData {
-    return {name: name, showyear: showyear, data: data}
-}
-interface DiffValue {
-    date1: Date;
-    date2: Date;
-    value: number;
-}
-function createDiffValue(value: number, date1: Date, date2: Date): DiffValue {
-    return {date1: date1, date2: date2, value: value}
-}
-
-export function getDiffCurveDataTS(allfiltered: Filtered[], sums: YearCalcValue[], lastyear: number, defaultyear: number, location: string): GraphSerie[] {
-    let curves: DiffData[] = [];
-    curves.push(createDiffData('Keskiarvo', false, sums.map(daydata => (
-        createDiffValue(daydata.difference.count > 0 ? daydata.difference.sum / daydata.difference.count : NaN, daydata.date, daydata.date)
-        ))));
-
-    curves.push(createDiffData('Maksimi', true, sums.map(daydata => (
-        createDiffValue(daydata.difference.max, daydata.date, daydata.difference.maxdate)
-        ))));
-    curves.push(createDiffData('Minimi', true, sums.map(daydata => (
-        createDiffValue(daydata.difference.min, daydata.date, daydata.difference.mindate)
-        ))));
-
-    let lastyeardata = allfiltered.filter(f => {
-        if (f.date.getFullYear() == lastyear) return f;
-    })
-
-    curves.push(createDiffData(`${lastyear.toString()} (suod)`, true, lastyeardata.map(daydata => (
-        createDiffValue(daydata.diffvalue, new Date(defaultyear, daydata.date.getMonth(), daydata.date.getDate()), daydata.date)
-        ))));
-    let curvedata: GraphSerie[] = curves.map(c => ({
-        values: c.data.map(d => ({
-            value: [d.date1, d.value],
-            tooltip: `${c.name} ${location} ${c.showyear==true ? getDateTxt(d.date2, false) : getDateTxt(d.date2, true)} ${roundNumber(d.value, 1)}°`,
-        })),
-        name: c.name,
-        year: 0,
-        location: location,
-        num: -1,
-        trend: false,
-    }))
-
-    return curvedata;
 }
 export function calculateTrendTS(valuearray): {k: number, b: number} {
     let k = 0;
@@ -834,319 +368,203 @@ export function calculateTrendTS(valuearray): {k: number, b: number} {
 
     return { k, b }
 }
-interface YearSum {
-    year: number;
-    sum: number;
-    count: number;
-}
-export function getYearlyTrendTS(series: TemperatureMsg, monthlytrend: MonthDataPair[], currentyearestimate: number): GraphSerie[] {
-    let yearsums: YearSum[] = [];
-    monthlytrend.forEach(month => {
-        month.data.forEach((m, i) => {
-            if (!yearsums[m.year]) yearsums[m.year] = {year: m.year, sum: 0, count: 0};
-            yearsums[m.year].count++;
-            yearsums[m.year].sum += m.value;
-        })
-    });
-    let yearlyaverages = yearsums.map(y => (
-        { value: createReturnValue(new Date(y.year, 0, 1), y.count == 12 ? roundNumber(y.sum/y.count, 1) : 'NaN'), 
-            tooltip: `Vuosikeskiarvo ${y.year} ${y.count == 12 ? roundNumber(y.sum/y.count, 1): ''}` })
-    )
-    yearlyaverages = yearlyaverages.filter(val => val);
-    if (!isNaN( currentyearestimate) && yearlyaverages[yearlyaverages.length-1].value[0].getFullYear() == new Date().getFullYear()) {
-        if (yearlyaverages[yearlyaverages.length-1].value[1] === 'NaN') {
-            yearlyaverages[yearlyaverages.length-1].value[1] = roundNumber(currentyearestimate, 1);
-            yearlyaverages[yearlyaverages.length-1].tooltip = yearlyaverages[yearlyaverages.length-1].tooltip.replace(`Vuosikeskiarvo`, `Arvioitu vuosikeskiarvo`);
-        }
-    }   
-    let yearlyserie = {
-        month: 0,
-        data: yearlyaverages.map(val => ({
-            month:0,
-            value: Number(val.value[1]),
-            year: Number(val.value[0].getFullYear()),
-        })),
-    }
- 
-    const trend = calculateTrendTS([yearlyserie]);
-    let yearlytrend = series.data.map(ser => (
-        { value: createReturnValue(new Date(ser.info.year, 0, 1), roundNumber(ser.info.year * trend.k + trend.b, 1)), 
-            tooltip: `Suuntaus ${ser.info.year} ${roundNumber(ser.info.year * trend.k + trend.b, 1)}` })
-    )
-    const yearlyvalues = createGraphSerie(`Vuosikeskiarvo`, series.data[0].info.location, 0, yearlyaverages, -1);
-    const trendvalues = createGraphSerie(`Suuntaus ${trend.k > 0 ? '+' : ''}${roundNumber(trend.k * 10, 1)}°C/10v`, '', 0, yearlytrend, -1);
 
-    return [yearlyvalues, trendvalues];
-}
-export function getSeasonTrendsTS(series: TemperatureMsg, monthnumbers: number[], monthnames: string[], monthlytrends: MonthDataPair[]): GraphSerie[] {
-    let datavalues: GraphSerie[] = [];
-    monthlytrends.forEach(month => {
-        let found = monthnumbers.indexOf(month.month);
-        if (found >= 0) {
-            let values = month.data.map(value => (
-                { value: [new Date(value.year, 0, 1), roundNumber(value.value, 1)], tooltip: `${value.year} ${monthnames[found]} ${roundNumber(value.value, 1)}` }
-            ));
-            datavalues.push( createGraphSerie( monthnames[datavalues.length], series.data[0].info.location, 0, values, monthnumbers[found]));
-        }
-    });
-    let trend = calculateTrendTS([monthlytrends[monthnumbers[0] - 1] ?? null, monthlytrends[monthnumbers[1] - 1] ?? null, monthlytrends[monthnumbers[2] - 1]] ?? null);
-    let newvalues = series.data.map((ser, serieindex) => (
-        { value: [new Date(ser.info.year, 0, 1), roundNumber(ser.info.year * trend.k + trend.b, 1)], tooltip: `${ser.info.year} Suuntaus ${roundNumber(ser.info.year * trend.k + trend.b, 1)}` })
-    )
-    if (isNaN(trend.k)) {
-        datavalues.push( createGraphSerie( `Trendi --- °C/10v`, series.data[0].info.location, 0, newvalues, -1, true ));
-    }
-    else {
-        datavalues.push( createGraphSerie( `Trendi ${trend.k > 0 ? '+' : ''}${roundNumber(trend.k * 10, 1)}°C/10v`, series.data[0].info.location, 0, newvalues, -1, true ));
-    }
-
-    return datavalues;
-}
-
-export function createAllYearsMonthlySeriedataTS(series: TemperatureMsg, monthlyaverages: YearlyAverage[], defaultyear: number, monthnames: string[]): GraphSerie[] {
-    let monthly = monthlyaverages;
-    // find highest and lowest months
-    let monthhighest: any = [];
-    let monthlowest: any = [];
-    for (let index = 0; index < 12; index++) {
-        monthhighest.push({ value: TempMaxDefaultValue, year: 0, month: 0, date: 0 });
-        monthlowest.push({ value: TempMinDefaultValue, year: 0, month: 0, date: 0 })
-    }
-    monthly.forEach(year => {
-        year.months.forEach((m, i) => {
-            if (m.average > monthhighest[i].value) { monthhighest[i].value = m.average, monthhighest[i].year = year.year, monthhighest[i].month = i };
-            if (m.average < monthlowest[i].value) { monthlowest[i].value = m.average, monthlowest[i].year = year.year, monthlowest[i].month = i };
-        })
-    })
-    let valueshigh: GraphChartData[] = monthhighest.map(high => ({
-        value: [new Date(defaultyear, high.month, 1), high.value],
-        tooltip: `Korkein ${high.year} ${monthnames[high.month]} ${roundNumber(high.value, 1)}`
-    }))
-
-    let valueslow: GraphChartData[] = monthlowest.map(low => ({
-        value: [new Date(defaultyear, low.month, 1), low.value],
-        tooltip: `Matalin ${low.year} ${monthnames[low.month]} ${roundNumber(low.value, 1)}`
-    }))
-    let valuesthisyear: GraphChartData[] = [];
-    if (monthly[monthly.length - 1].year == new Date().getFullYear()) {
-        valuesthisyear = monthly[monthly.length - 1].months.map((m, i) => ({
-            value: [new Date(defaultyear, i, 1), m.average],
-            tooltip: `Vuosi ${monthly[monthly.length - 1].year} ${monthly[monthly.length - 1].year} ${monthnames[i]} ${roundNumber(m.average, 1)}`
-        }));
-    }
-    let datavalues: GraphSerie[] = [];
-    if (series.data.length > 0) {
-        datavalues.push(createGraphSerie( 'Korkein', series.data[0].info.location, 0,  valueshigh, -1))
-        datavalues.push(createGraphSerie( 'Matalin', series.data[0].info.location, 0, valueslow, -1))
-        datavalues.push(createGraphSerie( monthly[monthly.length - 1].year.toString(), series.data[0].info.location, 0, valuesthisyear, -1))
-    }
-    return datavalues;
-}
-
-export function createAllYearsFilteredSerieTS(series: TemperatureMsg, filtered: Filtered[], defaultyear: number): GraphSerie[] {
-    let valuearray: GraphSerie[] = [];
-    let curryear: number = 0;
-    filtered.forEach((f: Filtered) => {
-        if (f.date.getFullYear() != curryear) {
-            curryear = f.date.getFullYear();
-            valuearray.push(createGraphSerie(curryear.toString(), series.data[0].info.location, curryear, [], -1));
-        }
-        let dt = new Date(defaultyear, f.date.getMonth(), f.date.getDate());
-        valuearray[valuearray.length - 1].values.push({ value: [dt, f.value], tooltip: `${getDateTxt(f.date, false)} ${roundNumber(f.value, 1)}` });
-    })
-    // add minimum and maximum values to screen data
-    let minimum = createGraphSerie('Minimi', series.data[0].info.location, 0, [], -1);
-    let maximum = createGraphSerie('Maksimi', series.data[0].info.location, 0, [], -1);
-    let minmax = getDailyFilteredMinMaxTS(filtered, defaultyear);
-    maximum.values = minmax.map(r => {
-        return {
-            value: [r.date, r.total.max],
-            tooltip: `Maksimi ${getDateTxt(r.total.maxdate, false)} ${roundNumber(r.total.max, 1)}`,
-        }
-    });
-    minimum.values = minmax.map(r => {
-        return {
-            value: [r.date, r.total.min],
-            tooltip: `Minimi ${getDateTxt(r.total.mindate, false)} ${roundNumber(r.total.min, 1)}`,
-        }
-    });
-
-    valuearray.push(minimum);
-    valuearray.push(maximum);
-
-    return valuearray;
-}
-
-export function createAllyearsAverageSerieTS(series: TemperatureMsg, sums: YearCalcValue[]): GraphSerie[] {
-    let loc: string | null = null;
-    for (let index = 0; index < series.data.length; index++) {
-        if (series.data[index].info.location !== loc) {
-            if (loc === null) loc = series.data[index].info.location;
-            else loc = loc + ', ' + series.data[index].info.location;
-        }
-    }
-    if (loc === null) loc = '';
-
-    let valuearraymorning: GraphChartData[] = sums.map(s => ({
-        value: [s.date, s.morning.average],
-        tooltip: `Aamu ${getDateTxt(s.date, true)} ${roundNumber(s.morning.average, 1)}`,
-    }))
-    let valuearrayevening: GraphChartData[] = sums.map(s => ({
-        value: [s.date, s.evening.average],
-        tooltip: `Ilta ${getDateTxt(s.date, true)} ${roundNumber(s.evening.average, 1)}`,
-    }))
-    let valuearrayaverage: GraphChartData[] = sums.map(s => ({
-        value: [s.date, (s.morning.average + s.evening.average)/2],
-        tooltip: `Keskiarvo ${getDateTxt(s.date, true)} ${roundNumber((s.morning.average + s.evening.average)/2, 1)}`,
-    }))
-    let valuearrayhigh: GraphChartData[] = sums.map(s => ({
-        value: [s.date, s.morning.max > s.evening.max ? s.morning.max : s.evening.max],
-        tooltip: `Korkein ${getDateTxt(s.morning.max > s.evening.max ? s.morning.maxdate : s.evening.maxdate, false)} ${roundNumber(s.morning.max > s.evening.max ? s.morning.max : s.evening.max, 1)}`,
-    }))
-    let valuearraylow: GraphChartData[] = sums.map(s => ({
-        value: [s.date, s.morning.min < s.evening.min ? s.morning.min : s.evening.min],
-        tooltip: `Matalin ${getDateTxt(s.morning.min < s.evening.min ? s.morning.mindate : s.evening.mindate, false)} ${roundNumber(s.morning.min < s.evening.min ? s.morning.min : s.evening.min, 1)}`,
-    }))
-    let returnvalues1 = createGraphSerie( 'Aamu', loc, 0, valuearraymorning, -1);
-    let returnvalues2 = createGraphSerie( 'Ilta', loc, 0, valuearrayevening, -1);
-    let returnvalues3 = createGraphSerie( 'Keskiarvo', loc, 0, valuearrayaverage, -1);
-    let returnvalues4 = createGraphSerie( 'Korkein', loc, 0, valuearrayhigh, -1);
-    let returnvalues5 = createGraphSerie( 'Matalin', loc, 0, valuearraylow, -1);
-
-    return [returnvalues1, returnvalues2, returnvalues3, returnvalues4, returnvalues5];
-}
-
-interface YearData {
-    year: number;
-    data: YearDataValue[];
-}
-function createYearData(year: number): YearData {
-    let data: YearDataValue[] = createYearDataValues();
-    return {year: year, data: data}
-}
-interface YearDataValue {
-    morningsum: number;
-    morningcount: number;
-    eveningsum: number;
-    eveningcount: number;
-    month: number;
-    average: number;
-    count: number;
-}
-function createYearDataValue(month: number): YearDataValue {
-    return { morningsum: 0, morningcount: 0, eveningsum: 0, eveningcount: 0, month: month, average: NaN, count: 0 }
-}
-function createYearDataValues(): YearDataValue[] {
-    let data: YearDataValue[] = [];
-    for (let i = 0; i < 12; i++) data.push(createYearDataValue(i + 1));
-    return data;
-}
-interface MonthDataPair {
-    month: number;
-    data: ValueDataValue[]
-}
-function createMonthDataPair(month: number): MonthDataPair {
-    return {month: month, data: []}
-}
-interface ValueDataValue {
-    value: number;
-    year: number;
-    month: number;
-}
-function createValueDataValue(value: number, year: number, month: number): ValueDataValue {
-    return {value: value, year: year, month: month}
-}
-
-export function calculateMonthlyTrendsTS(series: TemperatureMsg): MonthDataPair[] {
-    let monthlyaverages: YearData[] = [];
-    series.data.forEach((year, yearindex) => {
-        monthlyaverages.push(createYearData(year.info.year));
-        year.data.forEach(tempdata => {
-            let d = getDate(tempdata.date);
-            let monthindex = (typeof d === "number") ? 0 : d.getMonth();
-            if (tempdata.morning !== undefined) {
-                monthlyaverages[yearindex].data[monthindex].morningcount++;
-                monthlyaverages[yearindex].data[monthindex].morningsum += tempdata.morning;
-            }
-            if (tempdata.evening !== undefined) {
-                monthlyaverages[yearindex].data[monthindex].eveningcount++;
-                monthlyaverages[yearindex].data[monthindex].eveningsum += tempdata.evening;
-            }
-        })
-    });
-
-    monthlyaverages.forEach(m => {
-        m.data.forEach(d => {
-            d.average = (d.morningsum / (d.morningcount > 0 ? d.morningcount : 1) + (d.eveningsum / (d.eveningcount > 0 ? d.eveningcount : 1))) / 2;
-        })
-    })
-
-    let monthlytrenddata: MonthDataPair[] = [];
-    for (let monthindex = 0; monthindex < 12; monthindex++) {
-        monthlytrenddata.push(createMonthDataPair(monthindex + 1));
-        monthlyaverages.forEach(year => {
-            if (year.data[monthindex].eveningcount > 0 || year.data[monthindex].morningcount > 0) {
-                let value = (year.data[monthindex].eveningsum + year.data[monthindex].morningsum) / (year.data[monthindex].eveningcount + year.data[monthindex].morningcount);
-                monthlytrenddata[monthindex].data.push(createValueDataValue(value, year.year, monthindex + 1));
-            }
-        })
-    }
-    return monthlytrenddata;
-}
-
+// ========================================================================================
 class Temperatures {
     //temperatures: TemperatureMsg;
     defaultyear: number = 1976;
-    yearlyAverages: AverageDataNew[];
+    filterlength: number = 10;
+    yearlyAverages: AverageDataNew[] = [];
+    monthlyValues: MonthlyValueNew[] = [];
+    filteredValues: FilteredNew[] = [];
+    dailyValues: DailyValuesNew[] = [];
+    yearlyTrend: YearlySerieNew = null;
     constructor () {
     }
+    getMonthlyvaluesForYear(currentyear: DbTemperature): AverageCounterNew[] {
+        let monthlycounters: AverageCounterNew[] = createMonthAverageCountersNew(currentyear.info.year);
+
+        currentyear.data.forEach(dailytemp => {
+            let month = dailytemp.datetimeLocal.getMonth();
+            let morningvalueexists = false;
+            if (!isNaN(dailytemp.morning) && dailytemp.morning !== undefined) {
+                monthlycounters[month].morning.sum += dailytemp.morning;
+                monthlycounters[month].morning.count++;
+                if (dailytemp.morning > monthlycounters[month].morning.high) {
+                    monthlycounters[month].morning.high = dailytemp.morning;
+                    monthlycounters[month].morning.highdate = dailytemp.datetimeLocal;
+                }
+                if (dailytemp.morning < monthlycounters[month].morning.low) {
+                    monthlycounters[month].morning.low = dailytemp.morning;
+                    monthlycounters[month].morning.lowdate = dailytemp.datetimeLocal;
+                }
+                morningvalueexists = true;
+            }
+            if (!isNaN(dailytemp.evening) && dailytemp.evening !== undefined) {
+                monthlycounters[month].evening.sum += dailytemp.evening;
+                monthlycounters[month].evening.count++;
+                if (dailytemp.evening > monthlycounters[month].evening.high) {
+                    monthlycounters[month].evening.high = dailytemp.evening;
+                    monthlycounters[month].evening.highdate = dailytemp.datetimeLocal;
+                }
+                if (dailytemp.evening < monthlycounters[month].evening.low) {
+                    monthlycounters[month].evening.low = dailytemp.evening;
+                    monthlycounters[month].evening.lowdate = dailytemp.datetimeLocal;
+                }                    
+                if (morningvalueexists) {
+                    const diff = (dailytemp.evening - dailytemp.morning);
+                    monthlycounters[month].difference.sum += diff;
+                    monthlycounters[month].difference.count++;
+                    if (diff > monthlycounters[month].difference.high) {
+                        monthlycounters[month].difference.high = diff;
+                        monthlycounters[month].difference.highdate = dailytemp.datetimeLocal;
+                    }
+                    if (diff < monthlycounters[month].difference.low) {
+                        monthlycounters[month].difference.low = diff;
+                        monthlycounters[month].difference.lowdate = dailytemp.datetimeLocal;
+                    }                          
+                }
+            }
+        })
+        monthlycounters.forEach(month =>{
+            month.morning.average = month.morning.count > 0 ? month.morning.sum / month.morning.count : NaN;
+            month.evening.average = month.evening.count > 0 ? month.evening.sum / month.evening.count : NaN;
+            month.difference.average = month.difference.count > 0 ? month.difference.sum / month.difference.count : NaN;
+        })
+        return monthlycounters;
+    }
+    updateCounters(counter: HiLowYearlyNew, sourcevalue: OneDayValuesNew, year: number, month: number): boolean {
+        let status = false;
+        if (!isNaN(sourcevalue.average)) {
+            status = true;
+            counter.count++;
+            counter.sum += sourcevalue.average;
+            if (sourcevalue.average > counter.monthlyhigh) {
+                counter.monthlyhigh = sourcevalue.average;
+                counter.monthlyhighdate = new Date(year, month-1, 1);
+            }
+            if (sourcevalue.average < counter.monthlylow) {
+                counter.monthlylow = sourcevalue.average;
+                counter.monthlylowdate = new Date(year, month-1, 1);
+            }
+            if (sourcevalue.max.value > counter.high) {
+                counter.high = sourcevalue.max.value;
+                counter.highdate = sourcevalue.max.date;
+            }
+            if (sourcevalue.min.value < counter.low) {
+                counter.low = sourcevalue.min.value;
+                counter.lowdate = sourcevalue.min.date;
+            }            
+        }
+        return status;
+    }
+    updateYearCounters(yearcounters: AverageYearCounterNew[], monthlycounters: AverageCounterNew[]): MonthAverageDataNew[] {
+        const counters = monthlycounters.map((counter, index) => {
+            let averages: AverageNew = calculateAverageNew(counter);
+            const morningstatus = this.updateCounters(yearcounters[index].morning, averages.morning, counter.year, counter.monthno);
+            const everningstatus = this.updateCounters(yearcounters[index].evening, averages.evening, counter.year, counter.monthno);
+            if (morningstatus && everningstatus) {
+                this.updateCounters(yearcounters[index].difference, averages.difference, counter.year, counter.monthno);
+            }
+            return createMonthAverageDataNew(counter.monthno, averages);
+        });
+        // Calculate yearly averages
+        
+        return counters;
+    }
     calculateYearlyAverages(temperatures: TemperatureMsg): CalculationResult {
+        //let allYearsMonthlyAveragesHighsLows: AverageNew[] = createAverageNew2();
+        let yearcounters = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => (createAverageYearCounterNew(0, m)));
         const data: AverageDataNew[] = temperatures.data.map(currentyear => {
+
             const averagedata = createAverageDataNew(currentyear.info.year, currentyear.info.location);
+            /*
+            AverageDataNew
+                year
+                location
+                averages: AverageNew
+                months: MonthAverageDataNew[]
+            */
 
-            let monthlycounters: AverageCounterNew[] = createMonthAverageCountersNew();
+
             // calculate monthly values for current year
-            currentyear.data.forEach(dailytemp => {
-                let month = dailytemp.datetimeLocal.getMonth();
-                let morningvalueexists = false;
-                if (!isNaN(dailytemp.morning) && dailytemp.morning !== undefined) {
-                    monthlycounters[month].morningsum += dailytemp.morning;
-                    monthlycounters[month].morningcount++;
-                    morningvalueexists = true;
-                }
-                if (!isNaN(dailytemp.evening) && dailytemp.evening !== undefined) {
-                    monthlycounters[month].eveningsum += dailytemp.evening;
-                    monthlycounters[month].eveningcount++;
-                    if (morningvalueexists) {
-                        monthlycounters[month].differencesum += (dailytemp.evening - dailytemp.morning);
-                        monthlycounters[month].differencecount++;
-                    }
-                }
-            })
-            let yearcounters = createAverageCounterNew(0);
+            let monthlycounters: AverageCounterNew[] = this.getMonthlyvaluesForYear(currentyear);
+            // vuoden jokaisen kuukauden keskiarvot, korkeimmat ja matalimmat
+            /*
+            AverageCounterNew[12]
+                year
+                month
+                morning: HiLowNew
+                evening: HiLowNew
+                difference: HiLowNew
+                    sum, count, average, high, highdate, low, lowdate
+            */
 
-            averagedata.months = monthlycounters.map(counter => {
-                let averages: AverageNew = calculateAverageNew(counter);
+            // update yearcounters
+            averagedata.months = this.updateYearCounters(yearcounters, monthlycounters);
+            /*
+            AverageYearCounterNew
+                year
+                monthno (1..12)
+                morning: HiLowYearlyNew
+                evening: HiLowYearlyNew
+                difference: HiLowYearlyNew
+                    sum, count, average, high, highdate, low, lowdate, monthlyhigh, monthlyhighdate, monthlylow, monthlylowdate
 
-                if (!isNaN(averages.morning)) {
-                    yearcounters.morningcount++;
-                    yearcounters.morningsum += averages.morning;
-                }
-                if (!isNaN(averages.evening)) {
-                    yearcounters.eveningcount++;
-                    yearcounters.eveningsum += averages.evening;
-                    if (!isNaN(averages.morning)) {
-                        yearcounters.differencecount++;
-                        yearcounters.differencesum += (averages.evening -averages. morning);
-                    }
-                }
-                return createMonthAverageDataNew(counter.month, averages);
-            })
-            averagedata.averages = calculateAverageNew(yearcounters);
+            MonthAverageDataNew[]
+                monthno (1..12)
+                averages: AverageNew
+                    average
+                    morning: OneDayValuesNew
+                    evening: OneDayValuesNew
+                    difference: OneDayValuesNew
+                        count
+                        average
+                        min: ReadingDate
+                            value, date
+                        max: ReadingDate
+            */
+
+
+            // calculate yearly averages
+            // for (let monthindex = 0; monthindex < 12; monthindex++) {
+            //     updateHiLo(yearlyAverages.morning, monthlycounters[monthindex].morning);
+            //     updateHiLo(yearlyAverages.evening, monthlycounters[monthindex].evening);
+            //     updateHiLo(yearlyAverages.difference, monthlycounters[monthindex].difference);
+            // }
+            // averagedata.averages = yearlyAverages;
+
+            // -----------------
             return averagedata;
         })
         this.yearlyAverages = data;
+        // set monthly values
+        // this.monthlyValues = [];
+        // monthlyAverages.forEach(month => {
+        //     const newmonth = createMonthlyValueNew(month.monthno);
+        //     setMonthlyStatisticsNew(newmonth.morning, month.morning);
+        //     setMonthlyStatisticsNew(newmonth.evening, month.evening);
+        //     setMonthlyStatisticsNew(newmonth.difference, month.difference);
+        //     this.monthlyValues.push(newmonth);
+        // })
+
         return {status: 0, message: null, data: data};
+
+
+        function updateHiLo(dest, source) {
+            dest.average += source.average;
+            dest.count++;
+            dest.sum += source.sum;
+
+            if (dest.high < source.high) {
+                dest.high = source.high;
+                dest.highdate = source.highdate;
+            }
+            if (dest.low > source.low) {
+                dest.low = source.low;
+                dest.lowdate = source.lowdate;
+            }
+        }
     }
     createLinearContTable(temperatures: TemperatureMsg): FilterValueNew[] {
         let lineartable:FilterValueNew[] = [];
@@ -1181,160 +599,197 @@ class Temperatures {
         return lineartable;
     }    
     calculateFilteredValues(temperatures: TemperatureMsg): CalculationResult {
-        const filterlength = 10;
-
         const filteredserie: FilterValueNew[] = this.createLinearContTable(temperatures);
 
-            let firstindex: number = 0;
-            let lastindex: number = 0;
-            let negoffset: number = filterlength % 2 ? -filterlength / 2 + 0.5 : -filterlength / 2;
-            let posoffset: number = negoffset + filterlength;
-            let filtered: FilteredNew[] = filteredserie.map(ss => {
-                if (!isNaN(ss.average)) {
-                    let first = new Date(ss.date.getFullYear(), ss.date.getMonth(), ss.date.getDate() + negoffset);
-                    let last = new Date(ss.date.getFullYear(), ss.date.getMonth(), ss.date.getDate() + posoffset);
-                    while (firstindex < filteredserie.length && filteredserie[firstindex].date < first) firstindex++;
-                    while (lastindex < filteredserie.length && filteredserie[lastindex].date < last) lastindex++;
-                    let sum: number = 0;
-                    let dec: number = 0;
-                    let diffsum: number = 0;
-                    let diffdec: number = 0;
-                    let morningsum: number = 0;
-                    let morningdec: number = 0;
-                    let eveningsum: number = 0;
-                    let eveningdec: number = 0;
-                    for (let index: number = firstindex; index < lastindex; index++) {
-                        if (isNaN(filteredserie[index].average)) dec++;
-                        else sum += filteredserie[index].average;
-                        if (isNaN(filteredserie[index].difference)) diffdec++;
-                        else diffsum += filteredserie[index].difference;
-                        if (isNaN(filteredserie[index].morning)) morningdec++;
-                        else morningsum += filteredserie[index].morning;
-                        if (isNaN(filteredserie[index].evening)) eveningdec++;
-                        else eveningsum += filteredserie[index].evening;
-                    }
-                    let filteredmorning = (lastindex - firstindex - morningdec) > 0 ? morningsum / (lastindex - firstindex - morningdec) : NaN;
-                    let filteredevening = (lastindex - firstindex - eveningdec) > 0 ? eveningsum / (lastindex - firstindex - eveningdec) : NaN;
-                    let filteredaverage  = (lastindex - firstindex - dec) > 0 ? sum / (lastindex - firstindex - dec) : NaN;
-                    let filtereddifference = (lastindex - firstindex - diffdec) > 0 ? diffsum / (lastindex - firstindex - diffdec) : NaN;
-
-                    return createFilteredNew( ss.date, ss.morning, ss.evening, !isNaN(ss.morning) && !isNaN(ss.evening) ? (ss.morning+ss.evening)/2 : NaN, filteredmorning, filteredevening, filteredaverage, filtereddifference, first, last );
+        let firstindex: number = 0;
+        let lastindex: number = 0;
+        let negoffset: number = this.filterlength % 2 ? -this.filterlength / 2 + 0.5 : -this.filterlength / 2;
+        let posoffset: number = negoffset + this.filterlength;
+        let filtered: FilteredNew[] = filteredserie.map(ss => {
+            if (!isNaN(ss.average)) {
+                let first = new Date(ss.date.getFullYear(), ss.date.getMonth(), ss.date.getDate() + negoffset);
+                let last = new Date(ss.date.getFullYear(), ss.date.getMonth(), ss.date.getDate() + posoffset);
+                while (firstindex < filteredserie.length && filteredserie[firstindex].date < first) firstindex++;
+                while (lastindex < filteredserie.length && filteredserie[lastindex].date < last) lastindex++;
+                let sum: number = 0;
+                let dec: number = 0;
+                let diffsum: number = 0;
+                let diffdec: number = 0;
+                let morningsum: number = 0;
+                let morningdec: number = 0;
+                let eveningsum: number = 0;
+                let eveningdec: number = 0;
+                for (let index: number = firstindex; index < lastindex; index++) {
+                    if (isNaN(filteredserie[index].average)) dec++;
+                    else sum += filteredserie[index].average;
+                    if (isNaN(filteredserie[index].difference)) diffdec++;
+                    else diffsum += filteredserie[index].difference;
+                    if (isNaN(filteredserie[index].morning)) morningdec++;
+                    else morningsum += filteredserie[index].morning;
+                    if (isNaN(filteredserie[index].evening)) eveningdec++;
+                    else eveningsum += filteredserie[index].evening;
                 }
-                return createDateOnlyFilteredNew( ss.date);
-            })
-        
+                let filteredmorning = (lastindex - firstindex - morningdec) > 0 ? morningsum / (lastindex - firstindex - morningdec) : NaN;
+                let filteredevening = (lastindex - firstindex - eveningdec) > 0 ? eveningsum / (lastindex - firstindex - eveningdec) : NaN;
+                let filteredaverage = (lastindex - firstindex - dec) > 0 ? sum / (lastindex - firstindex - dec) : NaN;
+                let filtereddifference = (lastindex - firstindex - diffdec) > 0 ? diffsum / (lastindex - firstindex - diffdec) : NaN;
 
+                return createFilteredNew(ss.date, ss.morning, ss.evening, !isNaN(ss.morning) && 
+                    !isNaN(ss.evening) ? (ss.morning + ss.evening) / 2 : NaN,  
+                    !isNaN(ss.morning) && !isNaN(ss.evening) ? (ss.evening - ss.morning) : NaN, 
+                    filteredmorning, filteredevening, filteredaverage, filtereddifference, first, last);
+            }
+            return createDateOnlyFilteredNew(ss.date);
+        })
+
+        this.filteredValues = filtered;
         return {status: 0, message: null, data: filtered};
     }
+    checkReading(value: number, date: Date, current: MinMaxCalcNew, total: MinMaxCalcNew): boolean {
+        let valueok: boolean = false;
+        if (!isNaN(value) && value !== undefined && isNumeric(value)) {
+            valueok = true;
+            current.count += 1;
+            current.sum += value;
+            if (value < current.min) {
+                current.min = value;
+                current.mindate = date;
+                if (total && value < total.min) {
+                    total.min = value;
+                    total.mindate = date;
+                }
+            }
+            if (value > current.max) {
+                current.max = value;
+                current.maxdate = date;
+                if (total && value > total.max) {
+                    total.max = value;
+                    total.maxdate = date;
+                }
+            }
+        }
+        return valueok;
+    }
+    
     calculateDailyAverages(temperatures: TemperatureMsg, year: number = null): CalculationResult {
-        //export function calculateDailyAveragesTS(series: TemperatureMsg, defaultyear: number, year: number | null = null): YearCalcValue[] {
-            let sums: YearCalcValue[] = createDefaultYearTable(this.defaultyear);
-            let firstindex = 0;
-            let lastindex = temperatures.data.length;
-            if (year) {
-                let i: number = 0;
-                while (i < temperatures.data.length && temperatures.data[i].info.year != year) i++;
-                firstindex = i;
-                lastindex = firstindex + 1;
-            }
-            for (let yearindex: number = firstindex; yearindex < lastindex; yearindex++) {
-                let sumindex = 0;
-                for (let dayindex: number = 0; dayindex < temperatures.data[yearindex].data.length; dayindex++) {
-                    const dayreadings: DbData = temperatures.data[yearindex].data[dayindex];
-                    const dt: Date = new Date(dayreadings.datetimeLocal);
-                    const month = dt.getMonth() + 1;
-                    const day = dt.getDate();
-                    // which is faster ------
-                    //const foundsum = sums.find(s => s.day == day && s.month == month);
-                    let foundsum;
-                    while (sumindex < sums.length && (sums[sumindex].day != day || sums[sumindex].month != month)) {
-                        sumindex++;
-                    }
-                    if (sumindex < sums.length) foundsum = sums[sumindex];
-                    // ---------
-                    if (foundsum) {
-                        sumindex++;
-                        if (dayreadings.morning !== undefined && isNumeric(dayreadings.morning)) {
-                            foundsum.morning.count += 1;
-                            foundsum.morning.sum += dayreadings.morning;
-                            if (dayreadings.morning < foundsum.morning.min) {
-                                foundsum.morning.min = dayreadings.morning;
-                                foundsum.morning.mindate = dayreadings.datetimeLocal;
-                                if (dayreadings.morning < foundsum.total.min) {
-                                    foundsum.total.min = dayreadings.morning;
-                                    foundsum.total.mindate = dayreadings.datetimeLocal;
-                                }
-                            }
-                            if (dayreadings.morning > foundsum.morning.max) {
-                                foundsum.morning.max = dayreadings.morning;
-                                foundsum.morning.maxdate = dayreadings.datetimeLocal;
-                                if (dayreadings.morning > foundsum.total.max) {
-                                    foundsum.total.max = dayreadings.morning;
-                                    foundsum.total.maxdate = dayreadings.datetimeLocal;
-                                }
-                            }
-                        }
-                        if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening)) {
-                            foundsum.evening.count += 1;
-                            foundsum.evening.sum += dayreadings.evening;
-                            if (dayreadings.evening < foundsum.evening.min) {
-                                foundsum.evening.min = dayreadings.evening;
-                                foundsum.evening.mindate = dayreadings.datetimeLocal;
-                                if (dayreadings.evening < foundsum.total.min) {
-                                    foundsum.total.min = dayreadings.evening;
-                                    foundsum.total.mindate = dayreadings.datetimeLocal;
-                                }
-                            }
-                            if (dayreadings.evening > foundsum.evening.max) {
-                                foundsum.evening.max = dayreadings.evening;
-                                foundsum.evening.maxdate = dayreadings.datetimeLocal;
-                                if (dayreadings.evening > foundsum.total.max) {
-                                    foundsum.total.max = dayreadings.evening;
-                                    foundsum.total.maxdate = dayreadings.datetimeLocal;
-                                }
-                            }
-        
-                        }
-                        if (dayreadings.evening !== undefined && isNumeric(dayreadings.evening) &&
-                            dayreadings.morning !== undefined && isNumeric(dayreadings.morning)) {
-                            let value = dayreadings.evening - dayreadings.morning;
-                            foundsum.difference.count++;
-                            foundsum.difference.sum += value;
-                            if (value < foundsum.difference.min) {
-                                foundsum.difference.min = value;
-                                foundsum.difference.mindate = dayreadings.datetimeLocal;
-                            }
-                            if (value > foundsum.difference.max) {
-                                foundsum.difference.max = value;
-                                foundsum.difference.maxdate = dayreadings.datetimeLocal;
-                            }
-                        }
-                    }
-                }
-            }
-            for (let dayindex: number = 0; dayindex < sums.length; dayindex++) {
-                if (sums[dayindex].morning.count > 0) {
-                    sums[dayindex].morning.average = sums[dayindex].morning.sum / (sums[dayindex].morning.count > 0 ? sums[dayindex].morning.count : 1);
-                }
-                if (sums[dayindex].evening.count > 0) {
-                    sums[dayindex].evening.average = sums[dayindex].evening.sum / (sums[dayindex].evening.count > 0 ? sums[dayindex].evening.count : 1);
-                }
-                if (sums[dayindex].difference.count > 0) {
-                    sums[dayindex].difference.average = sums[dayindex].difference.sum / (sums[dayindex].difference.count > 0 ? sums[dayindex].difference.count : 1);
-                }
-                if (sums[dayindex].morning.count > 0 && sums[dayindex].evening.count > 0) {
-                    sums[dayindex].total.average = (sums[dayindex].morning.average + sums[dayindex].evening.average)/2;
-                }
-            }
-        
-        return {status: 0, message: null, data: sums};
+        let calculationtable: YearCalcValueNew[] = createDefaultYearTableNew(this.defaultyear);
+        let firstindex = 0;
+        let lastindex = temperatures.data.length;
+        if (year) {
+            while (firstindex < temperatures.data.length && temperatures.data[firstindex].info.year != year) firstindex++;
+            lastindex = firstindex + 1;
+        }
+        for (let yearindex: number = firstindex; yearindex < lastindex; yearindex++) {
+            let sumindex = 0;
+            temperatures.data[yearindex].data.forEach(dayreadings => {
+                const dt: Date = new Date(dayreadings.datetimeLocal);
+                const month = dt.getMonth() + 1;
+                const day = dt.getDate();
+                while (sumindex < calculationtable.length && (calculationtable[sumindex].day != day || calculationtable[sumindex].month != month)) sumindex++;
+                if (sumindex < calculationtable.length) {
+                    let foundsum = calculationtable[sumindex];
+                    sumindex++;
 
+                    const value1ok = this.checkReading(dayreadings.morning, dayreadings.datetimeLocal, foundsum.morning, foundsum.total);
+                    const value2ok = this.checkReading(dayreadings.evening, dayreadings.datetimeLocal, foundsum.evening, foundsum.total);
+
+                    if (value1ok && value2ok) {
+                        let difference = dayreadings.evening - dayreadings.morning;
+                        this.checkReading(difference, dayreadings.datetimeLocal, foundsum.difference, null);
+                    }
+                }
+            })
+        }
+        for (let dayindex: number = 0; dayindex < calculationtable.length; dayindex++) {
+            if (calculationtable[dayindex].morning.count > 0) {
+                calculationtable[dayindex].morning.average = calculationtable[dayindex].morning.sum / (calculationtable[dayindex].morning.count > 0 ? calculationtable[dayindex].morning.count : 1);
+            }
+            if (calculationtable[dayindex].evening.count > 0) {
+                calculationtable[dayindex].evening.average = calculationtable[dayindex].evening.sum / (calculationtable[dayindex].evening.count > 0 ? calculationtable[dayindex].evening.count : 1);
+            }
+            if (calculationtable[dayindex].difference.count > 0) {
+                calculationtable[dayindex].difference.average = calculationtable[dayindex].difference.sum / (calculationtable[dayindex].difference.count > 0 ? calculationtable[dayindex].difference.count : 1);
+            }
+            if (calculationtable[dayindex].morning.count > 0 && calculationtable[dayindex].evening.count > 0) {
+                calculationtable[dayindex].total.average = (calculationtable[dayindex].morning.average + calculationtable[dayindex].evening.average) / 2;
+            }
+        }
+        const returnvalue: DailyValuesNew[] = calculationtable.map(sum => {
+            let morning: OneDayValuesNew = createOneDayValuesNew(sum.morning.count, sum.morning.average, { date: sum.morning.mindate, value: sum.morning.min }, { date: sum.morning.maxdate, value: sum.morning.max });
+            let evening: OneDayValuesNew = createOneDayValuesNew(sum.evening.count, sum.evening.average, { date: sum.evening.mindate, value: sum.evening.min }, { date: sum.evening.maxdate, value: sum.evening.max });
+            let difference: OneDayValuesNew = createOneDayValuesNew(sum.difference.count, sum.difference.average, { date: sum.difference.mindate, value: sum.difference.min }, { date: sum.difference.maxdate, value: sum.difference.max });
+            let total: OneDayValuesNew = createOneDayValuesNew(sum.difference.count, sum.total.average, { date: sum.total.mindate, value: sum.total.min }, { date: sum.total.maxdate, value: sum.total.max });
+            return createDailyValuesNew(sum.date, morning, evening, difference, total);
+        })
+        /*
+        DailyValuesNew[0..365]
+            date
+            morning: OneDayValuesNew
+            evening: OneDayValuesNew
+            difference: OneDayValuesNew
+            total: OneDayValuesNew
+                count, average
+                min: ReadingDate
+                    value, date
+                max: ReadingDate
+                    value, date
+
+        */
+        this.dailyValues = returnvalue;
+        return { status: 0, message: null, data: returnvalue };
     }
-    calculateMonthlyTrends(temperatures: TemperatureMsg): boolean {
-        return false;
+    
+    calculateMonthlyTrends(temperatures: TemperatureMsg): CalculationResult {
+        return { status: 0, message: null, data: null};
     }
-    calculateYearlyTrends(temperatures: TemperatureMsg): boolean {
-        return false;
+    getEstimate(): number {
+        return 0;
+    }
+    calculateYearlyTrend(temperatures: TemperatureMsg): CalculationResult {
+        let yearlyaverages = this.yearlyAverages;
+        let yearlyserie: YearlySerieNew = {
+            data: yearlyaverages.map(val => ({
+                value: NaN, //val.averages ? val.averages.morning.count == 12 ? val.averages.average : NaN : NaN,
+                estimate: false, //val.averages ? val.averages.morning.count !== 12 : false,
+                estimatevalue: NaN,
+                trend: 0,
+                year: val.year,
+            })),
+        }
+        const trend = calculateTrendTS([yearlyserie]);
+        if (!(isNaN(trend.k) || isNaN(trend.b))) {
+            // update estimated values
+            yearlyserie.data.forEach(yeardata => {
+                if (yeardata.estimate) {
+                    yeardata.estimatevalue = this.getEstimate();
+                }
+            })
+            yearlyserie.data.forEach(ser => (
+                ser.trend = ser.year * trend.k + trend.b
+            ))
+        }
+        this.yearlyTrend = yearlyserie;
+        return { status: 0, message: null, data: yearlyserie };
+    }
+
+    getMonthChartValues() {
+        let values = this.monthlyValues.map(m => ({
+            month: m.monthno,
+            value: (isNaN(m.morning.average) || (isNaN(m.evening.average))) ? NaN : (m.morning.average + m.evening.average) / 2,
+            high: (isNaN(m.morning.high) || isNaN(m.evening.high)) ? NaN : m.morning.high > m.evening.high ? m.morning.high : m.evening.high,
+            low: (isNaN(m.morning.low) || isNaN(m.evening.low)) ? NaN :  m.morning.low < m.evening.low ? m.morning.low : m.evening.low,
+            highdate: (isNaN(m.morning.high) || isNaN(m.evening.high)) ? new Date(0) : m.morning.high > m.evening.high ? m.morning.highdate : m.evening.highdate,
+            lowdate: (isNaN(m.morning.low) || isNaN(m.evening.low)) ? new Date(0) : m.morning.low < m.evening.low ? m.morning.lowdate : m.evening.lowdate,
+        }))
+        let lastyear = this.yearlyAverages[this.yearlyAverages.length-1].months.map(m => ({
+            month: m.monthno,
+            value: m.averages.average
+        }))
+        return values;
+        
+    }
+    getDefaultYear(): number {
+        return this.defaultyear;
     }
 }
 
@@ -1347,13 +802,43 @@ export function initTemperature() {
 }
 
 export function calculateTemperatures(temperaturevalues: TemperatureMsg) {
-    const status1 = temperatureClass.calculateYearlyAverages(temperaturevalues);
-    const status3 = temperatureClass.calculateFilteredValues(temperaturevalues);
-    const status2 = temperatureClass.calculateDailyAverages(temperaturevalues);
+    const status1 = temperatureClass.calculateYearlyAverages(temperaturevalues); // this.YearlyAverages
+    const status3 = temperatureClass.calculateFilteredValues(temperaturevalues); // this.filteredValues
+    const status2 = temperatureClass.calculateDailyAverages(temperaturevalues);  // this.dailyValues
+    const status5 = temperatureClass.calculateYearlyTrend(temperaturevalues);    // this.yearlyTrend
 
     // const status4 = temperatureClass.calculateMonthlyTrends(temperaturevalues);
-    // const status5 = temperatureClass.calculateYearlyTrends(temperaturevalues);
 }
 export function getYearAverages() {
-
 }
+
+export function getAllReadings() {
+    const values = temperatureClass.filteredValues.filter(v => !(isNaN(v.morning) || isNaN(v.evening))).reverse();
+    for (let i = 0; i < values.length; i++) values[i].index = i;
+    return {values: values, filtersize: temperatureClass.filterlength}
+}
+export function createAllYearsMonthlyAverageSeriedata() {
+
+    //const datavalues = createAllYearsMonthlySeriedataTS(series, this.calculated.monthlyaverages.values, this.defaultyear, this.monthnamesLong);
+
+    // Kuukausittainen keskiarvo
+    // Korkein Matalin 2024
+    temperatureClass.getMonthChartValues();
+
+    /*
+    let valueshigh: GraphChartData[] = monthmonthlyhigh.map(high => ({
+        value: createGraphItemNew(new Date(temperatureClass.getDefaultYear(), high.month, 1), high.value),
+        tooltip: `Korkein ${high.year} ${monthnames[high.month]} ${roundNumber(high.value, 1)}`
+    }))
+    */
+    let datavalues: GraphSerieNew[] = [];
+    let valueshigh: GraphItemNew[] = [];
+
+    //datavalues.push(createGraphSerieNew( 1, 'Korkein', '', valueshigh));
+    //datavalues.push(createGraphSerie( 'Matalin', series.data[0].info.location, 0, valueslow, -1))
+    //datavalues.push(createGraphSerie( monthly[monthly.length - 1].year.toString(), series.data[0].info.location, 0, valuesthisyear, -1))
+
+
+    return {data: datavalues, params: {showlegend: true}};
+}
+
