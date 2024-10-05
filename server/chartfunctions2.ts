@@ -200,6 +200,15 @@ interface HiLowNew {
 function createHiLowNew(): HiLowNew {
     return {sum: 0, count: 0, average: NaN, high: TempMaxDefaultValue, low: TempMinDefaultValue, highdate: new Date(0), lowdate: new Date(0)}
 }
+function fillHiLowNew(itemtofill: HiLowNew, sum: number, count: number, average: number, high: number, highdate: Date, low: number, lowdate: Date) {
+    itemtofill.sum = sum;
+    itemtofill.count = count;
+    itemtofill.average = average;
+    itemtofill.high = high;
+    itemtofill.highdate = highdate;
+    itemtofill.low = low;
+    itemtofill.lowdate = lowdate;
+}
 interface HiLowYearlyNew {
     sum: number;
     count: number;
@@ -223,9 +232,10 @@ interface AverageCounterNew {
     morning: HiLowNew;
     evening: HiLowNew;
     difference: HiLowNew;
+    total: HiLowNew;
 }
 function createAverageCounterNew(year: number, monthno: number): AverageCounterNew {
-    return { year: year, morning: createHiLowNew(), evening: createHiLowNew(), difference: createHiLowNew(), monthno: monthno }
+    return { year: year, morning: createHiLowNew(), evening: createHiLowNew(), difference: createHiLowNew(), total: createHiLowNew(), monthno: monthno }
 }
 interface AverageYearCounterNew {
     year: number;
@@ -379,53 +389,46 @@ class Temperatures {
     yearlyAverages: AverageDataNew[] = [];
     monthlyValues: MonthlyValueNew[] = [];
     filteredValues: FilteredNew[] = [];
+    filteredValuesValid:  FilteredNew[] = [];
     dailyValues: DailyValuesNew[] = [];
     yearlyTrend: YearlySerieNew = null;
     constructor () {
     }
+    getValidFilteredValues(): FilteredNew[] {
+        if (this.filteredValuesValid.length == 0) {
+            this.filteredValuesValid = this.filteredValues.filter(v => !(isNaN(v.morning) || isNaN(v.evening)));
+            this.filteredValuesValid.forEach((fv,i) => fv.index = i)
+        }
+        return this.filteredValuesValid;
+    }
     getMonthlyvaluesForYear(currentyear: DbTemperature): AverageCounterNew[] {
         let monthlycounters: AverageCounterNew[] = createMonthAverageCountersNew(currentyear.info.year);
 
+        function updateHiLo(dest, newvalue, newdate) {
+            let valueexists = false;
+            if (!isNaN(newvalue) && newvalue !== undefined) {
+                dest.sum += newvalue;
+                dest.count++;
+                if (newvalue > dest.high) {
+                    dest.high = newvalue;
+                    dest.highdate = newdate;
+                }
+                if (newvalue < dest.low) {
+                    dest.low = newvalue;
+                    dest.lowdate = newdate;
+                }
+                valueexists = true;
+            }  
+            return valueexists;
+        }
+
         currentyear.data.forEach(dailytemp => {
-            let month = dailytemp.datetimeLocal.getMonth();
-            let morningvalueexists = false;
-            if (!isNaN(dailytemp.morning) && dailytemp.morning !== undefined) {
-                monthlycounters[month].morning.sum += dailytemp.morning;
-                monthlycounters[month].morning.count++;
-                if (dailytemp.morning > monthlycounters[month].morning.high) {
-                    monthlycounters[month].morning.high = dailytemp.morning;
-                    monthlycounters[month].morning.highdate = dailytemp.datetimeLocal;
-                }
-                if (dailytemp.morning < monthlycounters[month].morning.low) {
-                    monthlycounters[month].morning.low = dailytemp.morning;
-                    monthlycounters[month].morning.lowdate = dailytemp.datetimeLocal;
-                }
-                morningvalueexists = true;
-            }
-            if (!isNaN(dailytemp.evening) && dailytemp.evening !== undefined) {
-                monthlycounters[month].evening.sum += dailytemp.evening;
-                monthlycounters[month].evening.count++;
-                if (dailytemp.evening > monthlycounters[month].evening.high) {
-                    monthlycounters[month].evening.high = dailytemp.evening;
-                    monthlycounters[month].evening.highdate = dailytemp.datetimeLocal;
-                }
-                if (dailytemp.evening < monthlycounters[month].evening.low) {
-                    monthlycounters[month].evening.low = dailytemp.evening;
-                    monthlycounters[month].evening.lowdate = dailytemp.datetimeLocal;
-                }                    
-                if (morningvalueexists) {
-                    const diff = (dailytemp.evening - dailytemp.morning);
-                    monthlycounters[month].difference.sum += diff;
-                    monthlycounters[month].difference.count++;
-                    if (diff > monthlycounters[month].difference.high) {
-                        monthlycounters[month].difference.high = diff;
-                        monthlycounters[month].difference.highdate = dailytemp.datetimeLocal;
-                    }
-                    if (diff < monthlycounters[month].difference.low) {
-                        monthlycounters[month].difference.low = diff;
-                        monthlycounters[month].difference.lowdate = dailytemp.datetimeLocal;
-                    }                          
-                }
+            const month = dailytemp.datetimeLocal.getMonth();
+            const morningvalueexists = updateHiLo(monthlycounters[month].morning, dailytemp.morning, dailytemp.datetimeLocal);
+            const eveningvalueexists = updateHiLo(monthlycounters[month].evening, dailytemp.evening, dailytemp.datetimeLocal);
+            if (eveningvalueexists && morningvalueexists) {
+                const diff = (dailytemp.evening - dailytemp.morning);
+                updateHiLo(monthlycounters[month].difference, diff, dailytemp.datetimeLocal);
             }
         })
         monthlycounters.forEach(month =>{
@@ -774,15 +777,16 @@ class Temperatures {
         return { status: 0, message: null, data: yearlyserie };
     }
 
-    getMonthChartValues() {
-        let values = this.monthlyValues.map(m => ({
-            month: m.monthno,
-            value: (isNaN(m.morning.average) || (isNaN(m.evening.average))) ? NaN : (m.morning.average + m.evening.average) / 2,
-            high: (isNaN(m.morning.high) || isNaN(m.evening.high)) ? NaN : m.morning.high > m.evening.high ? m.morning.high : m.evening.high,
-            low: (isNaN(m.morning.low) || isNaN(m.evening.low)) ? NaN :  m.morning.low < m.evening.low ? m.morning.low : m.evening.low,
-            highdate: (isNaN(m.morning.high) || isNaN(m.evening.high)) ? new Date(0) : m.morning.high > m.evening.high ? m.morning.highdate : m.evening.highdate,
-            lowdate: (isNaN(m.morning.low) || isNaN(m.evening.low)) ? new Date(0) : m.morning.low < m.evening.low ? m.morning.lowdate : m.evening.lowdate,
-        }))
+    getMonthChartValues(): AverageCounterNew[] {
+        let values: AverageCounterNew[] = this.monthlyValues.map(m => {
+            let newvalue: AverageCounterNew = createAverageCounterNew(0, m.monthno);
+            const high = (isNaN(m.morning.high) || isNaN(m.evening.high)) ? NaN : m.morning.high > m.evening.high ? m.morning.high : m.evening.high;
+            const low = (isNaN(m.morning.low) || isNaN(m.evening.low)) ? NaN :  m.morning.low < m.evening.low ? m.morning.low : m.evening.low;
+            const highdate =  (isNaN(m.morning.high) || isNaN(m.evening.high)) ? new Date(0) : m.morning.high > m.evening.high ? m.morning.highdate : m.evening.highdate;
+            const lowdate = (isNaN(m.morning.low) || isNaN(m.evening.low)) ? new Date(0) : m.morning.low < m.evening.low ? m.morning.lowdate : m.evening.lowdate;
+            fillHiLowNew(newvalue.total, NaN, NaN, NaN, high, highdate, low, lowdate);
+            return newvalue;
+        })
         let lastyear = this.yearlyAverages[this.yearlyAverages.length-1].months.map(m => ({
             month: m.monthno,
             value: m.averages.average
@@ -805,10 +809,11 @@ let temperatureClass: Temperatures;
 interface ReturnDataValue {
     date: Date;
     value: number;
+    year: number;
     tooltipfunction: any;
 }
-function createReturnDataValue(date: Date, value: number, tooltipfunction: any = null): ReturnDataValue {
-    return {date: date, value: value, tooltipfunction: tooltipfunction}
+function createReturnDataValue(date: Date, value: number, year: number, tooltipfunction: any = null): ReturnDataValue {
+    return {date: date, value: value, tooltipfunction: tooltipfunction, year: year}
 }
 interface ReturnDataType {
     name: string;
@@ -824,28 +829,58 @@ interface GraphSerieType {
 function createGraphSerieType(data: GraphSerieNew[], params: any): GraphSerieType {
     return {data: data, params: params}
 }
+interface ValueDate {
+    date: Date;
+    value: number;
+}
+function createValueDate(value: number): ValueDate {
+    return {date: new Date(0), value: value}
+}
+interface StatValues {
+    average: number;
+    averagecount: number;
+    averagesum: number;
+    high: ValueDate;
+    low: ValueDate;
+}
+function createStatValues() {
+    return {average: NaN, averagecount: 0, averagesum: 0,
+        high: createValueDate(TempMaxDefaultValue), low: createValueDate(TempMinDefaultValue)}
+}
 interface MinMaxDataType {
     date: number;
     month: number;
-    highvalue: number;
-    lowvalue: number;
+    morning: StatValues;
+    evening: StatValues;
+    average: StatValues;
+    difference: StatValues;
+
+    morningfiltered: StatValues;
+    eveningfiltered: StatValues;
+    averagefiltered: StatValues;
+    differencefiltered: StatValues;
 }
-function createMinMaxDataType(date: number, month: number, highvalue: number, lowvalue: number): MinMaxDataType {
-    return {date: date, month: month, highvalue: highvalue, lowvalue: lowvalue}
+function createMinMaxDataType(date: number, month: number): MinMaxDataType {
+    return {date: date, month: month, morning: createStatValues(), evening: createStatValues(), average: createStatValues(), difference: createStatValues(),
+        morningfiltered: createStatValues(), eveningfiltered: createStatValues(), averagefiltered: createStatValues(), differencefiltered: createStatValues()
+    }
 }
 
 //-------------------------------------------------------------------------------------------
 // Local functions
 //-------------------------------------------------------------------------------------------
-function getFilteredDataYearlyArranged(): ReturnDataType[] {
-    const values = temperatureClass.filteredValues.filter(v => !(isNaN(v.morning) || isNaN(v.evening)));
-    let results: ReturnDataValue[][] = [];
-    values.forEach(val => {
+function getFilteredDataYearlyArranged(data: FilteredNew[]): NameValues[] {
+    let yearlydata: FilteredNew[][] = [];
+    data.forEach(val => {
         const year = val.date.getFullYear();
-        if (!results[year]) results[year] = [];
-        results[year].push(createReturnDataValue(val.date,val.averagefiltered));
+        if (!yearlydata[year]) yearlydata[year] = [];
+        yearlydata[year].push(val);
     })
-    return results.map(res => ({name: `Vuosi ${res[0].date.getFullYear()}`, values: res, tooltipfunction: null}))
+    return yearlydata.map(yeardata => {
+        return createNameValues(`Vuosi ${yeardata[0].date.getFullYear()}`, yeardata[0].date, yeardata.map(v => 
+            createFilteredNew(v.date,v.morning,v.evening,v.average,v.difference,v.morningfiltered,v.eveningfiltered,
+                v.averagefiltered,v.differencefiltered,v.firstdayfilter,v.lastdayfilter)))
+    });
 }
 function getDateTxt(date) {
     if (date == null || date === undefined || isNaN(date)) {
@@ -872,82 +907,241 @@ export function getYearAverages() {
 }
 
 export function getAllReadings() {
-    const values = temperatureClass.filteredValues.filter(v => !(isNaN(v.morning) || isNaN(v.evening))).reverse();
-    for (let i = 0; i < values.length; i++) values[i].index = i;
-    return {values: values, filtersize: temperatureClass.filterlength}
+    const values = temperatureClass.getValidFilteredValues();
+    return {values: values.map(v => v), filtersize: temperatureClass.filterlength}
 }
 
 function createMinMaxDataTypeTable(): MinMaxDataType[] {
     let minmaxtable: MinMaxDataType[]  = [];
     for (let i = 0; i < 366; i++) {
         const d = new Date(temperatureClass.defaultyear, 0, i+1)
-        minmaxtable.push(createMinMaxDataType(d.getDate(), d.getMonth(), TempMaxDefaultValue, TempMinDefaultValue));
+        minmaxtable.push(createMinMaxDataType(d.getDate(), d.getMonth()));
     }
     return minmaxtable;
 }
+interface NameValues {
+    name: string;
+    date: Date;
+    values: FilteredNew[];
+}
+function createNameValues(name: string,date: Date, values: FilteredNew[]): NameValues {
+    return {name: name, date: date, values: values}
+}
 export function createAllYearsFilteredSeriedata(): GraphSerieType {
-    const yearlydata = getFilteredDataYearlyArranged();
-    
-    let returnvalues: GraphSerieNew[] = yearlydata.map(dd => {
-        return createGraphSerieNew(dd.name, '',0, dd.values.map(value => ({
-            value: createGraphItemNew(value.date, value.value), 
-            tooltip: '',
+    const alldata = temperatureClass.getValidFilteredValues();
+    const yearlyarrangeddata = getFilteredDataYearlyArranged(alldata);
+
+    let returnvalues: GraphSerieNew[] = yearlyarrangeddata.map(yeardata => {
+        return createGraphSerieNew(yeardata.name, '',0, yeardata.values.map(value => ({
+            value: createGraphItemNew(value.date, value.average), 
+            tooltip: `${getDateTxt(value.date)} ${roundNumber(value.average, 1)}°C`,
         })), false, 0)
     })
 
     return createGraphSerieType(returnvalues, { series: [{ name: '', markersize: 1 }] });
 }
-export function createYearlyFilteredSeriedata(): GraphSerieType {
-    const yearlydata = getFilteredDataYearlyArranged();
 
-    // move data to default year scale
-    let curyear = 0;
-    yearlydata.forEach(data => {
-        data.values.forEach(value => {
-            curyear = value.date.getFullYear();
-            value.date = new Date(temperatureClass.defaultyear, value.date.getMonth(), value.date.getDate());
-        })
-    })
+function getDailyMinMaxValues(data: NameValues[]): MinMaxDataType[] {
     // find daily minimums and maximums
-    const minmaxtable = createMinMaxDataTypeTable();
-    yearlydata.forEach(year => {
+    const dailyminmaxtable = createMinMaxDataTypeTable();
+    data.forEach(year => {
         let minmaxindex = 0;
         year.values.forEach(day => {
             const date = day.date.getDate();
             const month = day.date.getMonth();
-            while (minmaxindex < minmaxtable.length && (minmaxtable[minmaxindex].month != month || minmaxtable[minmaxindex].date != date)) minmaxindex++;
-            if (minmaxindex < minmaxtable.length) {
-                if (day.value > minmaxtable[minmaxindex].highvalue) minmaxtable[minmaxindex].highvalue = day.value;
-                if (day.value < minmaxtable[minmaxindex].lowvalue) minmaxtable[minmaxindex].lowvalue = day.value;
+            while (minmaxindex < dailyminmaxtable.length && (dailyminmaxtable[minmaxindex].month != month || dailyminmaxtable[minmaxindex].date != date)) minmaxindex++;
+            if (minmaxindex < dailyminmaxtable.length) {
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].morning, day.morning, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].evening, day.evening, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].morningfiltered, day.morningfiltered, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].eveningfiltered, day.eveningfiltered, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].average, (day.morning+day.evening)/2, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].averagefiltered, (day.eveningfiltered+day.morningfiltered)/2, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].difference, (day.evening-day.morning), day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].differencefiltered, (day.eveningfiltered-day.morningfiltered), day.date);
             }
         })
     })
-    // add high and low curves to graphics
-    yearlydata.push(createReturnDataType('Korkein', minmaxtable.map(minmax => {
-        return createReturnDataValue(new Date(temperatureClass.defaultyear, minmax.month, minmax.date),
-            minmax.highvalue, function(value) {
-                    return `Maksimi ${getDateTxt(value.date)} ${roundNumber(value.value, 1)}`;
-                })
-    })));
-    yearlydata.push(createReturnDataType('Matalin', minmaxtable.map(minmax => ({
-        date: new Date(temperatureClass.defaultyear, minmax.month, minmax.date),
-        value: minmax.lowvalue,
-        tooltipfunction: null,
-    }))));
-
-    let returnvalues: GraphSerieNew[] = yearlydata.map(dd => {
-        return createGraphSerieNew(dd.name, '',0, dd.values.map(value => {
-            let tt = value.tooltipfunction !== null ? value.tooltipfunction(value) : '';
-            return {
-                value: createGraphItemNew(value.date, value.value), 
-                tooltip: tt,
-            }
-        }), false, 0)
-    })
-
-    return createGraphSerieType(returnvalues, { showlegend: true, 
-        selection: [`Vuosi ${curyear}`, 'Korkein', 'Matalin'], series: [{ name: 'Matalin', color: '#777777' }, { 'name': 'Korkein', color: '#777777' }] });
+    function updateMinMaxTable(dest: StatValues, newvalue: number, newdate: Date) {
+        dest.averagecount++;
+        dest.averagesum += newvalue;
+        dest.average = dest.averagesum/dest.averagecount;
+        if (newvalue > dest.high.value) { 
+            dest.high.value = newvalue; 
+            dest.high.date = newdate; 
+        }
+        if (newvalue < dest.low.value) { 
+            dest.low.value = newvalue; 
+            dest.low.date = newdate; 
+        }
+    }
+    return dailyminmaxtable;
 }
+export function createYearlyFilteredSeriedata(): GraphSerieType {
+    const alldata = temperatureClass.getValidFilteredValues();
+    const yearlyarrangeddata = getFilteredDataYearlyArranged(alldata);
+    function serietooltipcallback(value: ReturnDataValue): string {
+        return `${getDateTxt(new Date(value.year, value.date.getMonth(), value.date.getDate()))} ${roundNumber(value.value, 1)}°C`;
+    }   
+    let lastyear = alldata.length == 0 ? 0 : alldata[alldata.length - 1].date.getFullYear();
+ 
+     let yearlydata: ReturnDataType[] = [];
+    // add high and low curves to graphics
+    const dailyminmaxtable = getDailyMinMaxValues(yearlyarrangeddata);
+    yearlydata.push(createReturnDataType('Korkein', dailyminmaxtable.map(minmax => {
+        return createReturnDataValue(new Date(temperatureClass.defaultyear, minmax.month, minmax.date),
+            minmax.averagefiltered.high.value, 
+            minmax.averagefiltered.high.date.getFullYear(), 
+            serietooltipcallback)
+    })));
+    yearlydata.push(createReturnDataType('Matalin', dailyminmaxtable.map(minmax => {
+        return createReturnDataValue(new Date(temperatureClass.defaultyear, minmax.month, minmax.date),
+        minmax.averagefiltered.low.value, 
+        minmax.averagefiltered.low.date.getFullYear(), 
+        serietooltipcallback)
+    })));
+    // add yearly graphs
+    let seriedata = yearlyarrangeddata.map(yearlydata => {
+        return createReturnDataType(`Vuosi ${yearlydata.date.getFullYear()}`,
+            yearlydata.values.map(value => {
+                return createReturnDataValue(new Date(temperatureClass.defaultyear, value.date.getMonth(), value.date.getDate()), value.averagefiltered, value.date.getFullYear(), serietooltipcallback);
+            }))
+     })
+     seriedata.forEach(s => yearlydata.push(s))
+
+    const returnvalues: GraphSerieNew[] = yearlydata.map(dd => {
+        return createGraphSerieNew(dd.name, '',0, dd.values.map(value => ({
+                value: createGraphItemNew(value.date, value.value), 
+                tooltip: value.tooltipfunction !== null ? value.tooltipfunction(value) : '',
+        })), false, 0)
+    })
+    return createGraphSerieType(returnvalues, { showlegend: true, 
+        selection: [`Vuosi ${lastyear}`, 'Korkein', 'Matalin'], series: [{ name: 'Matalin', color: '#777777' }, { 'name': 'Korkein', color: '#777777' }] });
+}
+function getReadingsBetween(startdate: Date, enddate: Date, readings: FilteredNew[]): FilteredNew[] {
+    let retvalues = readings.map(val => val.date >= startdate && val.date <= enddate ? val : null).filter(v => v !== null);
+    return retvalues;
+}
+export function createLastYearsSeriedata(): GraphSerieType {
+    function serietooltipcallback(value: ReturnDataValue): string {
+        return `${getDateTxt(new Date(value.year, value.date.getMonth(), value.date.getDate()))} ${roundNumber(value.value, 1)}°C`;
+    } 
+    const alldata = temperatureClass.getValidFilteredValues();
+    const allvalues = getFilteredDataYearlyArranged(alldata);
+
+    const dailyminmaxtable: MinMaxDataType[] = getDailyMinMaxValues(allvalues);
+
+    const lastdate = allvalues[allvalues.length - 1].values[allvalues[allvalues.length - 1].values.length-1].date;
+    const firstdate = new Date(lastdate.getFullYear() - 1, lastdate.getMonth(), lastdate.getDate());
+
+    const readings: FilteredNew[] = temperatureClass.getValidFilteredValues();
+    const lastyearreadings = getReadingsBetween(firstdate, lastdate, readings);
+
+    const morningserie = createReturnDataType('Aamu', lastyearreadings.map(reading => {
+        return createReturnDataValue(reading.date, reading.morning, reading.date.getFullYear(), serietooltipcallback);
+    }));
+    const eveningserie = createReturnDataType('Ilta', lastyearreadings.map(reading => {
+        return createReturnDataValue(reading.date, reading.evening, reading.date.getFullYear(), serietooltipcallback);
+    }));
+    // get minmax filler data for previous year values
+    const startyear = firstdate.getFullYear();
+    let maxdataarray: ReturnDataValue[] = [];
+    let mindataarray: ReturnDataValue[] = [];
+    let dateindex = dailyminmaxtable.findIndex(item => item.date == firstdate.getDate() && item.month == firstdate.getMonth());
+    if (dateindex >= 0) {
+        while (dateindex < dailyminmaxtable.length) {
+            const minmax = dailyminmaxtable[dateindex];
+            const newitemmax = createReturnDataValue(new Date(startyear, minmax.month, minmax.date), 
+                minmax.evening.high.value>minmax.morning.high.value?minmax.evening.high.value:minmax.morning.high.value, 
+                minmax.evening.high.value>minmax.morning.high.date.getFullYear()?minmax.evening.high.value:minmax.morning.high.date.getFullYear(), 
+                serietooltipcallback);
+            maxdataarray.push(newitemmax);
+            const newitemmin = createReturnDataValue(new Date(startyear, minmax.month, minmax.date), 
+                minmax.evening.low.value<minmax.morning.low.value?minmax.evening.low.value:minmax.morning.low.value, 
+                minmax.evening.low.value<minmax.morning.low.value?minmax.evening.low.date.getFullYear():minmax.morning.low.date.getFullYear(), 
+                serietooltipcallback);
+            mindataarray.push(newitemmin);
+
+            dateindex++;
+        }
+    }
+
+    let maxdata = dailyminmaxtable.map(minmax => {
+        return createReturnDataValue(new Date(startyear+1, minmax.month, minmax.date), 
+            minmax.evening.high.value>minmax.morning.high.value?minmax.evening.high.value:minmax.morning.high.value, 
+            minmax.evening.high.value>minmax.morning.high.date.getFullYear()?minmax.evening.high.value:minmax.morning.high.date.getFullYear(), 
+            serietooltipcallback);
+        });
+    maxdataarray = maxdataarray.concat(maxdata);
+    const maxserie = createReturnDataType('Korkein', maxdataarray);
+
+    const mindata = dailyminmaxtable.map(minmax => {
+        return createReturnDataValue(new Date(startyear+1, minmax.month, minmax.date), 
+        minmax.evening.low.value<minmax.morning.low.value?minmax.evening.low.value:minmax.morning.low.value, 
+        minmax.evening.low.value<minmax.morning.low.value?minmax.evening.low.date.getFullYear():minmax.morning.low.date.getFullYear(), 
+        serietooltipcallback);
+    })
+    mindataarray = mindataarray.concat(mindata);
+    const minserie = createReturnDataType('Matalin', mindataarray);
+
+    const allseries = [morningserie, eveningserie, maxserie, minserie];
+    const returnvalues: GraphSerieNew[] = allseries.map(serie => {
+        return createGraphSerieNew(serie.name, '', 0, serie.values.map(value => ({
+                value: createGraphItemNew(value.date, value.value), 
+                tooltip: value.tooltipfunction !== null ? value.tooltipfunction(value) : '',
+        })), false, 0)
+    })
+    return createGraphSerieType(returnvalues, { showlegend: true, 
+        selection: [`Aamu`, 'Ilta', 'Korkein', 'Matalin'], series: [{ name: 'Matalin', color: '#777777' }, { 'name': 'Korkein', color: '#777777' }] });
+}
+export function createDailyDiffdata() {
+    function serietooltipcallback(value: ReturnDataValue): string {
+        let daytxt = isNaN(value.year) ? 
+            `${value.date.getDate()}.${value.date.getMonth()+1}` : 
+            getDateTxt(new Date(value.year, value.date.getMonth(), value.date.getDate()));
+        return `${daytxt} ${roundNumber(value.value, 1)}°C`;
+    } 
+    const alldata = temperatureClass.getValidFilteredValues();
+    const yearlyarrangeddata = getFilteredDataYearlyArranged(alldata);
+    const dailyminmaxtable = getDailyMinMaxValues(yearlyarrangeddata);
+
+    const diffserie = createReturnDataType('Keskiarvo', dailyminmaxtable.map(reading => {
+            return createReturnDataValue(new Date(temperatureClass.defaultyear, reading.month, reading.date), 
+            reading.differencefiltered.average, NaN, serietooltipcallback);
+        }));   
+    const maxserie = createReturnDataType('Maksimi', dailyminmaxtable.map(reading => {
+            return createReturnDataValue(new Date(temperatureClass.defaultyear, reading.month, reading.date), 
+            reading.differencefiltered.high.value, reading.differencefiltered.high.date.getFullYear(), serietooltipcallback);
+        }));         
+    const minserie = createReturnDataType('Minimi', dailyminmaxtable.map(reading => {
+            return createReturnDataValue(new Date(temperatureClass.defaultyear, reading.month, reading.date), 
+            reading.differencefiltered.low.value, reading.differencefiltered.low.date.getFullYear(), serietooltipcallback);
+        }));   
+    const lastyear = yearlyarrangeddata[yearlyarrangeddata.length-1].values[yearlyarrangeddata[yearlyarrangeddata.length-1].values.length-1].date.getFullYear();
+    const lastyearserie = createReturnDataType(lastyear.toString(), yearlyarrangeddata[yearlyarrangeddata.length-1].values.map(reading => {
+        return createReturnDataValue(new Date(temperatureClass.defaultyear,reading.date.getMonth(), reading.date.getDate()), 
+            reading.differencefiltered, reading.date.getFullYear(), serietooltipcallback);
+        }));
+
+    const allseries = [diffserie, maxserie, minserie, lastyearserie];
+    const returnvalues: GraphSerieNew[] = allseries.map(serie => {
+        return createGraphSerieNew(serie.name, '', 0, serie.values.map(value => ({
+                value: createGraphItemNew(value.date, value.value), 
+                tooltip: value.tooltipfunction !== null ? value.tooltipfunction(value) : '',
+        })), false, 0)
+    })
+    let selection = '';
+    const seriedata = {
+        data: returnvalues,
+        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { name: 'Maksimi', color: '#777777' }], selection: selection }
+    };
+    return seriedata;
+}
+
+
+
+
+
 export function createAllYearsMonthlyAverageSeriedata() {
 
     //const datavalues = createAllYearsMonthlySeriedataTS(series, this.calculated.monthlyaverages.values, this.defaultyear, this.monthnamesLong);

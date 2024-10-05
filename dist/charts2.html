@@ -166,16 +166,22 @@
             },
             async mounted() {
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
-                //years.data = [2021,2022,2023,2024]
+                //years.data = [2023,2024]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
                 this.checkData(temperatures);
 
                 initTemperature(temperatures);
                 calculateTemperatures(temperatures);
 
-                this.allreadingsfiltered = getAllReadings();
+                let temp = getAllReadings();
+                temp.values = temp.values.reverse();
+                let i;
+                for (i = 0; i < temp.values.length; i++) temp.values[i].index = i;
+                this.allreadingsfiltered = temp;
                 this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, createYearlyFilteredSeriedata);
                 this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, createAllYearsFilteredSeriedata);
+                this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, createLastYearsSeriedata);
+                this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', temperatures, createDailyDiffdata);
 
                 //this.calculated.sums = calculateDailyAveragesTS(temperatures, this.defaultyear);
                 //this.calculated.monthlytrends = calculateMonthlyTrendsTS(temperatures);
