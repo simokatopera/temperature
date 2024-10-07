@@ -27,7 +27,7 @@
     <link href="css/loader.css" rel="stylesheet">
     <script src="api/api.js" defer></script>
 
-    <script src="chartfunctions2.js" defer></script>
+    <script src="chartfunctions.js" defer></script>
 
     <style>
 
@@ -90,7 +90,7 @@
         <div id="app" class="page-content">
             <div class="row">
                 <div class="col-6">
-                    <readings :readings="allreadingsfiltered" @newday="dayselected"></readings>
+                    <readings :readings="readings" @newday="dayselected"></readings>
                 </div>
                 <div class="col-6" :style="daydata.data[0].length>0?'display:inline-block;':'display:none;'">
                     <button type="button" :disabled="this.scrollday.scroll" class="btn btn-primary setmargin5" @click="rundays">Rullaa</button>
@@ -130,7 +130,6 @@
         const vueapp = createApp({
             data() {
                 return {
-                    allreadingsfiltered: {values: [], filtersize: 0},
                     testgraph: 'GraphLocation',
                     testgraph2: 'GraphLocation2',
                     testgraph3: 'GraphLocation3',
@@ -145,7 +144,7 @@
                     testgraph12: 'GraphLocation12',
                     defaultyear: 1976,
                     daydata: {data: [[],[]], chart: null},
-                    //readings: { values: [], filtered: [], filtersize: 10 },
+                    readings: { values: [], filtered: [], filtersize: 10 },
                     scrollday: {
                         firstdate: null,
                         selecteddate: null,
@@ -166,54 +165,41 @@
             },
             async mounted() {
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
-                //years.data = [2023,2024]
+                //years.data = [2021,2022,2023,2024]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
+                this.series = temperatures;
                 this.checkData(temperatures);
 
-                initTemperature(temperatures);
-                calculateTemperatures(temperatures);
+                this.calculated.sums = calculateDailyAveragesTS(temperatures, this.defaultyear);
+                this.calculated.monthlytrends = calculateMonthlyTrendsTS(temperatures);
+                this.calculated.monthlyaverages = calculateMonthlyAveragesTS(temperatures);
+                this.readings.values = createLinearContTableTS(temperatures);
+                this.readings.filtered = filterSeriesTS(this.readings.values, this.readings.filtersize);
 
-                let temp = getAllReadings();
-                temp.values = temp.values.reverse();
-                let i;
-                for (i = 0; i < temp.values.length; i++) temp.values[i].index = i;
-                this.allreadingsfiltered = temp;
-                this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, createYearlyFilteredSeriedata);
-                this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, createAllYearsFilteredSeriedata);
-                this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, createLastYearsSeriedata);
-                this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', temperatures, createDailyDiffdata);
+               this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, this.createAllYearsMonthlyAverageSeriedata);
+               this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, this.createAllYearsFilteredSeriedata);
+               this.createChart(this.testgraph2, 'Päivittäinen keskiarvo', temperatures, this.createAllYearsAverageSeriedata);
+               this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, this.createAllYearsSeriedata);
+               this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, this.createLastYearsSeriedata);
 
-                //this.calculated.sums = calculateDailyAveragesTS(temperatures, this.defaultyear);
-                //this.calculated.monthlytrends = calculateMonthlyTrendsTS(temperatures);
-                //this.calculated.monthlyaverages = calculateMonthlyAveragesTS(temperatures);
-                //this.readings.values = createLinearContTableTS(temperatures);
-                //this.readings.filtered = filterSeriesTS(this.readings.values, this.readings.filtersize);
+               this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, this.createYearlyTrendSeriedata);
 
-            //    this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, createAllYearsMonthlyAverageSeriedata);
+               this.charts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, this.createMonthlySummerTrendSeriedata));
+               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
 
-            //    this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, this.createAllYearsFilteredSeriedata);
-            //    this.createChart(this.testgraph2, 'Päivittäinen keskiarvo', temperatures, this.createAllYearsAverageSeriedata);
-            //    this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, this.createAllYearsSeriedata);
-            //    this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, this.createLastYearsSeriedata);
+               this.charts.push(this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, this.createMonthlyWinterTrendSeriedata));
+               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
 
-            //    this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, this.createYearlyTrendSeriedata);
+               this.charts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, this.createMonthlyFallTrendSeriedata));
+               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
 
-            //    this.charts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, this.createMonthlySummerTrendSeriedata));
-            //    this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+               this.charts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, this.createMonthlySpringTrendSeriedata));
+               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
 
-            //    this.charts.push(this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, this.createMonthlyWinterTrendSeriedata));
-            //    this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+               this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
+               this.createChart(this.testgraph12, 'Vuosien korkeimmat ja matalimmat', temperatures, this.createYearlyHighValuedata);
 
-            //    this.charts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, this.createMonthlyFallTrendSeriedata));
-            //    this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-
-            //    this.charts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, this.createMonthlySpringTrendSeriedata));
-            //    this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-
-            //    this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
-            //    this.createChart(this.testgraph12, 'Vuosien korkeimmat ja matalimmat', temperatures, this.createYearlyHighValuedata);
-
-            //     formatFilteredTableTS(temperatures.data, this.readings.filtered);
+                formatFilteredTableTS(temperatures.data, this.readings.filtered);
 
             },
             updated() {
@@ -275,12 +261,11 @@
                             this.calcSums();
                             if (this.selected == item.index) {
                                 // 
-                                const selectedday = this.readings.values[this.selected].date.getDate();
-                                const selectedmonth = this.readings.values[this.selected].date.getMonth();
-                                // **************
+                                const selectedday = this.readings.filtered[this.selected].date.getDate();
+                                const selectedmonth = this.readings.filtered[this.selected].date.getMonth();
                                 let values = this.readings.values.map(r => {
                                     if (r && r.date && r.date.getDate() == selectedday && r.date.getMonth() == selectedmonth) {
-                                        return {date: r.date, value: r.average, morning: r.morning, evening: r.evening, datetimeLocal: r.date}
+                                        return {date: r.date, value: r.value, morning: r.morning, evening: r.evening, datetimeLocal: r.datetimeLocal}
                                     }
                                     else return null
                                 })
@@ -299,14 +284,16 @@
                         markIfSelected(item) {
                             if (this.selected < 0) return { active: false };
 
-                            if (item.date >= this.readings.values[this.selected].firstdayfilter &&
-                                item.date < this.readings.values[this.selected].lastdayfilter) {
-                                return { active: true }
+                            if (item.date >= this.readings.filtered[this.selected].firstday &&
+                                item.date < this.readings.filtered[this.selected].lastday) {
+                                return {
+                                    active: true
+                                }
                             }
                             return { active: false }
                         },
                         saveValuestoFile() {
-                            let data = this.readings.values.map(line => (
+                            let data = this.readings.filtered.map(line => (
                                 `${this.getDateTxt(line.date)}\t${roundNumber(line.morning, 1)}\t${roundNumber(line.evening, 1)}\t${roundNumber(line.value, 1)}`
                             ));
                             let filename = 'readings.txt';
@@ -337,7 +324,7 @@
                         <table class="datatable">
                             <thead><tr><td></td><td>Aamu</td><td>Ilta</td><td>Suod({{readings.filtersize}})</td><td class="hideifnarrow">Alkupvm</td><td class="hideifnarrow">Loppupvm</td></tr></thead>
                             <tbody>
-                                <tr v-for="(item, index) in readings.values">
+                                <tr v-for="(item, index) in readings.filtered">
                                     <td :class="markIfPressed(item)" align="center"> 
                                         <button class="actionbutton" @click="selectDay(item)" :class="markIfPressed(item),getClass(index)">
                                             {{ getDateTxt(item.date) }} 
@@ -345,9 +332,9 @@
                                     </td>
                                     <td class="xxx" :class="markIfSelected(item)"> {{ roundNumber(item.morning, 1) }} </td>
                                     <td class="xxx" :class="markIfSelected(item)"> {{ roundNumber(item.evening, 1) }} </td>
-                                    <td :class="markIfPressed(item)"> {{ roundNumber(item.averagefiltered, 1) }} </td>
-                                    <td class="hideifnarrow"> {{ getDateTxt(item.firstdayfilter) }} </td>
-                                    <td class="hideifnarrow"> {{ getDateTxt(item.lastdayfilter) }} </td>
+                                    <td :class="markIfPressed(item)"> {{ roundNumber(item.value, 1) }} </td>
+                                    <td class="hideifnarrow"> {{ getDateTxt(item.firstday) }} </td>
+                                    <td class="hideifnarrow"> {{ getDateTxt(item.lastday) }} </td>
                                 </tr>                                
                             </tbody>
                         </table>            
@@ -585,7 +572,7 @@
                 },
                 rundays() {
                     this.scrollday.scroll = true;
-                    this.scrollday.firstdate = this.scrollday.selecteddate = this.allreadingsfiltered.values[this.scrollday.selecteddayindex].date;
+                    this.scrollday.firstdate = this.scrollday.selecteddate = this.readings.filtered[this.scrollday.selecteddayindex].datetimeLocal;
                     setTimeout(this.scrolldayfunction, 1);
                 },
                 stopdays() {
@@ -603,9 +590,9 @@
 
                     const selectedday = this.scrollday.selecteddate.getDate();
                     const selectedmonth = this.scrollday.selecteddate.getMonth();
-                    let values = this.allreadingsfiltered.values.map(r => {
-                        if (r && r.date && r.date.getDate() == selectedday && r.date.getMonth() == selectedmonth) {
-                            return {datetimeLocal: r.date, date: r.date, value: r.average, morning: r.morning, evening: r.evening}
+                    let values = this.readings.values.map(r => {
+                        if (r && r.datetimeLocal && r.datetimeLocal.getDate() == selectedday && r.datetimeLocal.getMonth() == selectedmonth) {
+                            return {datetimeLocal: r.datetimeLocal, date: r.date, value: r.value, morning: r.morning, evening: r.evening}
                         }
                         else return null
                     }).filter(v => v !== null);
@@ -688,109 +675,109 @@
                     return {data: datavalues, params: null}
                 },
                 // ---------------------------------------------------------------------------------------------
-                // createLastYearsSeriedata(series) {
-                //     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
+                createLastYearsSeriedata(series) {
+                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                //     const lastdate = this.getDate(series.data[series.data.length - 1].data[series.data[series.data.length - 1].data.length - 1].date);
-                //     const firstdate = new Date(lastdate.getFullYear() - 1, lastdate.getMonth(), lastdate.getDate());
-                //     const readings = getReadingsBetweenTS(firstdate, lastdate, series);
-                //     const data = createLastYearsSeriedataTS(readings, this.calculated.sums, series.data[0].info.location);
+                    const lastdate = this.getDate(series.data[series.data.length - 1].data[series.data[series.data.length - 1].data.length - 1].date);
+                    const firstdate = new Date(lastdate.getFullYear() - 1, lastdate.getMonth(), lastdate.getDate());
+                    const readings = getReadingsBetweenTS(firstdate, lastdate, series);
+                    const data = createLastYearsSeriedataTS(readings, this.calculated.sums, series.data[0].info.location);
 
-                //     return {
-                //         data: data,
-                //         params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }], legend: { items: this.monthnames } }
-                //     };
-                //     /*
-                //     let values = [];
-                //     values.push({value: [datetime, reading], tooltip: ''})
+                    return {
+                        data: data,
+                        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }], legend: { items: this.monthnames } }
+                    };
+                    /*
+                    let values = [];
+                    values.push({value: [datetime, reading], tooltip: ''})
 
-                //     let datavalues = [];
-                //     datavalues.push({values: values, location: '', year: 2000})
+                    let datavalues = [];
+                    datavalues.push({values: values, location: '', year: 2000})
 
-                //     return {data: datavalues, params: null}
-                //     */
-                // },
+                    return {data: datavalues, params: null}
+                    */
+                },
 
-                // createDailyDiffdata(series) {
-                //     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
+                createDailyDiffdata(series) {
+                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                //     const curvedata = getDiffCurveDataTS(this.readings.filtered, this.calculated.sums, series.data[series.data.length - 1].info.year, this.defaultyear, series.data[0].info.location);
+                    const curvedata = getDiffCurveDataTS(this.readings.filtered, this.calculated.sums, series.data[series.data.length - 1].info.year, this.defaultyear, series.data[0].info.location);
                     
-                //     const selection = curvedata.map(c => (c.name))
-                //     const seriedata = {
-                //         data: curvedata,
-                //         params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { name: 'Maksimi', color: '#777777' }], selection: selection }
-                //     };
-                //     return seriedata;
-                // },
-                // // createAllYearsSeriedata(series) {
-                //     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
+                    const selection = curvedata.map(c => (c.name))
+                    const seriedata = {
+                        data: curvedata,
+                        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { name: 'Maksimi', color: '#777777' }], selection: selection }
+                    };
+                    return seriedata;
+                },
+                createAllYearsSeriedata(series) {
+                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                //     const returnvalues = series.data.map(yearserie => ({
-                //         values: yearserie.data.map(s => ({
-                //             value: [this.getDate(s.date), s.morning],
-                //             tooltip: `${yearserie.info.location} ${this.getDateTxt(this.getDate(s.date))} ${s.morning}`,
-                //         })),
-                //         location: yearserie.info.location,
-                //         year: yearserie.info.year,
-                //     }))
-                //     const seriedata = { data: returnvalues, params: { series: [{ name: '', markersize: 1 }] }};
-                //     return seriedata;
-                // },
-                // createYearlyTrendSeriedata(series) {
-                //     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
+                    const returnvalues = series.data.map(yearserie => ({
+                        values: yearserie.data.map(s => ({
+                            value: [this.getDate(s.date), s.morning],
+                            tooltip: `${yearserie.info.location} ${this.getDateTxt(this.getDate(s.date))} ${s.morning}`,
+                        })),
+                        location: yearserie.info.location,
+                        year: yearserie.info.year,
+                    }))
+                    const seriedata = { data: returnvalues, params: { series: [{ name: '', markersize: 1 }] }};
+                    return seriedata;
+                },
+                createYearlyTrendSeriedata(series) {
+                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                //     const lastyearestimate = this.calculated.monthlyaverages.values[this.calculated.monthlyaverages.values.length-1].estimate ? this.calculated.monthlyaverages.values[this.calculated.monthlyaverages.values.length-1].yearaverage : NaN;
-                //     const data = getYearlyTrendTS(series, this.calculated.monthlytrends, lastyearestimate);
-                //     let params = { rangeoffset: 1, showlegend: true};
-                //     if (!isNaN(lastyearestimate)) {
-                //         params.series = [{ name: data[0].name, symbol: 'arrow', symbolsize: 14, symbolindex: 'last' }];
-                //     }
-                //     return { data: data, params: params };
-                // },
-                // createTrendsDataForGivenMonths(series, monthnumbers, monthnames) {
-                //     return {data: getSeasonTrendsTS(series, monthnumbers, monthnames, this.calculated.monthlytrends), params: { rangeoffset: 1, showlegend: true } };
-                // },
-                // createMonthlySummerTrendSeriedata(series) {
-                //     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-                //     const data = this.createTrendsDataForGivenMonths(series, [6, 7, 8], ['Kesäkuu', 'Heinäkuu', 'Elokuu']);
-                //     return data;
-                // },
-                // createMonthlyWinterTrendSeriedata(series) {
-                //     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
+                    const lastyearestimate = this.calculated.monthlyaverages.values[this.calculated.monthlyaverages.values.length-1].estimate ? this.calculated.monthlyaverages.values[this.calculated.monthlyaverages.values.length-1].yearaverage : NaN;
+                    const data = getYearlyTrendTS(series, this.calculated.monthlytrends, lastyearestimate);
+                    let params = { rangeoffset: 1, showlegend: true};
+                    if (!isNaN(lastyearestimate)) {
+                        params.series = [{ name: data[0].name, symbol: 'arrow', symbolsize: 14, symbolindex: 'last' }];
+                    }
+                    return { data: data, params: params };
+                },
+                createTrendsDataForGivenMonths(series, monthnumbers, monthnames) {
+                    return {data: getSeasonTrendsTS(series, monthnumbers, monthnames, this.calculated.monthlytrends), params: { rangeoffset: 1, showlegend: true } };
+                },
+                createMonthlySummerTrendSeriedata(series) {
+                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
+                    const data = this.createTrendsDataForGivenMonths(series, [6, 7, 8], ['Kesäkuu', 'Heinäkuu', 'Elokuu']);
+                    return data;
+                },
+                createMonthlyWinterTrendSeriedata(series) {
+                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                //     const datavalues = getSeasonTrendsTS(series, [1, 2, 12], ['Tammikuu', 'Helmikuu', 'Joulukuu'], this.calculated.monthlytrends);
-                //     return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
-                // },
-                // createMonthlyFallTrendSeriedata(series) {
-                //     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
+                    const datavalues = getSeasonTrendsTS(series, [1, 2, 12], ['Tammikuu', 'Helmikuu', 'Joulukuu'], this.calculated.monthlytrends);
+                    return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
+                },
+                createMonthlyFallTrendSeriedata(series) {
+                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                //     const datavalues = getSeasonTrendsTS(series, [9, 10, 11], ['Syyskuu', 'Lokakuu', 'Marraskuu'], this.calculated.monthlytrends);
-                //     return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
-                // },
-                // createMonthlySpringTrendSeriedata(series) {
-                //     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
+                    const datavalues = getSeasonTrendsTS(series, [9, 10, 11], ['Syyskuu', 'Lokakuu', 'Marraskuu'], this.calculated.monthlytrends);
+                    return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
+                },
+                createMonthlySpringTrendSeriedata(series) {
+                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                //     const datavalues = getSeasonTrendsTS(series, [3, 4, 5], ['Maaliskuu', 'Huhtikuu', 'Toukokuu'], this.calculated.monthlytrends);
-                //     return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
-                // },
-                // createAllYearsMonthlyAverageSeriedata(series) {
-                //     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
+                    const datavalues = getSeasonTrendsTS(series, [3, 4, 5], ['Maaliskuu', 'Huhtikuu', 'Toukokuu'], this.calculated.monthlytrends);
+                    return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
+                },
+                createAllYearsMonthlyAverageSeriedata(series) {
+                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
 
-                //     const datavalues = createAllYearsMonthlySeriedataTS(series, this.calculated.monthlyaverages.values, this.defaultyear, this.monthnamesLong);
+                    const datavalues = createAllYearsMonthlySeriedataTS(series, this.calculated.monthlyaverages.values, this.defaultyear, this.monthnamesLong);
 
-                //     return {data: datavalues, params: {showlegend: true}};
-                // },
-                // createAllYearsFilteredSeriedata(series) {
-                //     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-                //     const valuearray = createAllYearsFilteredSerieTS(series, this.readings.filtered, this.defaultyear);
-                //     let curyear = series.data[series.data.length-1].data[0].datetimeLocal.getFullYear().toString();
-                //     const seriedata = {
-                //         data: valuearray,
-                //         params: { showlegend: true, selection: [curyear, 'Minimi', 'Maksimi'], series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }] }
-                //     };
-                //     return seriedata;
-                // },
+                    return {data: datavalues, params: {showlegend: true}};
+                },
+                createAllYearsFilteredSeriedata(series) {
+                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
+                    const valuearray = createAllYearsFilteredSerieTS(series, this.readings.filtered, this.defaultyear);
+                    let curyear = series.data[series.data.length-1].data[0].datetimeLocal.getFullYear().toString();
+                    const seriedata = {
+                        data: valuearray,
+                        params: { showlegend: true, selection: [curyear, 'Minimi', 'Maksimi'], series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }] }
+                    };
+                    return seriedata;
+                },
                 createYearlyHighValuedata(series) {
                     if (this.yearlyHiLoReadings.length === 0) {
                         this.createAllYearsAverageSeriedata(series);
@@ -810,38 +797,38 @@
                     const seriedata = { data: datavalues, params: { showlegend: true} };
                     return seriedata;  
                 },
-                // createAllYearsAverageSeriedata(series) {
-                //     if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-                //     const data = createAllyearsAverageSerieTS(series, this.calculated.sums);
-                //     let hiindex = 0;
-                //     let loindex = 0;
-                //     this.yearlyHiLoReadings = series.data.map(year => ({hicount:0, locount: 0, year:year.info.year}));
+                createAllYearsAverageSeriedata(series) {
+                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
+                    const data = createAllyearsAverageSerieTS(series, this.calculated.sums);
+                    let hiindex = 0;
+                    let loindex = 0;
+                    this.yearlyHiLoReadings = series.data.map(year => ({hicount:0, locount: 0, year:year.info.year}));
 
-                //     while (hiindex < data.length && data[hiindex].name != 'Korkein') hiindex++;
-                //     if (hiindex < data.length) {
-                //         data[hiindex].values.forEach(val => {
-                //             let date = val.tooltip.match(/(\d{1,2}).(\d{1,2}).(\d{4}) /);
-                //             if (date && date.length == 4) {
-                //                 const year = Number(date[3]);
-                //                 let found = this.yearlyHiLoReadings.find(h => h.year==year);
-                //                 found.hicount++;
-                //             }
-                //         })
-                //     }
-                //     while (loindex < data.length && data[loindex].name != 'Matalin') loindex++;
-                //     if (loindex < data.length) {
-                //         data[loindex].values.forEach(val => {
-                //             let date = val.tooltip.match(/(\d{1,2}).(\d{1,2}).(\d{4}) /);
-                //             if (date && date.length == 4) {
-                //                 const year = Number(date[3]);
-                //                 let found = this.yearlyHiLoReadings.find(h => h.year==year);
-                //                 found.locount++;
-                //             }
-                //         })
-                //     }
-                //     const seriedata = { data: data, params: null };
-                //     return seriedata;
-                // },
+                    while (hiindex < data.length && data[hiindex].name != 'Korkein') hiindex++;
+                    if (hiindex < data.length) {
+                        data[hiindex].values.forEach(val => {
+                            let date = val.tooltip.match(/(\d{1,2}).(\d{1,2}).(\d{4}) /);
+                            if (date && date.length == 4) {
+                                const year = Number(date[3]);
+                                let found = this.yearlyHiLoReadings.find(h => h.year==year);
+                                found.hicount++;
+                            }
+                        })
+                    }
+                    while (loindex < data.length && data[loindex].name != 'Matalin') loindex++;
+                    if (loindex < data.length) {
+                        data[loindex].values.forEach(val => {
+                            let date = val.tooltip.match(/(\d{1,2}).(\d{1,2}).(\d{4}) /);
+                            if (date && date.length == 4) {
+                                const year = Number(date[3]);
+                                let found = this.yearlyHiLoReadings.find(h => h.year==year);
+                                found.locount++;
+                            }
+                        })
+                    }
+                    const seriedata = { data: data, params: null };
+                    return seriedata;
+                },
 
 
                 //initSerieLegends(data) {

@@ -3,7 +3,7 @@
 <html>
 
 <head>
-    <title>Lämpötilat</title>
+    <title>Lämpötilat (2)</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -85,14 +85,16 @@
 <body>
     <div class="container-fluid">
         <div class="page-title">
-            <h1 id="ID_PageTitle">Lämpötilat</h1>
+            <h1 id="ID_PageTitle">Lämpötilat (2)</h1>
         </div>
         <div id="app" class="page-content">
             <div class="row">
-                <div class="col-6">
-                    <readings :readings="readings" @newday="dayselected"></readings>
+
+                <div class="col-6" :style="loading?'display:none;':'display:inline-block;'">
+                    
+                    <readings :temperatures="readings" @dayselected="dayselected"></readings>
                 </div>
-                <div class="col-6" :style="daydata.data[0].length>0?'display:inline-block;':'display:none;'">
+                <div class="col-6" :style="!loading && daydata.data[0].length>0?'display:inline-block;':'display:none;'">
                     <button type="button" :disabled="this.scrollday.scroll" class="btn btn-primary setmargin5" @click="rundays">Rullaa</button>
                     <button type="button" :disabled="!this.scrollday.scroll" class="btn btn-primary setmargin5" @click="stopdays">Pysäytä</button>
                     <hr>
@@ -118,6 +120,9 @@
 
         import { createApp, ref } from 'vue'
 
+        let Galltemperaturereadings = { values: [], filtered: [], filtersize: 10 }
+        let Gcharts = [];
+
         function selectFirstDay() {
             let button = document.getElementsByClassName('daybutton_0');
             if (button && button.length) button[0].click();
@@ -130,6 +135,9 @@
         const vueapp = createApp({
             data() {
                 return {
+                    //allreadingsfiltered: {values: [], filtersize: 0},
+                    readings: { values: [], filtered: [], filtersize: 10 },
+
                     testgraph: 'GraphLocation',
                     testgraph2: 'GraphLocation2',
                     testgraph3: 'GraphLocation3',
@@ -143,73 +151,76 @@
                     testgraph11: 'GraphLocation11',
                     testgraph12: 'GraphLocation12',
                     defaultyear: 1976,
+                    loading: ref(true),
                     daydata: {data: [[],[]], chart: null},
-                    readings: { values: [], filtered: [], filtersize: 10 },
                     scrollday: {
                         firstdate: null,
                         selecteddate: null,
                         selecteddayindex: -1,
                         scroll: false,
                     },
-                    yearlyHiLoReadings: ref([]),
                     monthnames: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
                     monthnamesLong: ['Tammikuu', 'Helmikuu', 'Maaliskuu', 'Huhtikuu', 'Toukokuu', 'Kesäkuu', 'Heinäkuu', 'Elokuu', 'Syyskuu', 'Lokakuu', 'Marraskuu', 'Joulukuu'],
                     calculated : {
-                        sums: [],             // YearCalcValue[]
-                        monthlytrends: [],    // MonthDataPair[]
-                        monthlyaverages: {values: [], calculated: [], averages: []},  // YearlyAverage[]
-                        //linearcont: [],       // TemperatureValue[]
+                        monthlytrends: [],
+                        monthlyaverages: {values: [], calculated: [], averages: []},
                     },
-                    charts: [],
                 }
             },
             async mounted() {
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
-                //years.data = [2021,2022,2023,2024]
+                //years.data = [2023,2024]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
-                this.series = temperatures;
                 this.checkData(temperatures);
 
-                this.calculated.sums = calculateDailyAveragesTS(temperatures, this.defaultyear);
-                this.calculated.monthlytrends = calculateMonthlyTrendsTS(temperatures);
-                this.calculated.monthlyaverages = calculateMonthlyAveragesTS(temperatures);
-                this.readings.values = createLinearContTableTS(temperatures);
-                this.readings.filtered = filterSeriesTS(this.readings.values, this.readings.filtersize);
+                CFinitTemperature();
+                CFcalculateTemperatures(temperatures);
 
-               this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, this.createAllYearsMonthlyAverageSeriedata);
-               this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, this.createAllYearsFilteredSeriedata);
-               this.createChart(this.testgraph2, 'Päivittäinen keskiarvo', temperatures, this.createAllYearsAverageSeriedata);
-               this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, this.createAllYearsSeriedata);
-               this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, this.createLastYearsSeriedata);
+                Galltemperaturereadings = CFgetAllReadings();
 
-               this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, this.createYearlyTrendSeriedata);
+                this.readings.filtersize = Galltemperaturereadings.filtersize;
+                this.readings.values = [];
+                const stoploading = this.stoploading;
+                fillTemperaturereadingtable(0, this.readings.values, Galltemperaturereadings.values[0].date.getFullYear());
 
-               this.charts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, this.createMonthlySummerTrendSeriedata));
-               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                function fillTemperaturereadingtable(index, desttable, year) {
+                    const maxyears = 2;
+                    let i;
+                    for (i = index; i < Galltemperaturereadings.values.length && i < index + 1000 && Galltemperaturereadings.values[i].date.getFullYear() > year-maxyears;i++) 
+                        desttable.push(Galltemperaturereadings.values[i]);
+                    if (i < Galltemperaturereadings.values.length && Galltemperaturereadings.values[i].date.getFullYear() > year-maxyears) setTimeout(fillTemperaturereadingtable, 200, i, desttable, year);
+                    else stoploading();
+                }
 
-               this.charts.push(this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, this.createMonthlyWinterTrendSeriedata));
-               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                this.calculated.monthlyaverages = CFcalculateMonthlyAverages();
 
-               this.charts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, this.createMonthlyFallTrendSeriedata));
-               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, CFcreateYearlyFilteredSeriedata);
+                this.createChart(this.testgraph2, 'Päivittäiset keskiarvot', temperatures, CFcreateAllYearsAverageSeriedata);
+                this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, CFcreateAllYearsMonthlyAverageSeriedata);
+                this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, CFcreateAllYearsFilteredSeriedata);
+                this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, CFcreateLastYearsSeriedata);
+                this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', temperatures, CFcreateDailyDiffdata);
+                this.createChart(this.testgraph12, 'Vuosien korkeimmat ja matalimmat', temperatures, CFcreateYearlyHighValuedata);
+                this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, CFcreateYearlyTrendSeriedata);
 
-               this.charts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, this.createMonthlySpringTrendSeriedata));
-               this.charts[this.charts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-
-               this.createChart(this.testgraph9, 'Aamun ja illan ero', temperatures, this.createDailyDiffdata);
-               this.createChart(this.testgraph12, 'Vuosien korkeimmat ja matalimmat', temperatures, this.createYearlyHighValuedata);
-
-                formatFilteredTableTS(temperatures.data, this.readings.filtered);
-
+                Gcharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, CFcreateMonthlySummerTrendSeriedata));
+                Gcharts[Gcharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                Gcharts.push(this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, CFcreateMonthlyWinterTrendSeriedata));
+                Gcharts[Gcharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                Gcharts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, CFcreateMonthlyFallTrendSeriedata));
+                Gcharts[Gcharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                Gcharts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, CFcreateMonthlySpringTrendSeriedata));
+                Gcharts[Gcharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
             },
             updated() {
+                //this.stoploading();
                 // let button = document.getElementsByClassName('daybutton_0');
                 // if (button && button.length) button[0].click();
             },
             components: {
                 readings: {
-                    props: ['readings'],
-                    emits: ['newday'],
+                    props: ['temperatures'],
+                    emits: ['dayselected'],
                     data: function () {
                         return {
                             selected: ref(-1),
@@ -261,17 +272,19 @@
                             this.calcSums();
                             if (this.selected == item.index) {
                                 // 
-                                const selectedday = this.readings.filtered[this.selected].date.getDate();
-                                const selectedmonth = this.readings.filtered[this.selected].date.getMonth();
-                                let values = this.readings.values.map(r => {
+                                const selectedday = this.temperatures.values[this.selected].date.getDate();
+                                const selectedmonth = this.temperatures.values[this.selected].date.getMonth();
+                                // **************
+
+                                let values = Galltemperaturereadings.values.map(r => {
                                     if (r && r.date && r.date.getDate() == selectedday && r.date.getMonth() == selectedmonth) {
-                                        return {date: r.date, value: r.value, morning: r.morning, evening: r.evening, datetimeLocal: r.datetimeLocal}
+                                        return {date: r.date, value: r.average, morning: r.morning, evening: r.evening, datetimeLocal: r.date}
                                     }
                                     else return null
                                 })
-                                this.$emit('newday', {values: values.filter(v => v !== null), selected: this.selected});
+                                this.$emit('dayselected', {values: values.filter(v => v !== null), selected: this.selected});
                             }
-                            else this.$emit('newday', {values: [], selected: -1});
+                            else this.$emit('dayselected', {values: [], selected: -1});
                         },
                         markIfPressed(item) {
                             if (this.selected < 0) return { active: false };
@@ -284,20 +297,18 @@
                         markIfSelected(item) {
                             if (this.selected < 0) return { active: false };
 
-                            if (item.date >= this.readings.filtered[this.selected].firstday &&
-                                item.date < this.readings.filtered[this.selected].lastday) {
-                                return {
-                                    active: true
-                                }
+                            if (item.date >= this.temperatures.values[this.selected].firstdayfilter &&
+                                item.date < this.temperatures.values[this.selected].lastdayfilter) {
+                                return { active: true }
                             }
                             return { active: false }
                         },
                         saveValuestoFile() {
-                            let data = this.readings.filtered.map(line => (
-                                `${this.getDateTxt(line.date)}\t${roundNumber(line.morning, 1)}\t${roundNumber(line.evening, 1)}\t${roundNumber(line.value, 1)}`
+                            let data = Galltemperaturereadings.values.map(line => (
+                                `${this.getDateTxt(line.date)}\t${roundNumber(line.morning, 1)}\t${roundNumber(line.evening, 1)}\t${roundNumber(line.averagefiltered, 1)}`
                             ));
                             let filename = 'readings.txt';
-                            this.saveToFile(`Päivämäärä\tAamu\tIlta\tSuodatettu(${this.readings.filtersize})\n${data.join('\n')}`, filename, `Tallennettu tiedostoon ${filename}`, '');
+                            this.saveToFile(`Päivämäärä\tAamu\tIlta\tSuodatettu(${Galltemperaturereadings.filtersize})\n${data.join('\n')}`, filename, `Tallennettu tiedostoon ${filename}`, '');
                         },
                         saveToFile(dataToSave, fileName, successmsg, eventname) {
                             var gameblob = new Blob([dataToSave], { type: 'text/plain' })
@@ -319,12 +330,12 @@
                     },
                     template: `
                         Mittaustulokset ja suodatettu arvo
-                        <div><button type="button" class="btn btn-primary" @click="saveValuestoFile">Tallenna lukemat tiedostoon</button></div>
+                        <div><button type="button" class="btn btn-primary" @click="saveValuestoFile">Tallenna kaikki lukemat tiedostoon</button></div>
                         <div class="scrollbox">
                         <table class="datatable">
-                            <thead><tr><td></td><td>Aamu</td><td>Ilta</td><td>Suod({{readings.filtersize}})</td><td class="hideifnarrow">Alkupvm</td><td class="hideifnarrow">Loppupvm</td></tr></thead>
+                            <thead><tr><td></td><td>Aamu</td><td>Ilta</td><td>Suod({{temperatures.filtersize}})</td><td class="hideifnarrow">Alkupvm</td><td class="hideifnarrow">Loppupvm</td></tr></thead>
                             <tbody>
-                                <tr v-for="(item, index) in readings.filtered">
+                                <tr v-for="(item, index) in temperatures.values">
                                     <td :class="markIfPressed(item)" align="center"> 
                                         <button class="actionbutton" @click="selectDay(item)" :class="markIfPressed(item),getClass(index)">
                                             {{ getDateTxt(item.date) }} 
@@ -332,9 +343,9 @@
                                     </td>
                                     <td class="xxx" :class="markIfSelected(item)"> {{ roundNumber(item.morning, 1) }} </td>
                                     <td class="xxx" :class="markIfSelected(item)"> {{ roundNumber(item.evening, 1) }} </td>
-                                    <td :class="markIfPressed(item)"> {{ roundNumber(item.value, 1) }} </td>
-                                    <td class="hideifnarrow"> {{ getDateTxt(item.firstday) }} </td>
-                                    <td class="hideifnarrow"> {{ getDateTxt(item.lastday) }} </td>
+                                    <td :class="markIfPressed(item)"> {{ roundNumber(item.averagefiltered, 1) }} </td>
+                                    <td class="hideifnarrow"> {{ getDateTxt(item.firstdayfilter) }} </td>
+                                    <td class="hideifnarrow"> {{ getDateTxt(item.lastdayfilter) }} </td>
                                 </tr>                                
                             </tbody>
                         </table>            
@@ -385,17 +396,20 @@
                 }
             },
             methods: {
+                stoploading() {
+                    this.loading = false;
+                },
                 monthlytrendcallback(params) {
                     const seriestatus = Object.keys(params.selected).map(k => ({status: params.selected[k], name: k}));
                     let i = 0;
                     let j;
                     let chart = null;
-                    while (!chart && i < this.charts.length) {
+                    while (!chart && i < Gcharts.length) {
                         j = 0;
-                        while (j < this.charts[i].serieOptions.series.length && !chart) {
+                        while (j < Gcharts[i].serieOptions.series.length && !chart) {
                             // only one serie cheked, maybe should be more
-                            let search = seriestatus.find(s => this.charts[i].serieOptions.series[j].trend == false && this.charts[i].serieOptions.series[j].name == s.name);
-                            if (search) chart = this.charts[i];
+                            let search = seriestatus.find(s => Gcharts[i].serieOptions.series[j].trend == false && Gcharts[i].serieOptions.series[j].name == s.name);
+                            if (search) chart = Gcharts[i];
                             else j++;
                         }
                         if (!chart) i++;
@@ -421,7 +435,7 @@
                     const originaltrendserie = chart.serieOptions.series.find(d => d.trend == true);
                     if (!originaltrendserie) return;
                     const tempserie = {data: chart.serieOptions.series[0].data.map(ss => ({info: {year: ss.value[0].getFullYear(), location: ''}}))};
-                    const datavalues = getSeasonTrendsTS(tempserie, series.map(s => s.num), series.map(s => s.name), this.calculated.monthlytrends);
+                    const datavalues = createTrendForGivenMonths(series.map(s => s.num), series.map(s => s.name));
                     const newtrendserie = datavalues.find(d => d.trend == true);
                     if (!newtrendserie) return;
                     originaltrendserie.data = newtrendserie.values.map(v => v);
@@ -443,6 +457,7 @@
                         })
                     })
                 },
+                //------------------------------------------------------------------------------
                 createChart(element, title, data, funct, thischart) {
                     let trendChart = (thischart ? thischart.trendChart : this.initSerie(element));
                     if (trendChart === null) return;
@@ -545,6 +560,7 @@
 
                     return chartoptions;
                 },
+                //------------------------------------------------------------------------------
                 dayselected(data) {
                     // create trend curve
                     if (data.selected >= 0) {
@@ -559,7 +575,7 @@
                             date: d.date,
                         }))
                     }
-                    const factors = calculateTrendTS([values]);
+                    const factors = calculateTrend([values]);
                     let trend = data.values.map(d => ({
                         value: d.date.getFullYear() * factors.k + factors.b,
                         date: d.date,
@@ -572,7 +588,7 @@
                 },
                 rundays() {
                     this.scrollday.scroll = true;
-                    this.scrollday.firstdate = this.scrollday.selecteddate = this.readings.filtered[this.scrollday.selecteddayindex].datetimeLocal;
+                    this.scrollday.firstdate = this.scrollday.selecteddate = this.readings.values[this.scrollday.selecteddayindex].date;
                     setTimeout(this.scrolldayfunction, 1);
                 },
                 stopdays() {
@@ -590,9 +606,9 @@
 
                     const selectedday = this.scrollday.selecteddate.getDate();
                     const selectedmonth = this.scrollday.selecteddate.getMonth();
-                    let values = this.readings.values.map(r => {
-                        if (r && r.datetimeLocal && r.datetimeLocal.getDate() == selectedday && r.datetimeLocal.getMonth() == selectedmonth) {
-                            return {datetimeLocal: r.datetimeLocal, date: r.date, value: r.value, morning: r.morning, evening: r.evening}
+                    let values = Galltemperaturereadings.values.map(r => {
+                        if (r && r.date && r.date.getDate() == selectedday && r.date.getMonth() == selectedmonth) {
+                            return {datetimeLocal: r.date, date: r.date, value: r.average, morning: r.morning, evening: r.evening}
                         }
                         else return null
                     }).filter(v => v !== null);
@@ -625,7 +641,7 @@
                         })),
                         name: values.name,
                         trend: values.trend,
-                        num: values.num,
+                        num: values.index,
                     }))
 
                     if (params) {
@@ -674,180 +690,7 @@
                     });
                     return {data: datavalues, params: null}
                 },
-                // ---------------------------------------------------------------------------------------------
-                createLastYearsSeriedata(series) {
-                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-
-                    const lastdate = this.getDate(series.data[series.data.length - 1].data[series.data[series.data.length - 1].data.length - 1].date);
-                    const firstdate = new Date(lastdate.getFullYear() - 1, lastdate.getMonth(), lastdate.getDate());
-                    const readings = getReadingsBetweenTS(firstdate, lastdate, series);
-                    const data = createLastYearsSeriedataTS(readings, this.calculated.sums, series.data[0].info.location);
-
-                    return {
-                        data: data,
-                        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }], legend: { items: this.monthnames } }
-                    };
-                    /*
-                    let values = [];
-                    values.push({value: [datetime, reading], tooltip: ''})
-
-                    let datavalues = [];
-                    datavalues.push({values: values, location: '', year: 2000})
-
-                    return {data: datavalues, params: null}
-                    */
-                },
-
-                createDailyDiffdata(series) {
-                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-
-                    const curvedata = getDiffCurveDataTS(this.readings.filtered, this.calculated.sums, series.data[series.data.length - 1].info.year, this.defaultyear, series.data[0].info.location);
-                    
-                    const selection = curvedata.map(c => (c.name))
-                    const seriedata = {
-                        data: curvedata,
-                        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { name: 'Maksimi', color: '#777777' }], selection: selection }
-                    };
-                    return seriedata;
-                },
-                createAllYearsSeriedata(series) {
-                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-
-                    const returnvalues = series.data.map(yearserie => ({
-                        values: yearserie.data.map(s => ({
-                            value: [this.getDate(s.date), s.morning],
-                            tooltip: `${yearserie.info.location} ${this.getDateTxt(this.getDate(s.date))} ${s.morning}`,
-                        })),
-                        location: yearserie.info.location,
-                        year: yearserie.info.year,
-                    }))
-                    const seriedata = { data: returnvalues, params: { series: [{ name: '', markersize: 1 }] }};
-                    return seriedata;
-                },
-                createYearlyTrendSeriedata(series) {
-                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-
-                    const lastyearestimate = this.calculated.monthlyaverages.values[this.calculated.monthlyaverages.values.length-1].estimate ? this.calculated.monthlyaverages.values[this.calculated.monthlyaverages.values.length-1].yearaverage : NaN;
-                    const data = getYearlyTrendTS(series, this.calculated.monthlytrends, lastyearestimate);
-                    let params = { rangeoffset: 1, showlegend: true};
-                    if (!isNaN(lastyearestimate)) {
-                        params.series = [{ name: data[0].name, symbol: 'arrow', symbolsize: 14, symbolindex: 'last' }];
-                    }
-                    return { data: data, params: params };
-                },
-                createTrendsDataForGivenMonths(series, monthnumbers, monthnames) {
-                    return {data: getSeasonTrendsTS(series, monthnumbers, monthnames, this.calculated.monthlytrends), params: { rangeoffset: 1, showlegend: true } };
-                },
-                createMonthlySummerTrendSeriedata(series) {
-                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-                    const data = this.createTrendsDataForGivenMonths(series, [6, 7, 8], ['Kesäkuu', 'Heinäkuu', 'Elokuu']);
-                    return data;
-                },
-                createMonthlyWinterTrendSeriedata(series) {
-                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-
-                    const datavalues = getSeasonTrendsTS(series, [1, 2, 12], ['Tammikuu', 'Helmikuu', 'Joulukuu'], this.calculated.monthlytrends);
-                    return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
-                },
-                createMonthlyFallTrendSeriedata(series) {
-                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-
-                    const datavalues = getSeasonTrendsTS(series, [9, 10, 11], ['Syyskuu', 'Lokakuu', 'Marraskuu'], this.calculated.monthlytrends);
-                    return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
-                },
-                createMonthlySpringTrendSeriedata(series) {
-                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-
-                    const datavalues = getSeasonTrendsTS(series, [3, 4, 5], ['Maaliskuu', 'Huhtikuu', 'Toukokuu'], this.calculated.monthlytrends);
-                    return { data: datavalues, params: { rangeoffset: 1, showlegend: true } };
-                },
-                createAllYearsMonthlyAverageSeriedata(series) {
-                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-
-                    const datavalues = createAllYearsMonthlySeriedataTS(series, this.calculated.monthlyaverages.values, this.defaultyear, this.monthnamesLong);
-
-                    return {data: datavalues, params: {showlegend: true}};
-                },
-                createAllYearsFilteredSeriedata(series) {
-                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-                    const valuearray = createAllYearsFilteredSerieTS(series, this.readings.filtered, this.defaultyear);
-                    let curyear = series.data[series.data.length-1].data[0].datetimeLocal.getFullYear().toString();
-                    const seriedata = {
-                        data: valuearray,
-                        params: { showlegend: true, selection: [curyear, 'Minimi', 'Maksimi'], series: [{ name: 'Minimi', color: '#777777' }, { 'name': 'Maksimi', color: '#777777' }] }
-                    };
-                    return seriedata;
-                },
-                createYearlyHighValuedata(series) {
-                    if (this.yearlyHiLoReadings.length === 0) {
-                        this.createAllYearsAverageSeriedata(series);
-                    }
-                    let hivalues = this.yearlyHiLoReadings.map(v =>({
-                        value: [new Date(v.year, 0, 1), v.hicount],
-                        tooltip: `Korkein ${v.year} ${v.hicount} kpl`,
-                    }))
-                    let lovalues = this.yearlyHiLoReadings.map(v =>({
-                        value: [new Date(v.year, 0, 1), v.locount],
-                        tooltip: `Matalin ${v.year} ${v.locount} kpl`,
-                    }))
-                    let datavalues = [];
-                    datavalues.push({values: hivalues, location: '', year: 0, name:'Korkein'})
-                    datavalues.push({values: lovalues, location: '', year: 0, name: 'Matalin'})
-
-                    const seriedata = { data: datavalues, params: { showlegend: true} };
-                    return seriedata;  
-                },
-                createAllYearsAverageSeriedata(series) {
-                    if (!series || !series.data || series.data.length == 0) { return { data: [], params: null } }
-                    const data = createAllyearsAverageSerieTS(series, this.calculated.sums);
-                    let hiindex = 0;
-                    let loindex = 0;
-                    this.yearlyHiLoReadings = series.data.map(year => ({hicount:0, locount: 0, year:year.info.year}));
-
-                    while (hiindex < data.length && data[hiindex].name != 'Korkein') hiindex++;
-                    if (hiindex < data.length) {
-                        data[hiindex].values.forEach(val => {
-                            let date = val.tooltip.match(/(\d{1,2}).(\d{1,2}).(\d{4}) /);
-                            if (date && date.length == 4) {
-                                const year = Number(date[3]);
-                                let found = this.yearlyHiLoReadings.find(h => h.year==year);
-                                found.hicount++;
-                            }
-                        })
-                    }
-                    while (loindex < data.length && data[loindex].name != 'Matalin') loindex++;
-                    if (loindex < data.length) {
-                        data[loindex].values.forEach(val => {
-                            let date = val.tooltip.match(/(\d{1,2}).(\d{1,2}).(\d{4}) /);
-                            if (date && date.length == 4) {
-                                const year = Number(date[3]);
-                                let found = this.yearlyHiLoReadings.find(h => h.year==year);
-                                found.locount++;
-                            }
-                        })
-                    }
-                    const seriedata = { data: data, params: null };
-                    return seriedata;
-                },
-
-
-                //initSerieLegends(data) {
-                // let selection = [];
-                // if (activation.playernumbers && activation.playernumbers.length) {
-                //     activation.playernumbers.forEach((pno, i) => {
-                //         let foundplayer = data.options.chartitems.find((item, index) => {
-                //             let matchplayer = item.name.match(/^(\d{1,2}) ./);
-                //             return (matchplayer && pno == Number(matchplayer[1]));
-                //         });
-                //         if (foundplayer) selection.push(foundplayer.name);
-                //     });
-                // }
-                // else if (activation.names && activation.names.length) {
-                //     return activation.names;
-                // }
-                //return selection;
-                //},
-
+                //------------------------------------------------------------------------------
             }
         }).mount('#app');
 

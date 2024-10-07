@@ -11,6 +11,6 @@
       "outDir": "./dist"
     },
     "files": [ 
-      "./server/chartfunctions2.ts", "./server/chartfunctions.ts"
+      "./server/chartfunctions.ts"
       ]
   }
