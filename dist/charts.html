@@ -63,6 +63,13 @@
             width: 520px;
             overflow: scroll;
         }
+        .hidden {
+            display: none;
+        }
+        .graphtitle {
+            font-size: 20px;
+            font-weight: bold;
+        }
         @media screen and (max-width: 1080px) {
             .scrollbox {
                 height: 420px;
@@ -88,6 +95,7 @@
             <h1 id="ID_PageTitle">Lämpötilat (2)</h1>
         </div>
         <div id="app" class="page-content">
+            <hr>
             <div class="row">
 
                 <div class="col-6" :style="loading?'display:none;':'display:inline-block;'">
@@ -98,22 +106,24 @@
                     <button type="button" :disabled="this.scrollday.scroll" class="btn btn-primary setmargin5" @click="rundays">Rullaa</button>
                     <button type="button" :disabled="!this.scrollday.scroll" class="btn btn-primary setmargin5" @click="stopdays">Pysäytä</button>
                     <hr>
+                    <p class="graphtitle">{{ dailycharttitle }}</p>
                     <div id="daygraph"></div>
                 </div>
             </div>
-            <trendgraph :active="false" :elemid="testgraph10"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph4"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph12"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph2"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph3"></trendgraph>
-            <monthtable :monthlydata="calculated.monthlyaverages.values" :monthaverages="calculated.monthlyaverages.averages" :monthnames="monthnames"></monthtable>
-            <trendgraph :active="false" :elemid="testgraph11"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph5"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph6"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph7"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph8"></trendgraph>
-            <trendgraph :active="false" :elemid="testgraph9"></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph10" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph4" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph12" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph2" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles":title="" :elemid="testgraph3" :active=true></trendgraph>
+            <monthtable :title="'Kuukausittaiset lämpötilat'" :monthlydata="calculated.monthlyaverages.values" :monthaverages="calculated.monthlyaverages.averages.temp" :monthnames="monthnames" :datatype="'t'"></monthtable>
+            <monthtable :title="'Kuukausittaiset lämpötilaerot'":monthlydata="calculated.monthlyaverages.values" :monthaverages="calculated.monthlyaverages.averages.diff" :monthnames="monthnames" :datatype="'d'"></monthtable>
+            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph11" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph5" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph6" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph7" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph8" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph9" :active=true></trendgraph>
         </div>
     </div>
     <script type="module">
@@ -150,6 +160,8 @@
                     testgraph10: 'GraphLocation10',
                     testgraph11: 'GraphLocation11',
                     testgraph12: 'GraphLocation12',
+                    testgraphtitles : [],
+                    dailycharttitle: '',
                     defaultyear: 1976,
                     loading: ref(true),
                     daydata: {data: [[],[]], chart: null},
@@ -194,13 +206,13 @@
 
                 this.calculated.monthlyaverages = CFcalculateMonthlyAverages();
 
-                this.createChart(this.testgraph10, 'Suodatetut lampotilat', temperatures, CFcreateYearlyFilteredSeriedata);
+                this.createChart(this.testgraph10, 'Suodatetut lämpötilat', temperatures, CFcreateYearlyFilteredSeriedata);
                 this.createChart(this.testgraph2, 'Päivittäiset keskiarvot', temperatures, CFcreateAllYearsAverageSeriedata);
                 this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, CFcreateAllYearsMonthlyAverageSeriedata);
                 this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, CFcreateAllYearsFilteredSeriedata);
                 this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, CFcreateLastYearsSeriedata);
                 this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', temperatures, CFcreateDailyDiffdata);
-                this.createChart(this.testgraph12, 'Vuosien korkeimmat ja matalimmat', temperatures, CFcreateYearlyHighValuedata);
+                this.createChart(this.testgraph12, 'Vuosien korkeimmat ja matalimmat (kpl)', temperatures, CFcreateYearlyHighValuedata);
                 this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, CFcreateYearlyTrendSeriedata);
 
                 Gcharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, CFcreateMonthlySummerTrendSeriedata));
@@ -261,10 +273,7 @@
                             }, 1)
                         },
                         getDateTxt(date) {
-                            if (date == null || date === undefined || isNaN(date)) {
-                                return '????';
-                            }
-                            return (date) ? `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}` : `-`;
+                            return getDateTxt(date);
                         },
                         selectDay(item) {
                             if (this.selected == item.index) this.selected = -1;
@@ -329,7 +338,7 @@
 
                     },
                     template: `
-                        Mittaustulokset ja suodatettu arvo
+                        <p class="graphtitle">Mittaustulokset ja suodatettu arvo</p>
                         <div><button type="button" class="btn btn-primary" @click="saveValuestoFile">Tallenna kaikki lukemat tiedostoon</button></div>
                         <div class="scrollbox">
                         <table class="datatable">
@@ -353,7 +362,7 @@
                         `
                 },
                 monthtable: {
-                    props: ['monthlydata', 'monthnames', 'monthaverages'],
+                    props: ['monthlydata', 'monthnames', 'monthaverages', 'title', 'datatype'],
                     emits: ['lastyear'],
                     methods: {
                         roundNumber(value, num) {
@@ -361,7 +370,8 @@
                         },
                     },
                     template: `
-                        Kuukausittaiset lämpötilat
+                        <hr>
+                        <p class="graphtitle">{{ title }}</p>
                         <table class="datatable">
                             <thead>
                                 <tr>
@@ -372,8 +382,8 @@
                             <tbody>
                                 <tr v-for="item in monthlydata">
                                     <td>{{ item.year }}</td> 
-                                    <td v-for="m in item.months">{{ isNaN(m.average) ? '-' : roundNumber(m.average, 1) }}</td>
-                                    <td>{{ item.estimate===true ? '(': ''}} {{roundNumber(item.yearaverage, 1)}} {{ item.estimate==true?')':''}}</td>
+                                    <td v-for="m in item.months">{{ datatype=="t" ? isNaN(m.temperature) ? '-' : roundNumber(m.temperature, 1): isNaN(m.difference) ? '-': roundNumber(m.difference, 1) }}</td>
+                                    <td>{{ item.estimate===true ? '(': ''}} {{ datatype=="t" ? roundNumber(item.yearaverage, 1): roundNumber(item.yearaveragediff, 1) }} {{ item.estimate==true?')':''}}</td>
                                 </tr>                                
                             </tbody>
                             <tfoot>
@@ -386,11 +396,15 @@
                         `
                 },
                 trendgraph: {
-                    props: ['active', 'elemid', 'title'],
+                    props: ['title', 'elemid', 'active', 'titles'],
                     template: `
-                        <div :class="{hidden: !active}" class="trendchart">
-                            <div class="trendtitle"></div>
-                            <div :id="elemid" class="graphelement"></div>
+                        <hr>
+                        <div>
+                            <p class="graphtitle">{{ titles[elemid] ? titles[elemid] : '' }}</p>
+                            <div :class="{hidden: !active}" class="trendchart">
+                                <div class="trendtitle"></div>
+                                <div :id="elemid" class="graphelement"></div>
+                            </div>
                         </div>
                         `
                 }
@@ -459,6 +473,7 @@
                 },
                 //------------------------------------------------------------------------------
                 createChart(element, title, data, funct, thischart) {
+                    this.testgraphtitles[element] = title;
                     let trendChart = (thischart ? thischart.trendChart : this.initSerie(element));
                     if (trendChart === null) return;
                     const buildValues = funct(data);
@@ -502,7 +517,7 @@
                     let chartoptions = {
                         animation: false,
                         title: {
-                            text: title,
+                            text: '',//title,
                         },
                         tooltip: {
                             trigger: 'item',
@@ -582,8 +597,9 @@
                     }))
                     let series = [data.values, trend];
                     this.daydata.data = series;
+                    this.dailycharttitle = `Päivän ${values.data.length ? values.data[0].date.getDate() : ''}.${values.data.length ? values.data[0].date.getMonth()+1 : ''} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`;
                     this.daydata.chart = this.createChart('daygraph', 
-                        `Päivän ${values.data.length ? values.data[0].date.getDate() : ''}.${values.data.length ? values.data[0].date.getMonth()+1 : ''} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`, 
+                        this.dailycharttitle, 
                         series, this.createDayGraph, this.daydata.chart);
                 },
                 rundays() {
@@ -624,11 +640,7 @@
                     return NaN;
                 },
                 getDateTxt(date, daymonth) {
-                    if (!date) return '???';
-                    const month = date.getMonth() + 1;
-                    const day = date.getDate();
-                    if (daymonth === true) return `${day}.${month}`;
-                    return `${day}.${month}.${date.getFullYear()}`;
+                    return getDateTxt(date, daymonth == true ? true : false);
                 },
                 createSeries(series, params) {
                     let chartdata = series.data.map(values => ({
