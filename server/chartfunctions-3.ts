@@ -1,8 +1,5 @@
 // 2-counterfunctionupdate
 // 3-extrafieldsremoved
-// 4-some counters combines
-// 5-
-
 
 interface AverageMinMaxCalc {
     count: number;
@@ -25,8 +22,7 @@ interface OneDayValues {
 interface AverageCalculated {
     date: Date;
     day: number;
-    monthno: number;
-    year: number;
+    month: number;
 
     averagevalue: number;
 
@@ -41,7 +37,34 @@ interface AverageCalculated {
     differencefiltered: OneDayValues;
 
 }
+interface AverageMinMaxCalcValues {
+    date: Date;
+    day: number;
+    monthno: number;
+    year: number;
 
+    morning: AverageMinMaxCalc;
+    evening: AverageMinMaxCalc;
+    difference: AverageMinMaxCalc;
+    total: AverageMinMaxCalc;
+}
+function updateCountersTableValue(counter: AverageMinMaxCalc, newvalue: number, date: Date): boolean {
+    if (isNaN(newvalue)) return false;
+
+    counter.count++;
+    counter.sum += newvalue;
+    counter.average = counter.sum/counter.count;
+    if (newvalue > counter.monthlyhigh) {
+        counter.monthlyhigh = newvalue;
+        counter.monthlyhighdate = date;
+    }
+    if (newvalue < counter.monthlylow) {
+        counter.monthlylow = newvalue;
+        counter.monthlylowdate = date;
+    }
+
+    return true;
+}
 function updateMinMaxTable(counter: OneDayValues, newvalue: number, newdate: Date): boolean {
     if (isNaN(newvalue)) return false;
 
@@ -55,29 +78,6 @@ function updateMinMaxTable(counter: OneDayValues, newvalue: number, newdate: Dat
     if (newvalue < counter.min.value) { 
         counter.min.value = newvalue; 
         counter.min.date = newdate; 
-    }
-    return true;
-}
-function checkReading(value: number, date: Date, current: OneDayValues, total: OneDayValues): boolean {
-    if (isNaN(value) || value == undefined || !isNumeric(value)) return false;
-
-    current.count += 1;
-    current.sum += value;
-    if (value < current.min.value) {
-        current.min.value = value;
-        current.min.date = date;
-        if (total && value < total.min.value) {
-            total.min.value = value;
-            total.min.date = date;
-        }
-    }
-    if (value > current.max.value) {
-        current.max.value = value;
-        current.max.date = date;
-        if (total && value > total.max.value) {
-            total.max.value = value;
-            total.max.date = date;
-        }
     }
     return true;
 }
@@ -164,11 +164,14 @@ function createDateOnlyFiltered(date: Date): Filtered {
 // ----------------------------------------------------
 /*
 
-MinMax and HighLow datatypes 
+MinMax and HighLow datatypes ?????????????????????????
 
 */
+
+
 interface FilterValue {
     date: Date;
+
     morning: AverageMinMaxCalculated;
     evening: AverageMinMaxCalculated;
     difference: AverageMinMaxCalculated;
@@ -182,6 +185,7 @@ interface AverageMinMaxCalculated{
     highdate: Date;
     lowdate: Date;
 }
+
 // - - - - - - - - - - - - - -
 interface AverageYearsMonths {
     yearlydata: YearlyAverageData[];
@@ -228,25 +232,14 @@ function createYearlyAverageData(year: number, location: string): YearlyAverageD
     return {year: year, location: location, yearlyaverage: NaN, yearlyaveragediff: NaN, months: []}
 }
 function createAverageCalculated(date: Date, average: number, 
-    morning: OneDayValues, evening: OneDayValues, difference: OneDayValues, total: OneDayValues, year: number): AverageCalculated {
+    morning: OneDayValues, evening: OneDayValues, difference: OneDayValues, total: OneDayValues): AverageCalculated {
     return {date: date, day: NaN, averagevalue: average, morning: morning, evening: evening, difference: difference, total: total,
-        monthno: 0, morningfiltered: null, eveningfiltered: null, differencefiltered: null, totalfiltered: null, year: year }
+        month: 0, morningfiltered: null, eveningfiltered: null, differencefiltered: null, totalfiltered: null }
 }
-function createAverageCalculatedEmpty(date: Date): AverageCalculated {
-    return {date: date, day: date.getDate(), monthno: date.getMonth()+1, year: date.getFullYear(), averagevalue: NaN, 
-        morning: createOneDayValues(0,0,createReadingDate(TempMinDefaultValue, new Date(0)),createReadingDate(TempMaxDefaultValue, new Date(0))), 
-        evening: createOneDayValues(0,0,createReadingDate(TempMinDefaultValue, new Date(0)),createReadingDate(TempMaxDefaultValue, new Date(0))), 
-        difference: createOneDayValues(0,0,createReadingDate(TempMinDefaultValue, new Date(0)),createReadingDate(TempMaxDefaultValue, new Date(0))), 
-        total: createOneDayValues(0,0,createReadingDate(TempMinDefaultValue, new Date(0)),createReadingDate(TempMaxDefaultValue, new Date(0))), 
-        morningfiltered: createOneDayValues(0,0,createReadingDate(TempMinDefaultValue, new Date(0)),createReadingDate(TempMaxDefaultValue, new Date(0))), 
-        eveningfiltered:  createOneDayValues(0,0,createReadingDate(TempMinDefaultValue, new Date(0)),createReadingDate(TempMaxDefaultValue, new Date(0))), 
-        differencefiltered:  createOneDayValues(0,0,createReadingDate(TempMinDefaultValue, new Date(0)),createReadingDate(TempMaxDefaultValue, new Date(0))), 
-        totalfiltered:  createOneDayValues(0,0,createReadingDate(TempMinDefaultValue, new Date(0)),createReadingDate(TempMaxDefaultValue, new Date(0))), 
-    }
-}
+
 function createAverageCalculated2(day: number, month: number): AverageCalculated {
 
-    return {date: new Date(0), day: day, monthno: month, year: 0, averagevalue: NaN, 
+    return {day: day, date: new Date(0), averagevalue: NaN, month: month, 
         morning: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
         evening: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
         difference: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
@@ -257,22 +250,9 @@ function createAverageCalculated2(day: number, month: number): AverageCalculated
         differencefiltered: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0)))
     }
 }
-// function createAverageCalculated2(day: number, month: number): AverageCalculated {
-
-//     return {day: day, date: new Date(0), averagevalue: NaN, month: month, 
-//         morning: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
-//         evening: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
-//         difference: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
-//         total: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
-//         morningfiltered: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
-//         eveningfiltered: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
-//         totalfiltered: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
-//         differencefiltered: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0)))
-//     }
-// }
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-function createAverageMinMaxCalcValues12MonthsTable(year: number): AverageCalculated[] {
+function createAverageMinMaxCalcValues12MonthsTable(year: number): AverageMinMaxCalcValues[] {
     let yearcounters = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => (createAverageMinMaxCalcValues2(year, m)));
     return yearcounters;
 }
@@ -280,35 +260,44 @@ function createAverageCalculated366DaysTable(): AverageCalculated[] {
     let minmaxtable: AverageCalculated[]  = [];
     for (let i = 0; i < 366; i++) {
         const d = new Date(temperatureClass.defaultyear, 0, i+1)
-        minmaxtable.push(createAverageCalculatedEmpty(d))
+        minmaxtable.push(createAverageCalculated2(d.getDate(), d.getMonth()));
     }
     return minmaxtable;
 }
-// function createAverageMinMaxCalcValues366DaysTable(defaultyear: number): AverageMinMaxCalcValues [] {
-//     let minmaxtable: AverageMinMaxCalcValues[] = [];
-//     for (let dayindex = 0; dayindex < 366; dayindex++) {
-//         let newdate: Date = new Date(defaultyear, 0, dayindex + 1);
-//         minmaxtable.push(createAverageMinMaxCalcValues(newdate));
-//     }
-//     return minmaxtable;
-// }
+function createAverageMinMaxCalcValues366DaysTable(defaultyear: number): AverageMinMaxCalcValues [] {
+    let minmaxtable: AverageMinMaxCalcValues[] = [];
+    for (let dayindex = 0; dayindex < 366; dayindex++) {
+        let newdate: Date = new Date(defaultyear, 0, dayindex + 1);
+        minmaxtable.push(createAverageMinMaxCalcValues(newdate));
+    }
+    return minmaxtable;
+}
 
 function createAverageMinMaxCalc(): AverageMinMaxCalc {
     return {sum: 0, count: 0, average: NaN,
         monthlyhigh: TempMaxDefaultValue, monthlylow: TempMinDefaultValue, monthlyhighdate: new Date(0), monthlylowdate: new Date(0) }
 }
-
-function createAverageMinMaxCalcValues2(year: number, monthno: number): AverageCalculated {
-    return { date: new Date(year, monthno-1, 1), day: NaN, monthno: monthno, year: year, averagevalue: NaN,
-        morning: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
-        evening: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
-        difference: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
-        total: createOneDayValues(0, 0, createReadingDate(TempMinDefaultValue, new Date(0)), createReadingDate(TempMaxDefaultValue, new Date(0))),
-        morningfiltered: null, eveningfiltered: null, differencefiltered: null, totalfiltered: null
-    }
+function createAverageMinMaxCalcValues(date: Date): AverageMinMaxCalcValues {
+    return { 
+        date: date,
+        day: date.getDate(), 
+        monthno: date.getMonth() + 1,
+        year: date.getFullYear(),
+        morning: createAverageMinMaxCalc(), 
+        evening: createAverageMinMaxCalc(), 
+        difference: createAverageMinMaxCalc(), 
+        total: createAverageMinMaxCalc(), 
+    };
+}
+function createAverageMinMaxCalcValues2(year: number, monthno: number): AverageMinMaxCalcValues {
+    return { date: new Date(year, monthno-1, 1), day: NaN, monthno: monthno, year: year, 
+        morning: createAverageMinMaxCalc(), evening: createAverageMinMaxCalc(), 
+        difference: createAverageMinMaxCalc(), total: createAverageMinMaxCalc()}
 }
 
 // -------------------------------------------------------
+
+
 
 function createFilterValueEmpty(date: Date): FilterValue {
     return {date: date, morning: createAverageMinMaxCalculatedEmpty(), evening: createAverageMinMaxCalculatedEmpty(), total: createAverageMinMaxCalculatedEmpty(), difference: createAverageMinMaxCalculatedEmpty()}
@@ -322,43 +311,43 @@ function createAverageYearsMonths(yearlydata: YearlyAverageData[], monthlydata: 
     return {yearlydata: yearlydata, monthlydata: monthlydata}
 }
 
-function calculateAverage(counter: AverageCalculated): AverageCalculated {
+function calculateAverage(counter: AverageMinMaxCalcValues): AverageCalculated {
     const morningvalue = counter.morning.count > 0 ? counter.morning.sum/counter.morning.count : NaN;
-    const morningmin = createReadingDate(counter.morning.min.value, counter.morning.min.date);
-    const morningmax = createReadingDate(counter.morning.max.value, counter.morning.max.date);
+    const morningmin = createReadingDate(counter.morning.monthlylow, counter.morning.monthlylowdate);
+    const morningmax = createReadingDate(counter.morning.monthlyhigh, counter.morning.monthlyhighdate);
     const morning = createOneDayValues(counter.morning.count, morningvalue, morningmin, morningmax);
 
     const eveningvalue = counter.evening.count > 0 ? counter.evening.sum/counter.evening.count : NaN;
-    const eveningmin = createReadingDate(counter.evening.min.value, counter.evening.min.date);
-    const eveningmax = createReadingDate(counter.evening.max.value, counter.evening.max.date);
+    const eveningmin = createReadingDate(counter.evening.monthlylow, counter.evening.monthlylowdate);
+    const eveningmax = createReadingDate(counter.evening.monthlyhigh, counter.evening.monthlyhighdate);
     const evening = createOneDayValues(counter.evening.count, eveningvalue, eveningmin, eveningmax);
 
     const differencevalue = counter.difference.count > 0 ? counter.difference.sum/counter.difference.count : NaN;
-    const differencemin = createReadingDate(counter.difference.min.value, counter.difference.min.date);
-    const differencemax = createReadingDate(counter.difference.max.value, counter.difference.max.date);
+    const differencemin = createReadingDate(counter.difference.monthlylow, counter.difference.monthlylowdate);
+    const differencemax = createReadingDate(counter.difference.monthlyhigh, counter.difference.monthlyhighdate);
     const difference = createOneDayValues(counter.difference.count, differencevalue, differencemin, differencemax);
 
     const totalvalue = counter.total.count > 0 ? counter.total.sum/counter.total.count : NaN;
-    const totalmin = createReadingDate(counter.total.min.value, counter.total.min.date);
-    const totalmax = createReadingDate(counter.total.max.value, counter.total.max.date);
+    const totalmin = createReadingDate(counter.total.monthlylow, counter.total.monthlylowdate);
+    const totalmax = createReadingDate(counter.total.monthlyhigh, counter.total.monthlyhighdate);
     const total = createOneDayValues(counter.total.count, totalvalue, totalmin, totalmax);
 
 
     let average = isNaN(morningvalue) || isNaN(eveningvalue) ? NaN : (morningvalue+eveningvalue)/2;
 
-    let newitem = createAverageCalculated(new Date(0), average, morning, evening, difference, total, counter.year);
-    newitem.morning.max.value = counter.morning.max.value;
-    newitem.morning.max.date = counter.morning.max.date;
-    newitem.morning.min.value = counter.morning.min.value;
-    newitem.morning.min.date = counter.morning.min.date;
-    newitem.evening.max.value = counter.evening.max.value;
-    newitem.evening.max.date = counter.evening.max.date;
-    newitem.evening.min.value = counter.evening.min.value;
-    newitem.evening.min.date = counter.evening.min.date;
-    newitem.difference.max.value = counter.difference.max.value;
-    newitem.difference.max.date = counter.difference.max.date;
-    newitem.difference.min.value = counter.difference.min.value;
-    newitem.difference.min.date = counter.difference.min.date;
+    let newitem = createAverageCalculated(new Date(0), average, morning, evening, difference, total);
+    newitem.morning.max.value = counter.morning.monthlyhigh;
+    newitem.morning.max.date = counter.morning.monthlyhighdate;
+    newitem.morning.min.value = counter.morning.monthlylow;
+    newitem.morning.min.date = counter.morning.monthlylowdate;
+    newitem.evening.max.value = counter.evening.monthlyhigh;
+    newitem.evening.max.date = counter.evening.monthlyhighdate;
+    newitem.evening.min.value = counter.evening.monthlylow;
+    newitem.evening.min.date = counter.evening.monthlylowdate;
+    newitem.difference.max.value = counter.difference.monthlyhigh;
+    newitem.difference.max.date = counter.difference.monthlyhighdate;
+    newitem.difference.min.value = counter.difference.monthlylow;
+    newitem.difference.min.date = counter.difference.monthlylowdate;
 
     return newitem;
 }
@@ -445,8 +434,6 @@ class Temperatures {
     yearlyMonthlyAverages: AverageYearsMonths = createAverageYearsMonths([],[]);
     dailyValues: AverageCalculated[] = [];
 
-    allFilteredDataYearlyArranged = [];
-
     constructor () { }
     getValidFilteredValues(): Filtered[] {
         if (this.filteredValuesValid.length == 0) {
@@ -455,18 +442,18 @@ class Temperatures {
         }
         return this.filteredValuesValid;
     }
-    private getMonthlyvaluesForYear(currentyear: DbTemperature): AverageCalculated[] {
-        let monthlycounters: AverageCalculated[] = createAverageMinMaxCalcValues12MonthsTable(currentyear.info.year);
+    getMonthlyvaluesForYear(currentyear: DbTemperature): AverageMinMaxCalcValues[] {
+        let monthlycounters: AverageMinMaxCalcValues[] = createAverageMinMaxCalcValues12MonthsTable(currentyear.info.year);
 
         currentyear.data.forEach(dailytemp => {
             const month = dailytemp.datetimeLocal.getMonth();
-            const morningvalueexists = updateMinMaxTable(monthlycounters[month].morning, dailytemp.morning, dailytemp.datetimeLocal);
-            const eveningvalueexists = updateMinMaxTable(monthlycounters[month].evening, dailytemp.evening, dailytemp.datetimeLocal);
+            const morningvalueexists = updateCountersTableValue(monthlycounters[month].morning, dailytemp.morning, dailytemp.datetimeLocal);
+            const eveningvalueexists = updateCountersTableValue(monthlycounters[month].evening, dailytemp.evening, dailytemp.datetimeLocal);
             if (eveningvalueexists && morningvalueexists) {
                 const diff = (dailytemp.evening - dailytemp.morning);
                 const aver = (dailytemp.evening + dailytemp.morning)/2;
-                updateMinMaxTable(monthlycounters[month].difference, diff, dailytemp.datetimeLocal);
-                updateMinMaxTable(monthlycounters[month].total, aver, dailytemp.datetimeLocal);
+                updateCountersTableValue(monthlycounters[month].difference, diff, dailytemp.datetimeLocal);
+                updateCountersTableValue(monthlycounters[month].total, aver, dailytemp.datetimeLocal);
             }
         })
         monthlycounters.forEach(month =>{
@@ -476,14 +463,15 @@ class Temperatures {
         })
         return monthlycounters;
     }
-    private updateYearCounters(yearcounters: AverageCalculated[], monthlycounters: AverageCalculated[]): MonthAverageData[] {
+
+    updateYearCounters(yearcounters: AverageMinMaxCalcValues[], monthlycounters: AverageMinMaxCalcValues[]): MonthAverageData[] {
         const monthlyvalues = monthlycounters.map((counter, index) => {
             let averages: AverageCalculated = calculateAverage(counter);
-            const morningstatus = updateMinMaxTable(yearcounters[index].morning, averages.morning.sum, new Date(counter.year, counter.monthno, 1));
-            const everningstatus = updateMinMaxTable(yearcounters[index].evening, averages.evening.sum, new Date(counter.year, counter.monthno, 1));
+            const morningstatus = updateCountersTableValue(yearcounters[index].morning, averages.morning.sum, new Date(counter.year, counter.monthno, 1));
+            const everningstatus = updateCountersTableValue(yearcounters[index].evening, averages.evening.sum, new Date(counter.year, counter.monthno, 1));
             if (morningstatus && everningstatus) {
-                updateMinMaxTable(yearcounters[index].difference, averages.difference.sum, new Date(counter.year, counter.monthno, 1));
-                updateMinMaxTable(yearcounters[index].total, averages.total.sum, new Date(counter.year, counter.monthno, 1));
+                updateCountersTableValue(yearcounters[index].difference, averages.difference.sum, new Date(counter.year, counter.monthno, 1));
+                updateCountersTableValue(yearcounters[index].total, averages.total.sum, new Date(counter.year, counter.monthno, 1));
             }
             return createMonthAverageData(counter.monthno, NaN, 0, NaN, 0, averages);
         });       
@@ -493,7 +481,7 @@ class Temperatures {
         let yearcounters = createAverageMinMaxCalcValues12MonthsTable(0);
         const yearlyvalues: YearlyAverageData[] = temperatures.data.map(currentyear => {
             const averagedata = createYearlyAverageData(currentyear.info.year, currentyear.info.location);
-            const monthlycounters: AverageCalculated[] = this.getMonthlyvaluesForYear(currentyear);
+            const monthlycounters: AverageMinMaxCalcValues[] = this.getMonthlyvaluesForYear(currentyear);
             averagedata.months = this.updateYearCounters(yearcounters, monthlycounters);
             return averagedata;
         })
@@ -502,23 +490,23 @@ class Temperatures {
         // calculate monthly values
         yearlyvalues.forEach(year => {
             year.months.forEach(month => {
-                const morningok = updateMinMaxTable(monthcounters[month.monthno-1].morning, month.averages.morning.sum, new Date(year.year, month.monthno, 1));
-                const eveningok = updateMinMaxTable(monthcounters[month.monthno-1].evening, month.averages.evening.sum, new Date(year.year, month.monthno, 1));
+                const morningok = updateCountersTableValue(monthcounters[month.monthno-1].morning, month.averages.morning.sum, new Date(year.year, month.monthno, 1));
+                const eveningok = updateCountersTableValue(monthcounters[month.monthno-1].evening, month.averages.evening.sum, new Date(year.year, month.monthno, 1));
                 if (morningok && eveningok) {
                     // let average =  (month.averages.morning.sum + month.averages.evening.sum)/2
                     // let value: OneDayValues = createOneDayValues(0, average, createReadingDate(TempMaxDefaultValue, new Date(0)), createReadingDate(TempMinDefaultValue, new Date(0)));
-                    updateMinMaxTable(monthcounters[month.monthno-1].difference, month.averages.difference.sum, new Date(year.year, month.monthno, 1));
-                    updateMinMaxTable(monthcounters[month.monthno-1].total, month.averages.total.sum, new Date(year.year, month.monthno, 1));
+                    updateCountersTableValue(monthcounters[month.monthno-1].difference, month.averages.difference.sum, new Date(year.year, month.monthno, 1));
+                    updateCountersTableValue(monthcounters[month.monthno-1].total, month.averages.total.sum, new Date(year.year, month.monthno, 1));
                 }
             })
         })
         // add monthly values
         const monthlyvalues: FilterValue[] = monthcounters.map(counter => {
             return createFilterValue(new Date(this.defaultyear, counter.monthno-1, 1), 
-                createAverageMinMaxCalculated(counter.total.count > 0 ? counter.total.sum/counter.total.count:NaN, counter.total.max.value, counter.total.max.date, counter.total.min.value, counter.total.min.date),
-                createAverageMinMaxCalculated(counter.morning.count > 0 ? counter.morning.sum/counter.morning.count:NaN, counter.morning.max.value, counter.morning.max.date, counter.morning.min.value, counter.morning.min.date), 
-                createAverageMinMaxCalculated(counter.evening.count > 0 ? counter.evening.sum/counter.evening.count:NaN, counter.evening.max.value, counter.evening.max.date, counter.evening.min.value, counter.evening.min.date),
-                createAverageMinMaxCalculated(counter.difference.count > 0 ? counter.difference.sum/counter.difference.count:NaN, counter.difference.max.value, counter.difference.max.date, counter.difference.min.value, counter.difference.min.date)
+                createAverageMinMaxCalculated(counter.total.count > 0 ? counter.total.sum/counter.total.count:NaN, counter.total.monthlyhigh, counter.total.monthlyhighdate, counter.total.monthlylow, counter.total.monthlylowdate),
+                createAverageMinMaxCalculated(counter.morning.count > 0 ? counter.morning.sum/counter.morning.count:NaN, counter.morning.monthlyhigh, counter.morning.monthlyhighdate, counter.morning.monthlylow, counter.morning.monthlylowdate), 
+                createAverageMinMaxCalculated(counter.evening.count > 0 ? counter.evening.sum/counter.evening.count:NaN, counter.evening.monthlyhigh, counter.evening.monthlyhighdate, counter.evening.monthlylow, counter.evening.monthlylowdate),
+                createAverageMinMaxCalculated(counter.difference.count > 0 ? counter.difference.sum/counter.difference.count:NaN, counter.difference.monthlyhigh, counter.difference.monthlyhighdate, counter.difference.monthlylow, counter.difference.monthlylowdate)
             );
         })
 
@@ -624,9 +612,35 @@ class Temperatures {
 
         this.filteredValues = filtered;
         return {status: 0, message: null, data: filtered};
-    }   
+    }
+    checkReading(value: number, date: Date, current: AverageMinMaxCalc, total: AverageMinMaxCalc): boolean {
+        let valueok: boolean = false;
+        if (!isNaN(value) && value !== undefined && isNumeric(value)) {
+            valueok = true;
+            current.count += 1;
+            current.sum += value;
+            if (value < current.monthlylow) {
+                current.monthlylow = value;
+                current.monthlylowdate = date;
+                if (total && value < total.monthlylow) {
+                    total.monthlylow = value;
+                    total.monthlylowdate = date;
+                }
+            }
+            if (value > current.monthlyhigh) {
+                current.monthlyhigh = value;
+                current.monthlyhighdate = date;
+                if (total && value > total.monthlyhigh) {
+                    total.monthlyhigh = value;
+                    total.monthlyhighdate = date;
+                }
+            }
+        }
+        return valueok;
+    }
+    
     calculateDailyAverages(temperatures: TemperatureMsg, year: number = null): CalculationResult {
-        let calculationtable: AverageCalculated[] = createAverageCalculated366DaysTable();
+        let calculationtable: AverageMinMaxCalcValues[] = createAverageMinMaxCalcValues366DaysTable(this.defaultyear);
         let firstindex = 0;
         let lastindex = temperatures.data.length;
         if (year) {
@@ -644,12 +658,12 @@ class Temperatures {
                     let foundsum = calculationtable[sumindex];
                     sumindex++;
 
-                    const value1ok = checkReading(dayreadings.morning, dayreadings.datetimeLocal, foundsum.morning, foundsum.total);
-                    const value2ok = checkReading(dayreadings.evening, dayreadings.datetimeLocal, foundsum.evening, foundsum.total);
+                    const value1ok = this.checkReading(dayreadings.morning, dayreadings.datetimeLocal, foundsum.morning, foundsum.total);
+                    const value2ok = this.checkReading(dayreadings.evening, dayreadings.datetimeLocal, foundsum.evening, foundsum.total);
 
                     if (value1ok && value2ok) {
                         let difference = dayreadings.evening - dayreadings.morning;
-                        checkReading(difference, dayreadings.datetimeLocal, foundsum.difference, null);
+                        this.checkReading(difference, dayreadings.datetimeLocal, foundsum.difference, null);
                     }
                 }
             })
@@ -669,74 +683,42 @@ class Temperatures {
             }
         }
         const returnvalue: AverageCalculated[] = calculationtable.map(sum => {
-            let morning: OneDayValues = createOneDayValues(sum.morning.count, sum.morning.average, { date: sum.morning.min.date, value: sum.morning.min.value }, { date: sum.morning.max.date, value: sum.morning.max.value });
-            let evening: OneDayValues = createOneDayValues(sum.evening.count, sum.evening.average, { date: sum.evening.min.date, value: sum.evening.min.value }, { date: sum.evening.max.date, value: sum.evening.max.value });
-            let difference: OneDayValues = createOneDayValues(sum.difference.count, sum.difference.average, { date: sum.difference.min.date, value: sum.difference.min.value }, { date: sum.difference.max.date, value: sum.difference.max.value });
-            let total: OneDayValues = createOneDayValues(sum.difference.count, sum.total.average, { date: sum.total.min.date, value: sum.total.min.value }, { date: sum.total.max.date, value: sum.total.max.value });
-            return createAverageCalculated(sum.date, NaN, morning, evening, difference, total, 0);
+            let morning: OneDayValues = createOneDayValues(sum.morning.count, sum.morning.average, { date: sum.morning.monthlylowdate, value: sum.morning.monthlylow }, { date: sum.morning.monthlyhighdate, value: sum.morning.monthlyhigh });
+            let evening: OneDayValues = createOneDayValues(sum.evening.count, sum.evening.average, { date: sum.evening.monthlylowdate, value: sum.evening.monthlylow }, { date: sum.evening.monthlyhighdate, value: sum.evening.monthlyhigh });
+            let difference: OneDayValues = createOneDayValues(sum.difference.count, sum.difference.average, { date: sum.difference.monthlylowdate, value: sum.difference.monthlylow }, { date: sum.difference.monthlyhighdate, value: sum.difference.monthlyhigh });
+            let total: OneDayValues = createOneDayValues(sum.difference.count, sum.total.average, { date: sum.total.monthlylowdate, value: sum.total.monthlylow }, { date: sum.total.monthlyhighdate, value: sum.total.monthlyhigh });
+            return createAverageCalculated(sum.date, NaN, morning, evening, difference, total);
         })
+        /*
+        DailyValuesNew[0..365]
+            date
+            morning: OneDayValuesNew
+            evening: OneDayValuesNew
+            difference: OneDayValuesNew
+            total: OneDayValuesNew
+                count, average
+                min: ReadingDate
+                    value, date
+                max: ReadingDate
+                    value, date
+
+        */
         this.dailyValues = returnvalue;
         return { status: 0, message: null, data: returnvalue };
     }
-    calculateTemperatures(temperaturevalues: TemperatureMsg) {
-        const status1 = temperatureClass.calculateYearlyAndMonthlyAverages(temperaturevalues); // this.YearlyAverages
-        const status3 = temperatureClass.calculateFilteredValues(temperaturevalues); // this.filteredValues
-        const status2 = temperatureClass.calculateDailyAverages(temperaturevalues);  // this.dailyValues
-    }    
-    getFilteredDataYearlyArranged(): NameValues[] {
-        let data = this.getValidFilteredValues()
-        let yearlydata: Filtered[][] = [];
-        data.forEach(val => {
-            const year = val.date.getFullYear();
-            if (!yearlydata[year]) yearlydata[year] = [];
-            yearlydata[year].push(val);
-        })
-        return yearlydata.map(yeardata => {
-            return createNameValues(`Vuosi ${yeardata[0].date.getFullYear()}`, yeardata[0].date, yeardata.map(v => 
-                createFiltered(v.date,v.morning,v.evening,v.average,v.difference,v.morningfiltered,v.eveningfiltered,
-                    v.averagefiltered,v.differencefiltered,v.firstdayfilter,v.lastdayfilter)))
-        });
+    
+    calculateMonthlyTrends(temperatures: TemperatureMsg): CalculationResult {
+        return { status: 0, message: null, data: null};
     }
-    getAllFilteredDataYearlyArranged(): NameValues[] {
-        if (this.allFilteredDataYearlyArranged.length == 0) this.allFilteredDataYearlyArranged = temperatureClass.getFilteredDataYearlyArranged();
-        return this.allFilteredDataYearlyArranged;
-    }    
-    getDailyMinMaxValues(data: NameValues[]): AverageCalculated[] {
-        // if (dailyminimumsandmaximums.count == data.length) {
-        //     return dailyminimumsandmaximums.data;
-        // }
-        // find daily minimums and maximums
-        const dailyminmaxtable = createAverageCalculated366DaysTable();
-        data.forEach(year => {
-            let minmaxindex = 0;
-            year.values.forEach(day => {
-                const date = day.date.getDate();
-                const month = day.date.getMonth()+1;
-                while (minmaxindex < dailyminmaxtable.length && (dailyminmaxtable[minmaxindex].monthno != month || dailyminmaxtable[minmaxindex].day != date)) minmaxindex++;
-                if (minmaxindex < dailyminmaxtable.length) {
-                    updateMinMaxTable(dailyminmaxtable[minmaxindex].morning, day.morning, day.date);
-                    updateMinMaxTable(dailyminmaxtable[minmaxindex].evening, day.evening, day.date);
-                    updateMinMaxTable(dailyminmaxtable[minmaxindex].difference, (day.evening-day.morning), day.date);
-                    updateMinMaxTable(dailyminmaxtable[minmaxindex].total, (day.evening+day.morning)/2, day.date);
-                    updateMinMaxTable(dailyminmaxtable[minmaxindex].morningfiltered, day.morningfiltered, day.date);
-                    updateMinMaxTable(dailyminmaxtable[minmaxindex].eveningfiltered, day.eveningfiltered, day.date);
-                    updateMinMaxTable(dailyminmaxtable[minmaxindex].totalfiltered, (day.eveningfiltered+day.morningfiltered)/2, day.date);
-                    updateMinMaxTable(dailyminmaxtable[minmaxindex].differencefiltered, (day.eveningfiltered-day.morningfiltered), day.date);
-                }
-            })
-        })
-        //dailyminimumsandmaximums.data = dailyminmaxtable;
-        //dailyminimumsandmaximums.count = data.length;
-        return dailyminmaxtable;
+    getEstimate(): number {
+        return 0;
     }
+}
 
-} // class Temperature
 // --------------------------------------------------------------------------------------------
 
-
-
-// --------------------------------------------------------------------------------------------
 let temperatureClass: Temperatures;
+
 //-------------------------------------------------------------------------------------------
 // Data interfaces
 //-------------------------------------------------------------------------------------------
@@ -763,78 +745,52 @@ interface GraphSerieType {
 function createGraphSerieType(data: GraphSerie[], params: any): GraphSerieType {
     return {data: data, params: params}
 }
+
 function createValueDate(value: number): ValueDate {
     return {date: new Date(0), value: value}
 }
-interface NameValues {
-    name: string;
-    date: Date;
-    values: Filtered[];
+function createStatValues() {
+    return {average: NaN, averagecount: 0, averagesum: 0,
+        high: createValueDate(TempMaxDefaultValue), low: createValueDate(TempMinDefaultValue)}
 }
-function createNameValues(name: string,date: Date, values: Filtered[]): NameValues {
-    return {name: name, date: date, values: values}
-}
-// _______________________________________________________________________
-interface YearlyAveragesEstimates {
-    values: YearlyAverage[],
-    averages: TempDiffTable,
-}
-function createYearlyAveragesEstimates(values: YearlyAverage[], averages: TempDiffTable): YearlyAveragesEstimates {
-    return {values: values, averages: averages}
-}
-interface MonthlyAverage {
-    temperature: number;
-    difference: number;
-}
-function createMonthlyAverage(temperature: number, difference: number): MonthlyAverage {
-    return {temperature: temperature, difference: difference}
-}
-interface YearlyAverage {
-    year: number; 
-    yearaverage: number;
-    yearaveragediff: number;
-    months: MonthlyAverage[];
-    estimate: boolean;
-}
-function createYearlyAverage(year: number, yearaverage: number, yearaveragediff: number, months: MonthlyAverage[]): YearlyAverage {
-    return {year: year, yearaverage: yearaverage, yearaveragediff: yearaveragediff, months: months, estimate: false}
-}
-interface TempDiffTable {
-    temp: number[];
-    diff: number[];
-}
-function createTempDiffTable(temp: number[], diff: number[]): TempDiffTable {
-    return {temp: temp, diff: diff}
-}
-interface MonthDataPair {
-    month: number;
-    data: ValueDataValue[]
-}
-function createMonthDataPair(month: number, data: ValueDataValue[]): MonthDataPair {
-    return {month: month, data: data}
-}
-interface ValueDataValue {
-    value: number;
-    year: number;
-    month: number;
-}
-function createValueDataValue(value: number, year:  number, month: number): ValueDataValue {
-    return {value: value, year: year, month: month}
-}
+
+
 //-------------------------------------------------------------------------------------------
 // Local functions
 //-------------------------------------------------------------------------------------------
+let allFilteredDataYearlyArranged = [];
 
-function getReadingsBetween(startdate: Date, enddate: Date, readings: Filtered[]): Filtered[] {
-    let retvalues = readings.map(val => val.date >= startdate && val.date <= enddate ? val : null).filter(v => v !== null);
-    return retvalues;
+function getAllFilteredDataYearlyArranged(): NameValues[] {
+    if (allFilteredDataYearlyArranged.length == 0) allFilteredDataYearlyArranged = getFilteredDataYearlyArranged(temperatureClass.getValidFilteredValues());
+    return allFilteredDataYearlyArranged;
+}
+function getFilteredDataYearlyArranged(data: Filtered[]): NameValues[] {
+    let yearlydata: Filtered[][] = [];
+    data.forEach(val => {
+        const year = val.date.getFullYear();
+        if (!yearlydata[year]) yearlydata[year] = [];
+        yearlydata[year].push(val);
+    })
+    return yearlydata.map(yeardata => {
+        return createNameValues(`Vuosi ${yeardata[0].date.getFullYear()}`, yeardata[0].date, yeardata.map(v => 
+            createFiltered(v.date,v.morning,v.evening,v.average,v.difference,v.morningfiltered,v.eveningfiltered,
+                v.averagefiltered,v.differencefiltered,v.firstdayfilter,v.lastdayfilter)))
+    });
 }
 //-------------------------------------------------------------------------------------------
 // Exported functions
 //-------------------------------------------------------------------------------------------
-export function CFinitTemperature(temperaturevalues: TemperatureMsg) {
+export function CFinitTemperature() {
     temperatureClass = new Temperatures();
-    temperatureClass.calculateTemperatures(temperaturevalues);
+}
+
+export function CFcalculateTemperatures(temperaturevalues: TemperatureMsg) {
+    const status1 = temperatureClass.calculateYearlyAndMonthlyAverages(temperaturevalues); // this.YearlyAverages
+    const status3 = temperatureClass.calculateFilteredValues(temperaturevalues); // this.filteredValues
+    const status2 = temperatureClass.calculateDailyAverages(temperaturevalues);  // this.dailyValues
+
+    //const status5 = temperatureClass.calculateYearlyTrend(temperaturevalues);    // this.yearlyTrend
+    // const status4 = temperatureClass.calculateMonthlyTrends(temperaturevalues);
 }
 export function CFgetAllReadings() {
     const values = temperatureClass.getValidFilteredValues();
@@ -844,11 +800,20 @@ export function CFgetAllReadings() {
 
     return {values: values2, filtersize: temperatureClass.filterlength}
 }
-// export function getAllFilteredReadings(temperatures)  {
-//     return {values: temperatureClass.createLinearContTable(temperatures), filtersize: 10};
-// }
+export function getAllFilteredReadings(temperatures)  {
+    return {values: temperatureClass.createLinearContTable(temperatures), filtersize: 10};
+}
+
+interface NameValues {
+    name: string;
+    date: Date;
+    values: Filtered[];
+}
+function createNameValues(name: string,date: Date, values: Filtered[]): NameValues {
+    return {name: name, date: date, values: values}
+}
 export function CFcreateAllYearsFilteredSeriedata(): GraphSerieType {
-    const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
+    const yearlyarrangeddata = getAllFilteredDataYearlyArranged();
 
     let returnvalues: GraphSerie[] = yearlyarrangeddata.map(yeardata => {
         return createGraphSerie(yeardata.name, '',0, yeardata.values.map(value => ({
@@ -859,24 +824,54 @@ export function CFcreateAllYearsFilteredSeriedata(): GraphSerieType {
 
     return createGraphSerieType(returnvalues, { series: [{ name: '', markersize: 1 }] });
 }
+let dailyminimumsandmaximums = {count: 0, data: []};
+
+function getDailyMinMaxValues(data: NameValues[]): AverageCalculated[] {
+    if (dailyminimumsandmaximums.count == data.length) {
+        return dailyminimumsandmaximums.data;
+    }
+    // find daily minimums and maximums
+    const dailyminmaxtable = createAverageCalculated366DaysTable();
+    data.forEach(year => {
+        let minmaxindex = 0;
+        year.values.forEach(day => {
+            const date = day.date.getDate();
+            const month = day.date.getMonth();
+            while (minmaxindex < dailyminmaxtable.length && (dailyminmaxtable[minmaxindex].month != month || dailyminmaxtable[minmaxindex].day != date)) minmaxindex++;
+            if (minmaxindex < dailyminmaxtable.length) {
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].morning, day.morning, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].evening, day.evening, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].difference, (day.evening-day.morning), day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].total, (day.evening+day.morning)/2, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].morningfiltered, day.morningfiltered, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].eveningfiltered, day.eveningfiltered, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].totalfiltered, (day.eveningfiltered+day.morningfiltered)/2, day.date);
+                updateMinMaxTable(dailyminmaxtable[minmaxindex].differencefiltered, (day.eveningfiltered-day.morningfiltered), day.date);
+            }
+        })
+    })
+    dailyminimumsandmaximums.data = dailyminmaxtable;
+    dailyminimumsandmaximums.count = data.length;
+    return dailyminmaxtable;
+}
 export function CFcreateYearlyFilteredSeriedata(): GraphSerieType {
     function serietooltipcallback(value: ReturnDataValue): string {
         return `${getDateTxt(new Date(value.year, value.date.getMonth(), value.date.getDate()))} ${roundNumber(value.value, 1)}°C`;
     }   
-    const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
+    const yearlyarrangeddata = getAllFilteredDataYearlyArranged();
     let lastyear = yearlyarrangeddata.length > 0 ? yearlyarrangeddata[yearlyarrangeddata.length-1].date.getFullYear(): 0;
  
      let yearlydata: ReturnDataType[] = [];
     // add high and low curves to graphics
-    const dailyminmaxtable = temperatureClass.getDailyMinMaxValues(yearlyarrangeddata);
+    const dailyminmaxtable = getDailyMinMaxValues(yearlyarrangeddata);
     yearlydata.push(createReturnDataType('Korkein', dailyminmaxtable.map(minmax => {
-        return createReturnDataValue(new Date(temperatureClass.defaultyear, minmax.monthno-1, minmax.total.max.date.getDate()),
+        return createReturnDataValue(new Date(temperatureClass.defaultyear, minmax.month, minmax.total.max.date.getDate()),
             minmax.totalfiltered.max.value, 
             minmax.totalfiltered.max.date.getFullYear(), 
             serietooltipcallback)
     })));
     yearlydata.push(createReturnDataType('Matalin', dailyminmaxtable.map(minmax => {
-        return createReturnDataValue(new Date(temperatureClass.defaultyear, minmax.monthno-1, minmax.total.min.date.getDate()),
+        return createReturnDataValue(new Date(temperatureClass.defaultyear, minmax.month, minmax.total.min.date.getDate()),
         minmax.totalfiltered.min.value, 
         minmax.totalfiltered.min.date.getFullYear(), 
         serietooltipcallback)
@@ -899,12 +894,17 @@ export function CFcreateYearlyFilteredSeriedata(): GraphSerieType {
     return createGraphSerieType(returnvalues, { showlegend: true, 
         selection: [`Vuosi ${lastyear}`, 'Korkein', 'Matalin'], series: [{ name: 'Matalin', color: '#777777' }, { 'name': 'Korkein', color: '#777777' }] });
 }
+function getReadingsBetween(startdate: Date, enddate: Date, readings: Filtered[]): Filtered[] {
+    let retvalues = readings.map(val => val.date >= startdate && val.date <= enddate ? val : null).filter(v => v !== null);
+    return retvalues;
+}
 export function CFcreateLastYearsSeriedata(): GraphSerieType {
     function serietooltipcallback(value: ReturnDataValue): string {
         return `${getDateTxt(new Date(value.year, value.date.getMonth(), value.date.getDate()))} ${roundNumber(value.value, 1)}°C`;
     } 
-    const allvalues = temperatureClass.getAllFilteredDataYearlyArranged();
-    const dailyminmaxtable: AverageCalculated[] = temperatureClass.getDailyMinMaxValues(allvalues);
+    const allvalues = getAllFilteredDataYearlyArranged();
+
+    const dailyminmaxtable: AverageCalculated[] = getDailyMinMaxValues(allvalues);
 
     const lastdate = allvalues[allvalues.length - 1].values[allvalues[allvalues.length - 1].values.length-1].date;
     const firstdate = new Date(lastdate.getFullYear() - 1, lastdate.getMonth(), lastdate.getDate());
@@ -922,16 +922,16 @@ export function CFcreateLastYearsSeriedata(): GraphSerieType {
     const startyear = firstdate.getFullYear();
     let maxdataarray: ReturnDataValue[] = [];
     let mindataarray: ReturnDataValue[] = [];
-    let dateindex = dailyminmaxtable.findIndex(item => item.day == firstdate.getDate() && item.monthno-1 == firstdate.getMonth());
+    let dateindex = dailyminmaxtable.findIndex(item => item.day == firstdate.getDate() && item.month == firstdate.getMonth());
     if (dateindex >= 0) {
         while (dateindex < dailyminmaxtable.length) {
             const minmax = dailyminmaxtable[dateindex];
-            const newitemmax = createReturnDataValue(new Date(startyear, minmax.monthno-1, minmax.day), 
+            const newitemmax = createReturnDataValue(new Date(startyear, minmax.month, minmax.day), 
                 minmax.evening.max.value>minmax.morning.max.value?minmax.evening.max.value:minmax.morning.max.value, 
                 minmax.evening.max.value>minmax.morning.max.date.getFullYear()?minmax.evening.max.value:minmax.morning.max.date.getFullYear(), 
                 serietooltipcallback);
             maxdataarray.push(newitemmax);
-            const newitemmin = createReturnDataValue(new Date(startyear, minmax.monthno-1, minmax.day), 
+            const newitemmin = createReturnDataValue(new Date(startyear, minmax.month, minmax.day), 
                 minmax.evening.min.value<minmax.morning.min.value?minmax.evening.min.value:minmax.morning.min.value, 
                 minmax.evening.min.value<minmax.morning.min.value?minmax.evening.min.date.getFullYear():minmax.morning.min.date.getFullYear(), 
                 serietooltipcallback);
@@ -942,7 +942,7 @@ export function CFcreateLastYearsSeriedata(): GraphSerieType {
     }
 
     let maxdata = dailyminmaxtable.map(minmax => {
-        return createReturnDataValue(new Date(startyear+1, minmax.monthno-1, minmax.day), 
+        return createReturnDataValue(new Date(startyear+1, minmax.month, minmax.day), 
             minmax.evening.max.value>minmax.morning.max.value?minmax.evening.max.value:minmax.morning.max.value, 
             minmax.evening.max.value>minmax.morning.max.date.getFullYear()?minmax.evening.max.value:minmax.morning.max.date.getFullYear(), 
             serietooltipcallback);
@@ -951,7 +951,7 @@ export function CFcreateLastYearsSeriedata(): GraphSerieType {
     const maxserie = createReturnDataType('Korkein', maxdataarray);
 
     const mindata = dailyminmaxtable.map(minmax => {
-        return createReturnDataValue(new Date(startyear+1, minmax.monthno-1, minmax.day), 
+        return createReturnDataValue(new Date(startyear+1, minmax.month, minmax.day), 
         minmax.evening.min.value<minmax.morning.min.value?minmax.evening.min.value:minmax.morning.min.value, 
         minmax.evening.min.value<minmax.morning.min.value?minmax.evening.min.date.getFullYear():minmax.morning.min.date.getFullYear(), 
         serietooltipcallback);
@@ -976,19 +976,19 @@ export function CFcreateDailyDiffdata(): GraphSerieType {
             getDateTxt(new Date(value.year, value.date.getMonth(), value.date.getDate()));
         return `${daytxt} ${roundNumber(value.value, 1)}°C`;
     } 
-    const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
-    const dailyminmaxtable = temperatureClass.getDailyMinMaxValues(yearlyarrangeddata);
+    const yearlyarrangeddata = getAllFilteredDataYearlyArranged();
+    const dailyminmaxtable = getDailyMinMaxValues(yearlyarrangeddata);
 
     const diffserie = createReturnDataType('Keskiarvo', dailyminmaxtable.map(reading => {
-            return createReturnDataValue(new Date(temperatureClass.defaultyear, reading.monthno, reading.day), 
+            return createReturnDataValue(new Date(temperatureClass.defaultyear, reading.month, reading.day), 
             reading.differencefiltered.average, NaN, serietooltipcallback);
         }));   
     const maxserie = createReturnDataType('Maksimi', dailyminmaxtable.map(reading => {
-            return createReturnDataValue(new Date(temperatureClass.defaultyear, reading.monthno, reading.day), 
+            return createReturnDataValue(new Date(temperatureClass.defaultyear, reading.month, reading.day), 
             reading.differencefiltered.max.value, reading.differencefiltered.max.date.getFullYear(), serietooltipcallback);
         }));         
     const minserie = createReturnDataType('Minimi', dailyminmaxtable.map(reading => {
-            return createReturnDataValue(new Date(temperatureClass.defaultyear, reading.monthno, reading.day), 
+            return createReturnDataValue(new Date(temperatureClass.defaultyear, reading.month, reading.day), 
             reading.differencefiltered.min.value, reading.differencefiltered.min.date.getFullYear(), serietooltipcallback);
         }));   
         let lastyear = '';
@@ -1017,6 +1017,7 @@ export function CFcreateDailyDiffdata(): GraphSerieType {
         };
         return seriedata;
 }
+
 export function CFcreateYearlyHighValuedata(): GraphSerieType {
     function serietooltipcallback(value: ReturnDataValue): string {
         let daytxt = isNaN(value.year) ? 
@@ -1025,8 +1026,8 @@ export function CFcreateYearlyHighValuedata(): GraphSerieType {
         return `${daytxt} ${roundNumber(value.value, 1)} kpl`;
     } 
 
-    const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
-    const dailyminmaxtable = temperatureClass.getDailyMinMaxValues(yearlyarrangeddata);
+    const yearlyarrangeddata = getAllFilteredDataYearlyArranged();
+    const dailyminmaxtable = getDailyMinMaxValues(yearlyarrangeddata);
 
     let values = yearlyarrangeddata.map(y => ({year: y.date.getFullYear(), high: 0, low: 0}));
     dailyminmaxtable.forEach(day => { 
@@ -1080,6 +1081,39 @@ export function CFcreateYearlyHighValuedata(): GraphSerieType {
         })), false, 0)
     })
     return createGraphSerieType(returnvalues, { showlegend: true })
+}
+
+// _______________________________________________________________________
+interface YearlyAveragesEstimates {
+    values: YearlyAverage[],
+    averages: TempDiffTable,
+}
+function createYearlyAveragesEstimates(values: YearlyAverage[], averages: TempDiffTable): YearlyAveragesEstimates {
+    return {values: values, averages: averages}
+}
+interface MonthlyAverage {
+    temperature: number;
+    difference: number;
+}
+function createMonthlyAverage(temperature: number, difference: number): MonthlyAverage {
+    return {temperature: temperature, difference: difference}
+}
+interface YearlyAverage {
+    year: number; 
+    yearaverage: number;
+    yearaveragediff: number;
+    months: MonthlyAverage[];
+    estimate: boolean;
+}
+interface TempDiffTable {
+    temp: number[];
+    diff: number[];
+}
+function createTempDiffTable(temp: number[], diff: number[]): TempDiffTable {
+    return {temp: temp, diff: diff}
+}
+function createYearlyAverage(year: number, yearaverage: number, yearaveragediff: number, months: MonthlyAverage[]): YearlyAverage {
+    return {year: year, yearaverage: yearaverage, yearaveragediff: yearaveragediff, months: months, estimate: false}
 }
 export function CFcalculateMonthlyAverages(): YearlyAveragesEstimates {
     const months = temperatureClass.yearlyMonthlyAverages.monthlydata;
@@ -1166,7 +1200,21 @@ export function CFcreateYearlyTrendSeriedata(): GraphSerieType {
 
 }
 // _______________________________________________________________________
-
+interface MonthDataPair {
+    month: number;
+    data: ValueDataValue[]
+}
+function createMonthDataPair(month: number, data: ValueDataValue[]): MonthDataPair {
+    return {month: month, data: data}
+}
+interface ValueDataValue {
+    value: number;
+    year: number;
+    month: number;
+}
+function createValueDataValue(value: number, year:  number, month: number): ValueDataValue {
+    return {value: value, year: year, month: month}
+}
 export function createTrendForGivenMonths(monthnumbers: number[], monthnames: string[]): GraphSerie[] {
     let datavalues: GraphSerie[] = [];
 
@@ -1214,6 +1262,7 @@ export function CFcreateMonthlySpringTrendSeriedata(): GraphSerieType {
     const returnvalues = createTrendForGivenMonths([3, 4, 5], ['Maaliskuu', 'Huhtikuu', 'Toukokuu'])
     return createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true })    
 }
+
 export function CFcreateAllYearsAverageSeriedata(): GraphSerieType {
     function serietooltipcallback(value: ReturnDataValue): string {
         let daytxt = isNaN(value.year) ? 
@@ -1223,7 +1272,7 @@ export function CFcreateAllYearsAverageSeriedata(): GraphSerieType {
     } 
 
     const days = temperatureClass.dailyValues.map(day => ({average: day.total.sum, max: day.total.max, min: day.total.min, maxday: day.total.max.date}));
-    const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
+    const yearlyarrangeddata = getAllFilteredDataYearlyArranged();
 
     const minserie = createReturnDataType(`Matalin`,days.map(day => {
         return createReturnDataValue(new Date(temperatureClass.defaultyear, day.min.date.getMonth(), day.min.date.getDate()),
@@ -1250,6 +1299,7 @@ export function CFcreateAllYearsAverageSeriedata(): GraphSerieType {
     })
     return createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true })    
 }
+
 export function CFcreateAllYearsMonthlyAverageSeriedata(): GraphSerieType {
     function serietooltipcallback(value: ReturnDataValue): string {
         let daytxt = isNaN(value.year) ? `${value.date.getDate()}.${value.date.getMonth()+1}` : `${value.date.getMonth()+1}/${value.year}`;

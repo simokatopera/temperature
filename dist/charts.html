@@ -110,20 +110,20 @@
                     <div id="daygraph"></div>
                 </div>
             </div>
-            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph10" :active=true></trendgraph>
-            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph4" :active=true></trendgraph>
-            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph12" :active=true></trendgraph>
-            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph2" :active=true></trendgraph>
-            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph" :active=true></trendgraph>
-            <trendgraph :titles="testgraphtitles":title="" :elemid="testgraph3" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph10" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph4" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph12" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph2" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles":title="''" :elemid="testgraph3" :active=true></trendgraph>
             <monthtable :title="'Kuukausittaiset lämpötilat'" :monthlydata="calculated.monthlyaverages.values" :monthaverages="calculated.monthlyaverages.averages.temp" :monthnames="monthnames" :datatype="'t'"></monthtable>
             <monthtable :title="'Kuukausittaiset lämpötilaerot'":monthlydata="calculated.monthlyaverages.values" :monthaverages="calculated.monthlyaverages.averages.diff" :monthnames="monthnames" :datatype="'d'"></monthtable>
-            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph11" :active=true></trendgraph>
-            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph5" :active=true></trendgraph>
-            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph6" :active=true></trendgraph>
-            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph7" :active=true></trendgraph>
-            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph8" :active=true></trendgraph>
-            <trendgraph :titles="testgraphtitles" :title="" :elemid="testgraph9" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph11" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph5" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph6" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph7" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph8" :active=true></trendgraph>
+            <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph9" :active=true></trendgraph>
         </div>
     </div>
     <script type="module">
@@ -185,8 +185,7 @@
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
                 this.checkData(temperatures);
 
-                CFinitTemperature();
-                CFcalculateTemperatures(temperatures);
+                CFinitTemperature(temperatures);
 
                 Galltemperaturereadings = CFgetAllReadings();
 
