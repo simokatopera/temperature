@@ -130,7 +130,7 @@
 
         import { createApp, ref } from 'vue'
 
-        let Galltemperaturereadings = { values: [], filtered: [], filtersize: 10 }
+        let Galltemperaturereadings = { values: [], filtered: [], filtersize: 7 }
         let Gcharts = [];
 
         function selectFirstDay() {
@@ -145,8 +145,7 @@
         const vueapp = createApp({
             data() {
                 return {
-                    //allreadingsfiltered: {values: [], filtersize: 0},
-                    readings: { values: [], filtered: [], filtersize: 10 },
+                    readings: { values: [], filtered: [], filtersize: 0 },
 
                     testgraph: 'GraphLocation',
                     testgraph2: 'GraphLocation2',
@@ -185,7 +184,7 @@
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
                 this.checkData(temperatures);
 
-                CFinitTemperature(temperatures);
+                CFinitTemperature(temperatures, Galltemperaturereadings.filtersize);
 
                 Galltemperaturereadings = CFgetAllReadings();
 
@@ -589,7 +588,7 @@
                             date: d.date,
                         }))
                     }
-                    const factors = calculateTrend([values]);
+                    const factors = CFcalculateTrend([values]);
                     let trend = data.values.map(d => ({
                         value: d.date.getFullYear() * factors.k + factors.b,
                         date: d.date,
