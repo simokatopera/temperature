@@ -5,7 +5,7 @@
 // 6-cleaning tooltipparameters
 // 7-trendcalculation cleaning
 // 8-pushed to git
-
+// 9-some code rewritten
 
 const TempMinDefaultValue = 99999;
 const TempMaxDefaultValue = -99999;
@@ -196,6 +196,7 @@ interface YearlyAverageData {
     yearlyaverage: number;
     yearlyaveragediff: number;
     months: MonthAverageData[]; // 12
+    estimate: boolean;
 }
 interface MonthAverageData {
     monthno: number;
@@ -204,6 +205,7 @@ interface MonthAverageData {
     monthlydifference: number;
     monthlydifferencecount: number;
     averages: AverageCalculated;
+    estimate: boolean;
 }
 
 function createAverageMinMaxCalculatedEmpty(): AverageMinMaxCalculated {
@@ -213,7 +215,7 @@ function createAverageMinMaxCalculated(value: number, high: number, highdate: Da
     return {value: value, high: high, highdate: highdate, low: low, lowdate: lowdate}
 }
 function createYearlyAverageData(year: number, location: string): YearlyAverageData {
-    return {year: year, location: location, yearlyaverage: NaN, yearlyaveragediff: NaN, months: []}
+    return {year: year, location: location, yearlyaverage: NaN, yearlyaveragediff: NaN, months: [], estimate: false}
 }
 function createFilterValueEmpty(date: Date): FilterValue {
     return {date: date, morning: createAverageMinMaxCalculatedEmpty(), evening: createAverageMinMaxCalculatedEmpty(), total: createAverageMinMaxCalculatedEmpty(), difference: createAverageMinMaxCalculatedEmpty()}
@@ -270,7 +272,7 @@ function createMonthAverageData(monthno: number, monthlytemperature: number, mon
         monthlytemperature: monthlytemperature, 
         monthlydifferencecount: monthlydifferencecount, 
         monthlydifference: monthlydifference,
-        averages: averages}
+        averages: averages, estimate: false}
 }
 // --------------------------------------------------------
 
@@ -333,26 +335,7 @@ class Temperatures {
         }
         return this.filteredValuesValid;
     }
-    private getMonthlyvaluesForYear(currentyear: DbTemperature): AverageCalculated[] {
-        let monthlycounters: AverageCalculated[] = createAverageCalculated12MonthsTable(currentyear.info.year);
-        currentyear.data.forEach(dailytemp => {
-            const month = dailytemp.datetimeLocal.getMonth();
-            const morningvalueexists = updateMinMaxTable(monthlycounters[month].morning, dailytemp.morning, dailytemp.datetimeLocal);
-            const eveningvalueexists = updateMinMaxTable(monthlycounters[month].evening, dailytemp.evening, dailytemp.datetimeLocal);
-            if (eveningvalueexists && morningvalueexists) {
-                const diff = (dailytemp.evening - dailytemp.morning);
-                const aver = (dailytemp.evening + dailytemp.morning)/2;
-                updateMinMaxTable(monthlycounters[month].difference, diff, dailytemp.datetimeLocal);
-                updateMinMaxTable(monthlycounters[month].total, aver, dailytemp.datetimeLocal);
-            }
-        })
-        monthlycounters.forEach(month =>{
-            month.morning.average = month.morning.count > 0 ? month.morning.sum / month.morning.count : NaN;
-            month.evening.average = month.evening.count > 0 ? month.evening.sum / month.evening.count : NaN;
-            month.difference.average = month.difference.count > 0 ? month.difference.sum / month.difference.count : NaN;
-        })
-        return monthlycounters;
-    }
+
     private updateYearCounters(yearcounters: AverageCalculated[], monthlycounters: AverageCalculated[]): MonthAverageData[] {
         const monthlyvalues = monthlycounters.map((counter, index) => {
             let averages: AverageCalculated = calculateAverage(counter);
@@ -362,62 +345,77 @@ class Temperatures {
                 updateMinMaxTable(yearcounters[index].difference, averages.difference.sum, new Date(counter.year, counter.monthno, 1));
                 updateMinMaxTable(yearcounters[index].total, averages.total.sum, new Date(counter.year, counter.monthno, 1));
             }
-            return createMonthAverageData(counter.monthno, NaN, 0, NaN, 0, averages);
+            const monthlytempereature = counter.total.average;
+            const monthlytempereaturecount = counter.total.count;
+            const monthlydifference = counter.difference.average;
+            const monthlydifferencecount = counter.difference.count;
+            return createMonthAverageData(counter.monthno, monthlytempereature, monthlytempereaturecount, monthlydifference, monthlydifferencecount, averages);
         });       
-        return monthlyvalues;
+        return monthlyvalues;   
     }
-    calculateYearlyAndMonthlyAverages(temperatures: TemperatureMsg): CalculationResult {
-        let yearcounters = createAverageCalculated12MonthsTable(0);
-        const yearlyvalues: YearlyAverageData[] = temperatures.data.map(currentyear => {
-            const averagedata = createYearlyAverageData(currentyear.info.year, currentyear.info.location);
-            const monthlycounters: AverageCalculated[] = this.getMonthlyvaluesForYear(currentyear);
-            averagedata.months = this.updateYearCounters(yearcounters, monthlycounters);
-            return averagedata;
-        })
-        // calculate monthly averages
-        let monthcounters = createAverageCalculated12MonthsTable(0);
-        // calculate monthly values
-        yearlyvalues.forEach(year => {
-            year.months.forEach(month => {
-                const morningok = updateMinMaxTable(monthcounters[month.monthno-1].morning, month.averages.morning.sum, new Date(year.year, month.monthno, 1));
-                const eveningok = updateMinMaxTable(monthcounters[month.monthno-1].evening, month.averages.evening.sum, new Date(year.year, month.monthno, 1));
-                if (morningok && eveningok) {
-                    updateMinMaxTable(monthcounters[month.monthno-1].difference, month.averages.difference.sum, new Date(year.year, month.monthno, 1));
-                    updateMinMaxTable(monthcounters[month.monthno-1].total, month.averages.total.sum, new Date(year.year, month.monthno, 1));
-                }
-            })
-        })
-        // add monthly values
-        const monthlyvalues: FilterValue[] = monthcounters.map(counter => {
-            return createFilterValue(new Date(this.defaultyear, counter.monthno-1, 1), 
-                createAverageMinMaxCalculated(counter.total.count > 0 ? counter.total.sum/counter.total.count:NaN, counter.total.max.value, counter.total.max.date, counter.total.min.value, counter.total.min.date),
-                createAverageMinMaxCalculated(counter.morning.count > 0 ? counter.morning.sum/counter.morning.count:NaN, counter.morning.max.value, counter.morning.max.date, counter.morning.min.value, counter.morning.min.date), 
-                createAverageMinMaxCalculated(counter.evening.count > 0 ? counter.evening.sum/counter.evening.count:NaN, counter.evening.max.value, counter.evening.max.date, counter.evening.min.value, counter.evening.min.date),
-                createAverageMinMaxCalculated(counter.difference.count > 0 ? counter.difference.sum/counter.difference.count:NaN, counter.difference.max.value, counter.difference.max.date, counter.difference.min.value, counter.difference.min.date)
-            );
+    private calculateMonthlyValuesForCurrentYear(currentyear: DbTemperature): AverageCalculated[] {
+        /*
+        currentyear: data:[366], info: 
+        daily data for surrent year
+        */
+        let monthlycounters: AverageCalculated[] = createAverageCalculated12MonthsTable(currentyear.info.year);
+        currentyear.data.forEach(dailytemp => {
+            const monthindex = dailytemp.datetimeLocal.getMonth();
+            const morningvalueexists = updateMinMaxTable(monthlycounters[monthindex].morning, dailytemp.morning, dailytemp.datetimeLocal);
+            const eveningvalueexists = updateMinMaxTable(monthlycounters[monthindex].evening, dailytemp.evening, dailytemp.datetimeLocal);
+            if (eveningvalueexists && morningvalueexists) {
+                const diff = (dailytemp.evening - dailytemp.morning);
+                const aver = (dailytemp.evening + dailytemp.morning)/2;
+                updateMinMaxTable(monthlycounters[monthindex].difference, diff, dailytemp.datetimeLocal);
+                updateMinMaxTable(monthlycounters[monthindex].total, aver, dailytemp.datetimeLocal);
+            }
+            monthlycounters[monthindex].averagevalue = monthlycounters[monthindex].total.average;
         })
 
-        // calculate and add yearly averages
-        yearlyvalues.forEach(year => {
+        return monthlycounters;
+    }    
+    calculateYearlyAndMonthlyAverages(temperatures: TemperatureMsg): CalculationResult {
+        let yearcounters: AverageCalculated[] = createAverageCalculated12MonthsTable(this.defaultyear);
+        let allyearsandmonthsstatistics = [];
+        const yearlystatistics: YearlyAverageData[] = temperatures.data.map(year => {
+            const averagedata = createYearlyAverageData(year.info.year, year.info.location);
+            const allmonthsstatistics = this.calculateMonthlyValuesForCurrentYear(year);
+            allyearsandmonthsstatistics[year.info.year] = {year: year.info.year, data: allmonthsstatistics};
+            averagedata.months = this.updateYearCounters(yearcounters, allmonthsstatistics);
+            averagedata.yearlyaverage = 0;
             let sum = 0;
             let count = 0;
-            let diffsum = 0;
-            let diffcount = 0;
-            year.months.forEach(month => {
-                if (!isNaN(month.averages.averagevalue)) {
-                    sum += month.averages.averagevalue;
+            let dsum = 0;
+            let dcount = 0;
+            let estimates = false;
+            averagedata.months.forEach(month => {
+                if (month.monthlytemperaturecount > 25) {
                     count++;
+                    sum += month.monthlytemperature;
                 }
-                if (!isNaN(month.averages.difference.sum)) {
-                    diffsum += month.averages.difference.sum;
-                    diffcount++;
-                }                
+                else {
+                    month.estimate = true;
+                    estimates = true;
+                }
+                dcount++;
+                dsum += month.monthlydifference;
             })
-            year.yearlyaverage = count == 12 ? sum/count : NaN;     
-            year.yearlyaveragediff = diffcount == 12 ? diffsum/diffcount : NaN;     
+            averagedata.yearlyaverage = estimates ? NaN : sum/count;
+            averagedata.yearlyaveragediff = estimates ? NaN : dsum/dcount;
+            return averagedata;
         })
 
-        this.yearlyMonthlyAverages = createAverageYearsMonths(yearlyvalues, monthlyvalues);
+        // calculate monthly statistics
+        let mstatistics: FilterValue[] = yearcounters.map((monthcounter, monthindex) => {
+            return createFilterValue(
+                new Date(this.defaultyear, monthindex, 1), 
+                createAverageMinMaxCalculated(monthcounter.total.count > 0 ? monthcounter.total.sum/monthcounter.total.count:NaN, monthcounter.total.max.value, monthcounter.total.max.date, monthcounter.total.min.value, monthcounter.total.min.date),
+                createAverageMinMaxCalculated(monthcounter.morning.count > 0 ? monthcounter.morning.sum/monthcounter.morning.count:NaN, monthcounter.morning.max.value, monthcounter.morning.max.date, monthcounter.morning.min.value, monthcounter.morning.min.date), 
+                createAverageMinMaxCalculated(monthcounter.evening.count > 0 ? monthcounter.evening.sum/monthcounter.evening.count:NaN, monthcounter.evening.max.value, monthcounter.evening.max.date, monthcounter.evening.min.value, monthcounter.evening.min.date),
+                createAverageMinMaxCalculated(monthcounter.difference.count > 0 ? monthcounter.difference.sum/monthcounter.difference.count:NaN, monthcounter.difference.max.value, monthcounter.difference.max.date, monthcounter.difference.min.value, monthcounter.difference.min.date)
+            )})
+
+        this.yearlyMonthlyAverages = createAverageYearsMonths(yearlystatistics, mstatistics);
 
         return {status: 0, message: null, data: this.yearlyMonthlyAverages};
     }
