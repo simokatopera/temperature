@@ -180,7 +180,7 @@
             },
             async mounted() {
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
-                //years.data = [2023,2024]
+                //years.data = [2005,2006]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
                 this.checkData(temperatures);
 
@@ -667,8 +667,8 @@
                                 }
                             })
                             chartdata.forEach(d => {
-                                let found = params.series.find(p => p.name === d.name);
-                                if (found) {
+                                let found = params.series.filter(p => p.name === d.name);
+                                if (found && found.length) {
                                     d.symbolsize = 1;
                                     if (found.color) d.lineStyle = { color: found.color }
 
@@ -680,8 +680,16 @@
                                         }
                                     }
                                     else {
-                                        if (found.symbol) d.symbol = found.symbol;
-                                        if (found.symbolsize) d.symbolSize = found.symbolsize;
+                                        let i = 0;
+                                        while (i < found.length) {
+                                            if (d.data[found[i].symbolindex]) {
+                                                if (found[i].symbol) d.data[found[i].symbolindex].symbol = found[i].symbol;
+                                            }
+                                            if (d.data[found[i].symbolindex]) {
+                                                if (found[i].symbolsize) d.data[found[i].symbolindex].symbolSize = found[i].symbolsize;
+                                            }
+                                            i++;
+                                        }
                                     }
                                     // d.markPoint = {symbolSize: 0, opacity: 0};
                                 }
