@@ -228,42 +228,23 @@ function createAverageYearsMonths(yearlydata: YearlyAverageData[], monthlydata: 
     return {yearlydata: yearlydata, monthlydata: monthlydata}
 }
 function calculateAverage(counter: AverageCalculated): AverageCalculated {
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    //const morningvalue = counter.morning.count > 0 ? counter.morning.sum/counter.morning.count : NaN;
     const morningmin = createReadingDate(counter.morning.min.value, counter.morning.min.date);
     const morningmax = createReadingDate(counter.morning.max.value, counter.morning.max.date);
     const morning = createOneDayValues(counter.morning.count, counter.morning.sum, morningmin, morningmax);
 
-    //const eveningvalue = counter.evening.count > 0 ? counter.evening.sum/counter.evening.count : NaN;
     const eveningmin = createReadingDate(counter.evening.min.value, counter.evening.min.date);
     const eveningmax = createReadingDate(counter.evening.max.value, counter.evening.max.date);
     const evening = createOneDayValues(counter.evening.count, counter.evening.sum, eveningmin, eveningmax);
 
-    //const differencevalue = counter.difference.count > 0 ? counter.difference.sum/counter.difference.count : NaN;
     const differencemin = createReadingDate(counter.difference.min.value, counter.difference.min.date);
     const differencemax = createReadingDate(counter.difference.max.value, counter.difference.max.date);
     const difference = createOneDayValues(counter.difference.count, counter.difference.sum, differencemin, differencemax);
 
-    //const totalvalue = counter.total.count > 0 ? counter.total.sum/counter.total.count : NaN;
     const totalmin = createReadingDate(counter.total.min.value, counter.total.min.date);
     const totalmax = createReadingDate(counter.total.max.value, counter.total.max.date);
     const total = createOneDayValues(counter.total.count, counter.total.sum, totalmin, totalmax);
 
-   // let average = counter.morning.count==0 || counter.evening.count==0 ? NaN : (counter.morning.sum/counter.morning.count + counter.evening.sum/counter.evening.count)/2;
-
     let newitem = createAverageCalculated(counter.date, counter.year, counter.total.average, morning, evening, difference, total);
-    // newitem.morning.max.value = counter.morning.max.value;
-    // newitem.morning.max.date = counter.morning.max.date;
-    // newitem.morning.min.value = counter.morning.min.value;
-    // newitem.morning.min.date = counter.morning.min.date;
-    // newitem.evening.max.value = counter.evening.max.value;
-    // newitem.evening.max.date = counter.evening.max.date;
-    // newitem.evening.min.value = counter.evening.min.value;
-    // newitem.evening.min.date = counter.evening.min.date;
-    // newitem.difference.max.value = counter.difference.max.value;
-    // newitem.difference.max.date = counter.difference.max.date;
-    // newitem.difference.min.value = counter.difference.min.value;
-    // newitem.difference.min.date = counter.difference.min.date;
 
     return newitem;
 }
@@ -375,6 +356,37 @@ class Temperatures {
 
         return monthlycounters;
     }    
+    private getEstimateForMonth(year, monthindex, monthlyreadings) {
+        // calculate estimation for month
+        let dailyindex = 0;
+        let estimationcount = 0;
+        let estimationsum = 0;
+        let countday = new Date(year, monthindex, 1);
+        while (countday.getMonth() == monthindex) {
+            let curdate = countday.getDate();
+            if (dailyindex >= monthlyreadings.length || curdate < monthlyreadings[dailyindex].date.getDate()) {
+                // get average temperature for curdate
+                let datefound = this.dailyValues.find(d => d.date.getMonth() == monthindex && d.date.getDate() == curdate);
+                if (datefound) {
+                    estimationcount++;
+                    estimationsum += datefound.averagevalue;
+                }
+                else {
+                    console.log(`Estimate calculation for day: ${curdate} failed`)
+                }
+            }
+            else {
+                estimationcount++;
+                estimationsum += monthlyreadings[dailyindex].average;
+            }
+            countday = new Date(year, monthindex, curdate + 1);
+    
+            while (dailyindex < monthlyreadings.length && curdate >= monthlyreadings[dailyindex].date.getDate()) {
+                dailyindex++;
+            }
+        }
+        return estimationsum / estimationcount;
+    }
     calculateYearlyAndMonthlyAverages(temperatures: TemperatureMsg): CalculationResult {
         let yearcounters: AverageCalculated[] = createAverageCalculated12MonthsTable(this.defaultyear);
         let allyearsandmonthsstatistics = [];
@@ -406,9 +418,7 @@ class Temperatures {
             averagedata.yearlyaveragediff = estimates ? NaN : dsum/dcount;
             return averagedata;
         })
-
-        // !!!!!!!!!!!!!!!!!!!!
-        // calculate monthly statistics
+        // format monthly statistics
         const monthlystatistics: FilterValue[] = yearcounters.map((monthcounter, monthindex) => {
             return createFilterValue(
                 new Date(this.defaultyear, monthindex, 1), 
@@ -418,6 +428,21 @@ class Temperatures {
                 createAverageMinMaxCalculated(monthcounter.difference.count > 0 ? monthcounter.difference.sum/monthcounter.difference.count:NaN, monthcounter.difference.max.value, monthcounter.difference.max.date, monthcounter.difference.min.value, monthcounter.difference.min.date)
             )})
 
+        // update estimate values for months
+        yearlystatistics.forEach((year) => {
+            const allyyearreadings = temperatureClass.getAllFilteredDataYearlyArranged();
+            const thisyearreadings = allyyearreadings[year.year];
+            if (year.estimate) {
+                year.months.forEach((month, monthindex) => {
+                    if (month.estimate) {
+                        month.averages.averagevalue = this.getEstimateForMonth(year.year, monthindex, thisyearreadings.values.filter(reading => reading.date.getMonth() == monthindex));
+                    }
+                })
+            }
+            let yearsum = year.months.reduce((a, b) => a + b.averages.averagevalue, 0);
+            year.yearlyaverage = yearsum/12;
+        })
+        
         this.yearlyMonthlyAverages = createAverageYearsMonths(yearlystatistics, monthlystatistics);
 
         return {status: 0, message: null, data: this.yearlyMonthlyAverages};
@@ -542,9 +567,9 @@ class Temperatures {
         return { status: 0, message: null, data: dailyvalues };
     }
     calculateTemperatures(temperaturevalues: TemperatureMsg) {
-        const status1 = temperatureClass.calculateYearlyAndMonthlyAverages(temperaturevalues); // this.YearlyAverages
         const status3 = temperatureClass.calculateFilteredValues(temperaturevalues); // this.filteredValues
         const status2 = temperatureClass.calculateDailyAverages(temperaturevalues);  // this.dailyValues
+        const status1 = temperatureClass.calculateYearlyAndMonthlyAverages(temperaturevalues); // this.YearlyAverages
     }    
     getFilteredDataYearlyArranged(): NameValues[] {
         let data = this.getValidFilteredValues()
@@ -665,10 +690,11 @@ function createTempDiffTable(temp: number[], diff: number[]): TempDiffTable {
 }
 interface MonthDataPair {
     month: number;
-    data: ValueDataValue[]
+    data: ValueDataValue[];
+    estimate: boolean;
 }
-function createMonthDataPair(month: number, data: ValueDataValue[]): MonthDataPair {
-    return {month: month, data: data}
+function createMonthDataPair(month: number, data: ValueDataValue[], estimate: boolean): MonthDataPair {
+    return {month: month, data: data, estimate: estimate}
 }
 interface ValueDataValue {
     value: number;
@@ -914,8 +940,6 @@ export function CFcreateYearlyHighValuedata(): GraphSerieType {
     });
 
     let lastyearestimate: boolean = false;
-    let highestimate = NaN;
-    let lowestimage = NaN;
     const years = temperatureClass.yearlyMonthlyAverages.yearlydata;
     if (years[years.length-1].estimate) {
         lastyearestimate = true;
@@ -972,26 +996,39 @@ export function CFcreateYearlyHighValuedata(): GraphSerieType {
             tooltip: createTooltip(value),
         })), false, 0)
     })
-    let estimateitems = [];
-    allseries.forEach(serie => {
-        if (serie.values && serie.values.length) {
-            serie.values.map((value, index) => {
-                if (value.estimate) {
-                    estimateitems.push({
-                        name: serie.name,
-                        symbol: 'arrow',
-                        symbolsize: 14, 
-                        symbolindex: index,
-                    })
-                }
-            })
-        }
-    });
+    let estimateitems = addEstimatesToParameters(allseries);
 
     const params = {showlegend: true, series: estimateitems};
 
     return createGraphSerieType(returnvalues, params)
 }
+function addEstimatesToParameters(series: ReturnDataType[]) {
+    let estimateitems = [];
+    let currentyear = new Date().getFullYear();
+    let currentmonth = new Date().getMonth();
+    series.forEach(serie => {
+        if (serie.values && serie.values.length) {
+            serie.values.map((value, index) => {
+                if (value.estimate) {
+                    if (value.year < currentyear || (value.year == currentyear && value.date.getMonth() <= currentmonth)) {
+                        estimateitems.push({
+                            name: serie.name,
+                            symbol: 'arrow',
+                            symbolsize: 14, 
+                            symbolindex: index,
+                        })
+                    }
+                    else {
+                        value.value = NaN;
+                    }
+                }
+            })
+        }
+    });
+
+    return estimateitems;
+}
+
 export function CFcalculateMonthlyAverages(): YearlyAveragesEstimates {
     const months = temperatureClass.yearlyMonthlyAverages.monthlydata;
     const years = temperatureClass.yearlyMonthlyAverages.yearlydata;
@@ -1014,16 +1051,15 @@ export function CFcreateYearlyTrendSeriedata(): GraphSerieType {
     const yeartemperatureserie = createReturnDataType('Lämpötila', years.map(value => {
         return createReturnDataValue(new Date(value.year, 0, 1), 
             value.yearlyaverage, value.year, 
-            false, // estimate
+            value.estimate, // estimate
             serietooltipcallback);
     }));   
     const yeardiffserie = createReturnDataType('Illan ja aamun ero', years.map(value => {
         return createReturnDataValue(new Date(value.year, 0, 1), 
             value.yearlyaveragediff, value.year, 
-            false, // estimate
+            value.estimate, // estimate
             serietooltipcallback);
     }));   
-
     // --------------------------
     // calculate temperature trend
     let trenddata = createTrendCalcTable(yeartemperatureserie.values.map(v => (createTrendCalcData(v.year, v.value))));
@@ -1032,6 +1068,7 @@ export function CFcreateYearlyTrendSeriedata(): GraphSerieType {
     if (!(isNaN(trend.k) || isNaN(trend.b))) {
         values = yeartemperatureserie.values.map(val => ({
             year: val.year,
+            estimate: val.estimate,
             value: val.year * trend.k + trend.b,
         }))
     }
@@ -1060,8 +1097,11 @@ export function CFcreateYearlyTrendSeriedata(): GraphSerieType {
     }));   
     // --------------------------
 
-    const allseries = [yeartemperatureserie, trendserie, yeardiffserie, difftrendserie];
+    const allseries = [yeartemperatureserie, yeardiffserie];
 
+    let estimateseries = addEstimatesToParameters(allseries);
+    allseries.push(trendserie);
+    allseries.push(difftrendserie);
     const returnvalues: GraphSerie[] = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
             value: createGraphItem(value.date, value.value), 
@@ -1069,24 +1109,16 @@ export function CFcreateYearlyTrendSeriedata(): GraphSerieType {
         })), false, 0)
     })
 
-// !!!!!!!!!!!!!!!!!!!!!
-// estimate for years
-
-    let params = { rangeoffset: 1, showlegend: true };
-    // if (!isNaN(lastyearestimate)) {
-    //     params.series = [{ name: data[0].name, symbol: 'arrow', symbolsize: 14, symbolindex: 'last' }];
-    // }
+    let params = { rangeoffset: 1, showlegend: true, series: estimateseries };
     return createGraphSerieType(returnvalues, params)
 
 }
 export function createTrendForGivenMonths(monthnumbers: number[], monthnames: string[]): GraphSerie[] {
     let datavalues: GraphSerie[] = [];
-
     const years = temperatureClass.yearlyMonthlyAverages.yearlydata;
     const monthlydata = monthnumbers.map(m => {
-        return createMonthDataPair(m-1, years.map(y => {
-            return createValueDataValue(y.months[m-1].averages.averagevalue, y.year, m-1)
-        }))
+        const data =  years.map(y => {return createValueDataValue(y.months[m-1].averages.averagevalue, y.year, m-1) });
+        return createMonthDataPair(m-1, data, years[m - 1].estimate);
     });
     // create series
     monthlydata.forEach(month => {
@@ -1094,7 +1126,7 @@ export function createTrendForGivenMonths(monthnumbers: number[], monthnames: st
         if (found >= 0) {
             let values = month.data.map(value => ({
                 value: createGraphItem(new Date(value.year, 0, 1), value.value), 
-                tooltip: `${value.year} ${monthnames[found]} ${roundNumber(value.value, 1)}`
+                tooltip: `${value.year} ${monthnames[found]} ${roundNumber(value.value, 1)}`,
             }));
             datavalues.push( createGraphSerie( monthnames[datavalues.length], 'location', 0, values, false, monthnumbers[found]));
         }
@@ -1106,6 +1138,17 @@ export function createTrendForGivenMonths(monthnumbers: number[], monthnames: st
             return createTrendCalcData(data.year, data.value);
             }))
     })
+    // ----------------
+    // add estimates
+    //debugger
+    monthlydata.forEach(data => {
+        if (data.estimate) {
+            data.data.forEach(d => {
+                
+            })
+        }
+    })
+    // ----------------
     let trend = CFcalculateTrend(calctable);
     let newvalues = years.map((ser, serieindex) => ({ 
         value: createGraphItem(new Date(ser.year, 0, 1), isNaN(trend.k) ? NaN : ser.year * trend.k + trend.b), 
@@ -1114,14 +1157,12 @@ export function createTrendForGivenMonths(monthnumbers: number[], monthnames: st
     if (isNaN(trend.k)) datavalues.push( createGraphSerie( `Trendi --- °C/10v`, 'location', 0, newvalues, true, -1));
     else datavalues.push( createGraphSerie( `Trendi ${trend.k > 0 ? '+' : ''}${roundNumber(trend.k * 10, 1)}°C/10v`, 'location', 0, newvalues, true, -1));
 
-// !!!!!!!!!!!!!!!!!!!!!!
-// estimate for months
-
     return datavalues;
 }
 export function CFcreateMonthlySummerTrendSeriedata(): GraphSerieType {
     const returnvalues = createTrendForGivenMonths([6, 7, 8], ['Kesäkuu', 'Heinäkuu', 'Elokuu'])
-    return createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true })    
+    let data = createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true })    
+    return data;
 }
 export function CFcreateMonthlyWinterTrendSeriedata(): GraphSerieType {
     const returnvalues = createTrendForGivenMonths([1, 2, 12], ['Tammikuu', 'Helmikuu', 'Joulukuu'])
@@ -1184,8 +1225,6 @@ export function CFcreateAllYearsMonthlyAverageSeriedata(): GraphSerieType {
     } 
     const monthstatistics = temperatureClass.yearlyMonthlyAverages.monthlydata;
     const yearsstatistics = temperatureClass.yearlyMonthlyAverages.yearlydata;
-    const readings = temperatureClass.allFilteredDataYearlyArranged;
-
     const maxserie = createReturnDataType(`Korkein`,monthstatistics.map(month => {
         return createReturnDataValue(new Date(temperatureClass.defaultyear, month.date.getMonth(), month.date.getDate()),
         month.total.high, month.total.highdate.getFullYear(), 
@@ -1212,44 +1251,10 @@ export function CFcreateAllYearsMonthlyAverageSeriedata(): GraphSerieType {
                 month.estimate, // estimate
                 serietooltipcallback) 
         }));      
-        if (year.estimate && estimatedmonthindexes.length) {
-            const thisyearreadings = readings[year.year];
-            // update estimate values for months
-            let yearsum = 0;
-            let yearcount = 0;
-            allmonths.values.forEach((month, monthindex) => {
-                if (month.estimate) {
-                    month.value = getEstimateForMonth(year.year, monthindex, thisyearreadings.values.filter(reading => reading.date.getMonth() == monthindex));
-                }
-                yearsum += month.value;
-                yearcount++;
-            })
-            year.yearlyaverage = yearsum/yearcount;
-        }       
+      
         return allmonths;
     });       
-    let estimateitems = [];
-    let currentyear = new Date().getFullYear();
-    let currentmonth = new Date().getMonth();
-    allyears.forEach(serie => {
-        if (serie.values && serie.values.length) {
-            serie.values.map((value, index) => {
-                if (value.estimate) {
-                    if (value.year < currentyear || (value.year == currentyear && value.date.getMonth() <= currentmonth)) {
-                        estimateitems.push({
-                            name: serie.name,
-                            symbol: 'arrow',
-                            symbolsize: 14, 
-                            symbolindex: index,
-                        })
-                    }
-                    else {
-                        value.value = NaN;
-                    }
-                }
-            })
-        }
-    });
+    let estimateparams = addEstimatesToParameters(allyears);
     const allseries: ReturnDataType[] = [minserie, maxserie];
     for (let i = 0; i < allyears.length; i++) allseries.push(allyears[i]);
 
@@ -1260,41 +1265,8 @@ export function CFcreateAllYearsMonthlyAverageSeriedata(): GraphSerieType {
         })), false, 0)
     })
 
-    return createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true, series: estimateitems, selection: [`Vuosi ${lastyear}`, 'Korkein', 'Matalin'] })    
+    return createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true, series: estimateparams, selection: [`Vuosi ${lastyear}`, 'Korkein', 'Matalin'] })    
 }    
-
-function getEstimateForMonth(year, monthindex, monthlyreadings) {
-    // calculate estimation for month
-    let dailyindex = 0;
-    let estimationcount = 0;
-    let estimationsum = 0;
-    let countday = new Date(year, monthindex, 1);
-    while (countday.getMonth() == monthindex) {
-        let curdate = countday.getDate();
-        if (dailyindex >= monthlyreadings.length || curdate < monthlyreadings[dailyindex].date.getDate()) {
-            // get average temperature for curdate
-            let datefound = temperatureClass.dailyValues.find(d => d.date.getMonth() == monthindex && d.date.getDate() == curdate);
-            if (datefound) {
-                estimationcount++;
-                estimationsum += datefound.averagevalue;
-            }
-            else {
-                console.log(`Estimate calculation for day: ${curdate} failed`)
-            }
-        }
-        else {
-            estimationcount++;
-            estimationsum += monthlyreadings[dailyindex].average;
-        }
-        countday = new Date(year, monthindex, curdate + 1);
-
-        while (dailyindex < monthlyreadings.length && curdate >= monthlyreadings[dailyindex].date.getDate()) {
-            dailyindex++;
-        }
-    }
-    return estimationsum / estimationcount;
-}
-
 interface TrendCalcTable {
     data: TrendCalcData[]
 }
