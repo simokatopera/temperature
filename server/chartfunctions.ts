@@ -215,8 +215,8 @@ function createAverageMinMaxCalculatedEmpty(): AverageMinMaxCalculated {
 function createAverageMinMaxCalculated(value: number, high: number, highdate: Date, low: number, lowdate: Date): AverageMinMaxCalculated {
     return {value: value, high: high, highdate: highdate, low: low, lowdate: lowdate}
 }
-function createYearlyAverageData(year: number, location: string): YearlyAverageData {
-    return {year: year, location: location, yearlyaverage: NaN, yearlyaveragediff: NaN, months: [], estimate: false}
+function createYearlyAverageData(year: number, location: string, estimate: boolean = false): YearlyAverageData {
+    return {year: year, location: location, yearlyaverage: NaN, yearlyaveragediff: NaN, months: [], estimate: estimate}
 }
 function createFilterValueEmpty(date: Date): FilterValue {
     return {date: date, morning: createAverageMinMaxCalculatedEmpty(), evening: createAverageMinMaxCalculatedEmpty(), total: createAverageMinMaxCalculatedEmpty(), difference: createAverageMinMaxCalculatedEmpty()}
@@ -277,11 +277,11 @@ function createGraphSerie(name: string, location: string, year: number, values: 
     return {name: name, location: location, year: year, values: values, trend: trend, index: index}
 }
 interface GraphItem {
-    value: [Date, number];
-    tooltip: string
+    value: [Date, number,boolean];
+    tooltip: string;
 }  
-function createGraphItem(d: Date, v: number): [Date, number] {
-    return [d, v];
+function createGraphItem(d: Date, v: number, e: boolean): [Date, number, boolean] {
+    return [d, v, e];
 }
 
 // --------------------------------------------------------
@@ -356,10 +356,11 @@ class Temperatures {
 
         return monthlycounters;
     }    
-    private getEstimateForMonth(year, monthindex, monthlyreadings) {
+    private getEstimateForMonth(year: number, monthindex: number, monthlyreadings: Filtered[]) {
         // calculate estimation for month
         let dailyindex = 0;
         let estimationcount = 0;
+        let estimationdiffsum = 0;
         let estimationsum = 0;
         let countday = new Date(year, monthindex, 1);
         while (countday.getMonth() == monthindex) {
@@ -370,6 +371,7 @@ class Temperatures {
                 if (datefound) {
                     estimationcount++;
                     estimationsum += datefound.averagevalue;
+                    estimationdiffsum += datefound.difference.average;
                 }
                 else {
                     console.log(`Estimate calculation for day: ${curdate} failed`)
@@ -378,6 +380,7 @@ class Temperatures {
             else {
                 estimationcount++;
                 estimationsum += monthlyreadings[dailyindex].average;
+                estimationdiffsum += monthlyreadings[dailyindex].difference;
             }
             countday = new Date(year, monthindex, curdate + 1);
     
@@ -385,9 +388,9 @@ class Temperatures {
                 dailyindex++;
             }
         }
-        return estimationsum / estimationcount;
+        return {temperature: estimationsum / estimationcount, difference: estimationdiffsum / estimationcount };
     }
-    calculateYearlyAndMonthlyAverages(temperatures: TemperatureMsg): CalculationResult {
+    calculateYearlyAndMonthlyAveragesWithEstimates(temperatures: TemperatureMsg): CalculationResult {
         let yearcounters: AverageCalculated[] = createAverageCalculated12MonthsTable(this.defaultyear);
         let allyearsandmonthsstatistics = [];
         const yearlystatistics: YearlyAverageData[] = temperatures.data.map(year => {
@@ -435,12 +438,16 @@ class Temperatures {
             if (year.estimate) {
                 year.months.forEach((month, monthindex) => {
                     if (month.estimate) {
-                        month.averages.averagevalue = this.getEstimateForMonth(year.year, monthindex, thisyearreadings.values.filter(reading => reading.date.getMonth() == monthindex));
+                        let x = this.getEstimateForMonth(year.year, monthindex, thisyearreadings.values.filter(reading => reading.date.getMonth() == monthindex));
+                        month.monthlytemperature = x.temperature;
+                        month.monthlydifference = x.difference;
                     }
                 })
             }
-            let yearsum = year.months.reduce((a, b) => a + b.averages.averagevalue, 0);
+            let yearsum = year.months.reduce((a, b) => a + b.monthlytemperature, 0);
             year.yearlyaverage = yearsum/12;
+            let diffsum = year.months.reduce((a, b) => a + b.monthlydifference, 0);
+            year.yearlyaveragediff = diffsum/12;
         })
         
         this.yearlyMonthlyAverages = createAverageYearsMonths(yearlystatistics, monthlystatistics);
@@ -569,7 +576,7 @@ class Temperatures {
     calculateTemperatures(temperaturevalues: TemperatureMsg) {
         const status3 = temperatureClass.calculateFilteredValues(temperaturevalues); // this.filteredValues
         const status2 = temperatureClass.calculateDailyAverages(temperaturevalues);  // this.dailyValues
-        const status1 = temperatureClass.calculateYearlyAndMonthlyAverages(temperaturevalues); // this.YearlyAverages
+        const status1 = temperatureClass.calculateYearlyAndMonthlyAveragesWithEstimates(temperaturevalues); // this.YearlyAverages
     }    
     getFilteredDataYearlyArranged(): NameValues[] {
         let data = this.getValidFilteredValues()
@@ -640,6 +647,7 @@ interface ReturnDataValue {
     tooltipformat: any;
     estimate: boolean;
 }
+
 function createReturnDataValue(date: Date, value: number, year: number, estimate: boolean, tooltipfunction: any = null, tooltipformat: any = null): ReturnDataValue {
     return {date: date, value: value, year: year, estimate: estimate, tooltipfunction: tooltipfunction, tooltipformat: tooltipformat}
 }
@@ -657,11 +665,11 @@ function createNameValues(name: string,date: Date, values: Filtered[]): NameValu
 }
 // _______________________________________________________________________
 interface YearlyAveragesEstimates {
-    values: YearlyAverage[],
-    averages: TempDiffTable,
+    yearlyvalues: YearlyAverage[],
+    monthlyaverages: TempDiffTable,
 }
-function createMonthlyAveragesEstimates(values: YearlyAverage[], averages: TempDiffTable): YearlyAveragesEstimates {
-    return {values: values, averages: averages}
+function createYearlyAveragesEstimates(yearlyvalues: YearlyAverage[], monthlyaverages: TempDiffTable): YearlyAveragesEstimates {
+    return {yearlyvalues: yearlyvalues, monthlyaverages: monthlyaverages}
 }
 interface MonthlyAverage {
     temperature: number;
@@ -678,31 +686,32 @@ interface YearlyAverage {
     months: MonthlyAverage[];
     estimate: boolean;
 }
-function createYearlyAverage(year: number, yearaverage: number, yearaveragediff: number, months: MonthlyAverage[]): YearlyAverage {
-    return {year: year, yearaverage: yearaverage, yearaveragediff: yearaveragediff, months: months, estimate: false}
+function createYearlyAverage(year: number, yearaverage: number, yearaveragediff: number, months: MonthlyAverage[], estimate: boolean = false): YearlyAverage {
+    return {year: year, yearaverage: yearaverage, yearaveragediff: yearaveragediff, months: months, estimate: estimate}
 }
 interface TempDiffTable {
-    temp: number[];
+    temperature: number[];
     diff: number[];
 }
 function createTempDiffTable(temp: number[], diff: number[]): TempDiffTable {
-    return {temp: temp, diff: diff}
+    return {temperature: temp, diff: diff}
 }
 interface MonthDataPair {
     month: number;
     data: ValueDataValue[];
     estimate: boolean;
 }
-function createMonthDataPair(month: number, data: ValueDataValue[], estimate: boolean): MonthDataPair {
+function createMonthDataPair(month: number, data: ValueDataValue[], estimate: boolean = false): MonthDataPair {
     return {month: month, data: data, estimate: estimate}
 }
 interface ValueDataValue {
     value: number;
     year: number;
     month: number;
+    estimate: boolean;
 }
-function createValueDataValue(value: number, year:  number, month: number): ValueDataValue {
-    return {value: value, year: year, month: month}
+function createValueDataValue(value: number, year:  number, month: number, estimate: boolean = false): ValueDataValue {
+    return {value: value, year: year, month: month, estimate: estimate}
 }
 //-------------------------------------------------------------------------------------------
 // Local functions
@@ -735,10 +744,12 @@ export function CFcreateAllYearsFilteredSeriedata(): GraphSerieType {
     const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
 
     let returnvalues: GraphSerie[] = yearlyarrangeddata.map(yeardata => {
-        return createGraphSerie(yeardata.name, '',0, yeardata.values.map(value => ({
-            value: createGraphItem(value.date, value.average), 
+        const item = yeardata.values.map(value => ({
+            value: createGraphItem(value.date, value.average, false), 
             tooltip: `${getDateTxt(value.date)} ${roundNumber(value.average, 1)}°C`,
-        })), false, 0)
+            estimate: false,   
+        }))
+        return createGraphSerie(yeardata.name, '',0, item, false, 0)
     })
 
     return createGraphSerieType(returnvalues, { series: [{ name: '', markersize: 1 }] });
@@ -780,7 +791,7 @@ export function CFcreateYearlyFilteredSeriedata(): GraphSerieType {
 
     const returnvalues: GraphSerie[] = yearlydata.map(dd => {
         return createGraphSerie(dd.name, '',0, dd.values.map(value => ({
-                value: createGraphItem(value.date, value.value), 
+                value: createGraphItem(value.date, value.value, false), 
                 tooltip: createTooltip(value)
         })), false, 0)
     })
@@ -856,7 +867,7 @@ export function CFcreateLastYearsSeriedata(): GraphSerieType {
     const allseries = [morningserie, eveningserie, maxserie, minserie];
     const returnvalues: GraphSerie[] = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-                value: createGraphItem(value.date, value.value), 
+                value: createGraphItem(value.date, value.value, false), 
                 tooltip: createTooltip(value),
         })), false, 0)
     })
@@ -907,7 +918,7 @@ export function CFcreateDailyDiffdata(): GraphSerieType {
     
         const returnvalues: GraphSerie[] = allseries.map(serie => {
             return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-                    value: createGraphItem(value.date, value.value), 
+                    value: createGraphItem(value.date, value.value, false), 
                     tooltip: createTooltip(value),
             })), false, 0)
         })
@@ -992,7 +1003,7 @@ export function CFcreateYearlyHighValuedata(): GraphSerieType {
     const allseries = [lowserie, highserie, hightrendserie, lowtrendserie];
     const returnvalues: GraphSerie[] = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-            value: createGraphItem(value.date, value.value), 
+            value: createGraphItem(value.date, value.value, false), 
             tooltip: createTooltip(value),
         })), false, 0)
     })
@@ -1033,15 +1044,18 @@ export function CFcalculateMonthlyAverages(): YearlyAveragesEstimates {
     const months = temperatureClass.yearlyMonthlyAverages.monthlydata;
     const years = temperatureClass.yearlyMonthlyAverages.yearlydata;
     let tempaverages = months.map(month => month.total.value);
-    let diffvalues = months.map(month => month.difference.value);
+    let diffaverages = months.map(month => month.difference.value);
 
     let yearlyMonthaverages: YearlyAverage[] = years.map(year => {
         return createYearlyAverage(year.year, year.yearlyaverage, year.yearlyaveragediff, year.months.map(month => {
-            return createMonthlyAverage(month.averages.averagevalue, month.averages.difference.sum, month.estimate);
-        }))
+            return createMonthlyAverage(month.monthlytemperature, month.monthlydifference, month.estimate);
+        }), year.estimate)
     })
-
-    return createMonthlyAveragesEstimates(yearlyMonthaverages, createTempDiffTable(tempaverages, diffvalues));
+    const sumtemp = tempaverages.reduce((a, b) => a += isNaN(b)?0:b, 0);
+    const sumdiff = diffaverages.reduce((a, b) => a += isNaN(b)?0:b, 0);
+    tempaverages.push(sumtemp/tempaverages.length)
+    diffaverages.push(sumdiff/diffaverages.length)
+    return createYearlyAveragesEstimates(yearlyMonthaverages, createTempDiffTable(tempaverages, diffaverages));
 }
 export function CFcreateYearlyTrendSeriedata(): GraphSerieType {
     function serietooltipcallback(value: ReturnDataValue): string {
@@ -1098,34 +1112,47 @@ export function CFcreateYearlyTrendSeriedata(): GraphSerieType {
     // --------------------------
 
     const allseries = [yeartemperatureserie, yeardiffserie];
-
+    
     let estimateseries = addEstimatesToParameters(allseries);
+
     allseries.push(trendserie);
     allseries.push(difftrendserie);
     const returnvalues: GraphSerie[] = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-            value: createGraphItem(value.date, value.value), 
+            value: createGraphItem(value.date, value.value, false), 
             tooltip: createTooltip(value),
         })), false, 0)
     })
-
     let params = { rangeoffset: 1, showlegend: true, series: estimateseries };
     return createGraphSerieType(returnvalues, params)
 
 }
-export function createTrendForGivenMonths(monthnumbers: number[], monthnames: string[]): GraphSerie[] {
+export function createTrendForGivenMonths(monthnumbers: number[], monthnames: string[]): any {
     let datavalues: GraphSerie[] = [];
     const years = temperatureClass.yearlyMonthlyAverages.yearlydata;
-    const monthlydata = monthnumbers.map(m => {
-        const data =  years.map(y => {return createValueDataValue(y.months[m-1].averages.averagevalue, y.year, m-1) });
-        return createMonthDataPair(m-1, data, years[m - 1].estimate);
+    const curyear = new Date().getFullYear();
+    const curmonth = new Date().getMonth();
+    const monthlydata = monthnumbers.map((monthnumber) => {
+        let estimates = false;
+        const data =  years.map(y => {
+            if (y.year < curyear || (y.year == curyear && monthnumber-1 <= curmonth)) {
+                if (y.months[monthnumber-1].estimate) estimates = true;
+                return createValueDataValue(y.months[monthnumber-1].monthlytemperature, y.year, monthnumber-1, y.months[monthnumber-1].estimate);
+            }
+            else {
+                return createValueDataValue(NaN, y.year, monthnumber-1);
+            }
+            
+        });
+        return createMonthDataPair(monthnumber-1, data, estimates);
     });
+
     // create series
     monthlydata.forEach(month => {
         let found = monthnumbers.indexOf(month.month+1);
         if (found >= 0) {
             let values = month.data.map(value => ({
-                value: createGraphItem(new Date(value.year, 0, 1), value.value), 
+                value: createGraphItem(new Date(value.year, 0, 1), value.value, value.estimate), 
                 tooltip: `${value.year} ${monthnames[found]} ${roundNumber(value.value, 1)}`,
             }));
             datavalues.push( createGraphSerie( monthnames[datavalues.length], 'location', 0, values, false, monthnumbers[found]));
@@ -1139,42 +1166,43 @@ export function createTrendForGivenMonths(monthnumbers: number[], monthnames: st
             }))
     })
     // ----------------
-    // add estimates
-    //debugger
-    monthlydata.forEach(data => {
-        if (data.estimate) {
-            data.data.forEach(d => {
-                
-            })
-        }
+    // find estimates
+    const tempseries = datavalues.map(dvalue => {
+        return createReturnDataType( dvalue.name, dvalue.values.map(day => {
+            return createReturnDataValue(new Date(temperatureClass.defaultyear, day.value[0].getMonth(), day.value[0].getDate()),
+                day.value[1], day.value[0].getFullYear(), 
+                day.value[2], // estimate
+            ) 
+        }))
     })
+    let estimateparameters = addEstimatesToParameters(tempseries);
     // ----------------
     let trend = CFcalculateTrend(calctable);
     let newvalues = years.map((ser, serieindex) => ({ 
-        value: createGraphItem(new Date(ser.year, 0, 1), isNaN(trend.k) ? NaN : ser.year * trend.k + trend.b), 
+        value: createGraphItem(new Date(ser.year, 0, 1), isNaN(trend.k) ? NaN : ser.year * trend.k + trend.b, false), 
         tooltip: `${ser.year} Suuntaus ${isNaN(trend.k) ? '???' : roundNumber(ser.year * trend.k + trend.b, 1)}`
     }))
     if (isNaN(trend.k)) datavalues.push( createGraphSerie( `Trendi --- °C/10v`, 'location', 0, newvalues, true, -1));
     else datavalues.push( createGraphSerie( `Trendi ${trend.k > 0 ? '+' : ''}${roundNumber(trend.k * 10, 1)}°C/10v`, 'location', 0, newvalues, true, -1));
 
-    return datavalues;
+    return {values: datavalues, series: estimateparameters};
 }
 export function CFcreateMonthlySummerTrendSeriedata(): GraphSerieType {
     const returnvalues = createTrendForGivenMonths([6, 7, 8], ['Kesäkuu', 'Heinäkuu', 'Elokuu'])
-    let data = createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true })    
+    let data = createGraphSerieType(returnvalues.values, { rangeoffset: 1, showlegend: true, series: returnvalues.series })    
     return data;
 }
 export function CFcreateMonthlyWinterTrendSeriedata(): GraphSerieType {
     const returnvalues = createTrendForGivenMonths([1, 2, 12], ['Tammikuu', 'Helmikuu', 'Joulukuu'])
-    return createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true })    
+    return createGraphSerieType(returnvalues.values, { rangeoffset: 1, showlegend: true, series: returnvalues.series  })    
 }
 export function CFcreateMonthlyFallTrendSeriedata(): GraphSerieType {
     const returnvalues = createTrendForGivenMonths([9, 10, 11], ['Syyskuu', 'Lokakuu', 'Marraskuu'])
-    return createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true })    
+    return createGraphSerieType(returnvalues.values, { rangeoffset: 1, showlegend: true, series: returnvalues.series  })    
 }
 export function CFcreateMonthlySpringTrendSeriedata(): GraphSerieType {
     const returnvalues = createTrendForGivenMonths([3, 4, 5], ['Maaliskuu', 'Huhtikuu', 'Toukokuu'])
-    return createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true })    
+    return createGraphSerieType(returnvalues.values, { rangeoffset: 1, showlegend: true, series: returnvalues.series  })    
 }
 export function CFcreateAllYearsAverageSeriedata(): GraphSerieType {
     function serietooltipcallback(value: ReturnDataValue): string {
@@ -1212,7 +1240,7 @@ export function CFcreateAllYearsAverageSeriedata(): GraphSerieType {
 
     const returnvalues: GraphSerie[] = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-            value: createGraphItem(value.date, value.value), 
+            value: createGraphItem(value.date, value.value, false), 
             tooltip: createTooltip(value),
         })), false, 0)
     })
@@ -1247,7 +1275,7 @@ export function CFcreateAllYearsMonthlyAverageSeriedata(): GraphSerieType {
             if (year.estimate && month.estimate) estimatedmonthindexes.push(month.monthno-1);
 
             return createReturnDataValue(new Date(temperatureClass.defaultyear, month.monthno-1, 1),
-                month.averages.averagevalue, yearsstatistics[yearsstatistics.length-1].year, 
+                month.monthlytemperature, yearsstatistics[yearsstatistics.length-1].year, 
                 month.estimate, // estimate
                 serietooltipcallback) 
         }));      
@@ -1260,7 +1288,7 @@ export function CFcreateAllYearsMonthlyAverageSeriedata(): GraphSerieType {
 
     const returnvalues: GraphSerie[] = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-            value: createGraphItem(value.date, value.value), 
+            value: createGraphItem(value.date, value.value, false), 
             tooltip: createTooltip(value),
         })), false, 0)
     })

@@ -116,8 +116,8 @@
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph2" :active=true></trendgraph>
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph" :active=true></trendgraph>
             <trendgraph :titles="testgraphtitles":title="''" :elemid="testgraph3" :active=true></trendgraph>
-            <monthtable :title="'Kuukausittaiset lämpötilat'" :monthlydata="calculated.monthlyaverages.values" :monthaverages="calculated.monthlyaverages.averages.temp" :monthnames="monthnames" :datatype="'t'"></monthtable>
-            <monthtable :title="'Kuukausittaiset lämpötilaerot'":monthlydata="calculated.monthlyaverages.values" :monthaverages="calculated.monthlyaverages.averages.diff" :monthnames="monthnames" :datatype="'d'"></monthtable>
+            <monthtable :title="'Kuukausittaiset lämpötilat'" :monthlydata="calculated.monthlyaverages.yearlyvalues" :monthaverages="calculated.monthlyaverages.monthlyaverages.temperature" :monthnames="monthnames" :datatype="'t'"></monthtable>
+            <monthtable :title="'Kuukausittaiset lämpötilaerot'":monthlydata="calculated.monthlyaverages.yearlyvalues" :monthaverages="calculated.monthlyaverages.monthlyaverages.diff" :monthnames="monthnames" :datatype="'d'"></monthtable>
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph11" :active=true></trendgraph>
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph5" :active=true></trendgraph>
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph6" :active=true></trendgraph>
@@ -174,7 +174,7 @@
                     monthnamesLong: ['Tammikuu', 'Helmikuu', 'Maaliskuu', 'Huhtikuu', 'Toukokuu', 'Kesäkuu', 'Heinäkuu', 'Elokuu', 'Syyskuu', 'Lokakuu', 'Marraskuu', 'Joulukuu'],
                     calculated : {
                         monthlytrends: [],
-                        monthlyaverages: {values: [], calculated: [], averages: []},
+                        monthlyaverages: {yearlyvalues: [], calculated: [], monthlyaverages: []},
                     },
                 }
             },
@@ -366,6 +366,14 @@
                         roundNumber(value, num) {
                             return roundNumber(value, num);
                         },
+                        getTableTemperatureValue(m) {
+                            if (isNaN(m.temperature)) return '-'
+                            return `${m.estimate ? '(' : ''}${roundNumber(m.temperature, 1)}${m.estimate ? ')' : ''}`;
+                        },
+                        getTableDifferenceValue(m) {
+                            if (isNaN(m.difference)) return '-'
+                            return `${m.estimate ? '(' : ''}${roundNumber(m.difference, 1)}${m.estimate ? ')' : ''}`;
+                        },
                     },
                     template: `
                         <hr>
@@ -380,8 +388,8 @@
                             <tbody>
                                 <tr v-for="item in monthlydata">
                                     <td>{{ item.year }}</td> 
-                                    <td v-for="m in item.months">{{ datatype=="t" ? isNaN(m.temperature) ? '-' : roundNumber(m.temperature, 1): isNaN(m.difference) ? '-': roundNumber(m.difference, 1) }}</td>
-                                    <td>{{ item.estimate===true ? '(': ''}} {{ datatype=="t" ? roundNumber(item.yearaverage, 1): roundNumber(item.yearaveragediff, 1) }} {{ item.estimate==true?')':''}}</td>
+                                    <td v-for="m in item.months">{{ datatype=="t" ? getTableTemperatureValue(m) : getTableDifferenceValue(m) }}</td>
+                                    <td>{{ item.estimate===true ? '(': ''}}{{ datatype=="t" ? roundNumber(item.yearaverage, 1): roundNumber(item.yearaveragediff, 1) }}{{ item.estimate==true?')':''}}</td>
                                 </tr>                                
                             </tbody>
                             <tfoot>
@@ -447,7 +455,8 @@
                     const originaltrendserie = chart.serieOptions.series.find(d => d.trend == true);
                     if (!originaltrendserie) return;
                     const tempserie = {data: chart.serieOptions.series[0].data.map(ss => ({info: {year: ss.value[0].getFullYear(), location: ''}}))};
-                    const datavalues = createTrendForGivenMonths(series.map(s => s.num), series.map(s => s.name));
+                    const temp = createTrendForGivenMonths(series.map(s => s.num), series.map(s => s.name));
+                    const datavalues = temp.values;
                     const newtrendserie = datavalues.find(d => d.trend == true);
                     if (!newtrendserie) return;
                     originaltrendserie.data = newtrendserie.values.map(v => v);
