@@ -184,7 +184,7 @@
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
                 this.checkData(temperatures);
 
-                CFinitTemperature(temperatures, Galltemperaturereadings.filtersize);
+                CFinitTemperature(temperatures, Galltemperaturereadings.filtersize, this.monthnamesLong);
 
                 Galltemperaturereadings = CFgetAllReadings();
 
@@ -210,7 +210,7 @@
                 this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, CFcreateAllYearsFilteredSeriedata);
                 this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, CFcreateLastYearsSeriedata);
                 this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', temperatures, CFcreateDailyDiffdata);
-                this.createChart(this.testgraph12, 'Vuosien korkeimmat ja matalimmat (kpl)', temperatures, CFcreateYearlyHighValuedata);
+                this.createChart(this.testgraph12, 'Korkeimmat ja matalimmat arvot/vuosi (kpl)', temperatures, CFcreateYearlyHighValuedata);
                 this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, CFcreateYearlyTrendSeriedata);
 
                 Gcharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, CFcreateMonthlySummerTrendSeriedata));
@@ -653,6 +653,7 @@
                     let chartdata = series.data.map(values => ({
                         type: 'line',
                         symbolSize: 3,
+                        symbol: 'circle',
                         data: values.values.map(s => ({
                             value: [s.value[0], s.value[1]],
                             name: values.location,
