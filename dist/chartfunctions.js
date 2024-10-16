@@ -939,7 +939,7 @@ function CFcreateAllYearsAverageSeriedata() {
     const maxserie = createReturnDataType(`Korkein`, days.map(day => {
         return createReturnDataValue(day.date, day.max.value > getTempMaxDefaultValue() ? day.max.value : NaN, day.max.date.getFullYear(), false, serietooltipcallback);
     }));
-    const curyearno = new Date().getFullYear();
+    const curyearno = yearlyarrangeddata[yearlyarrangeddata.length - 1].date.getFullYear();
     const curyear = createReturnDataType(`Vuosi ${curyearno}`, yearlyarrangeddata[yearlyarrangeddata.length - 1].values.map(day => {
         return createReturnDataValue(new Date(temperatureClass.defaultyear, day.date.getMonth(), day.date.getDate()), day.average, day.date.getFullYear(), false, serietooltipcallback);
     }));

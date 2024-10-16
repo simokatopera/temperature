@@ -1282,7 +1282,7 @@ export function CFcreateAllYearsAverageSeriedata(): GraphSerieType {
             false, // estimate
             serietooltipcallback) 
     }));   
-    const curyearno = new Date().getFullYear();
+    const curyearno = yearlyarrangeddata[yearlyarrangeddata.length-1].date.getFullYear();
 
     const curyear = createReturnDataType(`Vuosi ${curyearno}`,yearlyarrangeddata[yearlyarrangeddata.length-1].values.map(day => {
         return createReturnDataValue(new Date(temperatureClass.defaultyear, day.date.getMonth(), day.date.getDate()),
