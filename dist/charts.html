@@ -18,7 +18,7 @@
     <script type="importmap">
         {
           "imports": {
-            "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+            "vue": "//unpkg.com/vue@3/dist/vue.esm-browser.js"
           }
         }
       </script>
@@ -92,21 +92,19 @@
 <body>
     <div class="container-fluid">
         <div class="page-title">
-            <h1 id="ID_PageTitle">Lämpötilat (2)</h1>
+            <h1 id="ID_PageTitle">Lämpötilat</h1>
         </div>
         <div id="app" class="page-content">
             <hr>
             <div class="row">
-
                 <div class="col-6" :style="loading?'display:none;':'display:inline-block;'">
-                    
                     <readings :temperatures="readings" @dayselected="dayselected"></readings>
                 </div>
                 <div class="col-6" :style="!loading && daydata.data[0].length>0?'display:inline-block;':'display:none;'">
                     <button type="button" :disabled="this.scrollday.scroll" class="btn btn-primary setmargin5" @click="rundays">Rullaa</button>
                     <button type="button" :disabled="!this.scrollday.scroll" class="btn btn-primary setmargin5" @click="stopdays">Pysäytä</button>
                     <hr>
-                    <p class="graphtitle">{{ dailycharttitle }}</p>
+                    <p class="graphtitle hidden">{{ dailycharttitle }}</p>
                     <div id="daygraph"></div>
                 </div>
             </div>
@@ -180,7 +178,7 @@
             },
             async mounted() {
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
-                years.data = [2005,2006]
+                //years.data = [2005,2006]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
                 this.checkData(temperatures);
 
@@ -221,6 +219,8 @@
                 Gcharts[Gcharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
                 Gcharts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, CFcreateMonthlySpringTrendSeriedata));
                 Gcharts[Gcharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                let item = document.getElementsByClassName("graphtitle hidden");
+                if (item && item.length) item[0].classList.remove("hidden");
             },
             updated() {
                 //this.stoploading();
@@ -278,11 +278,8 @@
                             else this.selected = item.index;
                             this.calcSums();
                             if (this.selected == item.index) {
-                                // 
                                 const selectedday = this.temperatures.values[this.selected].date.getDate();
                                 const selectedmonth = this.temperatures.values[this.selected].date.getMonth();
-                                // **************
-
                                 let values = Galltemperaturereadings.values.map(r => {
                                     if (r && r.date && r.date.getDate() == selectedday && r.date.getMonth() == selectedmonth) {
                                         return {date: r.date, value: r.average, morning: r.morning, evening: r.evening, datetimeLocal: r.date}
@@ -555,14 +552,7 @@
                         series: this.createSeries(series, series.params),
                         legend: {
                             show: false,
-                            // data: ['1','2','3']
-                            //     data: series.data.map(s => s.year),
-                            // //     inactiveColor: '#aaa',
                             textStyle: { color: '#f0f', fontSize: '16' },
-                            //     type: 'scroll',
-                            //     //orient: 'vertical',
-                            //     //top: 0,
-                            //     //right: 20,
                         },
                     };
                     if (series.params) {
@@ -641,9 +631,7 @@
                 },
                 getDate(date) {
                     let parts = date.split('/');
-                    if (parts && parts.length === 3) {
-                        return new Date(parts[2], Number(parts[0]) - 1, parts[1]);
-                    }
+                    if (parts && parts.length === 3) return new Date(parts[2], Number(parts[0]) - 1, parts[1]);
                     return NaN;
                 },
                 getDateTxt(date, daymonth) {
@@ -682,7 +670,6 @@
                                     d.symbolsize = 1;
                                     if (found.color) d.lineStyle = { color: found.color }
 
-                                    // ?????????? 
                                     if (found.symbolindex == 'last') {
                                         if (d.data.length) {
                                             d.data[d.data.length-1].symbol = found.symbol;
@@ -701,7 +688,6 @@
                                             i++;
                                         }
                                     }
-                                    // d.markPoint = {symbolSize: 0, opacity: 0};
                                 }
                             })
                         }
@@ -718,7 +704,7 @@
                     });
                     return {data: datavalues, params: null}
                 },
-                //------------------------------------------------------------------------------
+                //-end of methods-----------------------------------------------------------------------------
             }
         }).mount('#app');
 

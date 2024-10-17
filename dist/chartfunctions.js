@@ -560,10 +560,24 @@ function CFcreateLastYearsSeriedata() {
     const firstdate = new Date(lastdate.getFullYear() - 1, lastdate.getMonth(), lastdate.getDate());
     const readings = temperatureClass.getValidFilteredValues();
     const lastyearreadings = getReadingsBetween(firstdate, lastdate, readings);
-    const morningserie = createReturnDataType('Aamu', lastyearreadings.map(reading => {
+    let curdate = firstdate;
+    let index = 0;
+    const fillledlastyearreadings = [];
+    while (curdate <= lastdate) {
+        if (curdate.getDate() == lastyearreadings[index].date.getDate() &&
+            curdate.getMonth() == lastyearreadings[index].date.getMonth()) {
+            fillledlastyearreadings.push(createFiltered(curdate, lastyearreadings[index].morning, lastyearreadings[index].evening, lastyearreadings[index].average, lastyearreadings[index].difference, lastyearreadings[index].morningfiltered, lastyearreadings[index].eveningfiltered, lastyearreadings[index].averagefiltered, lastyearreadings[index].differencefiltered, lastyearreadings[index].firstdayfilter, lastyearreadings[index].lastdayfilter));
+            index++;
+        }
+        else {
+            fillledlastyearreadings.push(createFiltered(curdate, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, new Date(0), new Date(0)));
+        }
+        curdate = new Date(curdate.getFullYear(), curdate.getMonth(), curdate.getDate() + 1);
+    }
+    const morningserie = createReturnDataType('Aamu', fillledlastyearreadings.map(reading => {
         return createReturnDataValue(reading.date, reading.morning, reading.date.getFullYear(), false, serietooltipcallback);
     }));
-    const eveningserie = createReturnDataType('Ilta', lastyearreadings.map(reading => {
+    const eveningserie = createReturnDataType('Ilta', fillledlastyearreadings.map(reading => {
         return createReturnDataValue(reading.date, reading.evening, reading.date.getFullYear(), false, serietooltipcallback);
     }));
     const startyear = firstdate.getFullYear();
@@ -632,7 +646,7 @@ function CFcreateDailyDiffdata() {
     }
     const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
     const dailyminmaxtable = temperatureClass.getDailyMinMaxValues(yearlyarrangeddata);
-    const diffserie = createReturnDataType('Keskiarvo', dailyminmaxtable.map(reading => {
+    const averageserie = createReturnDataType('Keskiarvo', dailyminmaxtable.map(reading => {
         return createReturnDataValue(reading.date, reading.differencefiltered.average, NaN, false, serietooltipcallback);
     }));
     const maxserie = createReturnDataType('Maksimi', dailyminmaxtable.map(reading => {
@@ -648,7 +662,7 @@ function CFcreateDailyDiffdata() {
             return createReturnDataValue(new Date(temperatureClass.defaultyear, reading.date.getMonth(), reading.date.getDate()), reading.differencefiltered, reading.date.getFullYear(), false, serietooltipcallback);
         }));
     });
-    let allseries = [diffserie, maxserie, minserie];
+    let allseries = [averageserie, maxserie, minserie];
     allseries = allseries.concat(yearseries);
     const returnvalues = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
