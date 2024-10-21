@@ -121,7 +121,9 @@
             <hr>
             <div class="row">
                 <div class="col-6" :style="loading?'display:none;':'display:inline-block;'">
-                    <readings :temperatures="readings" @dayselected="dayselected"></readings>
+                    <readings :temperatures="readings" :selectedday="selectedday" @dayselected="dayselected"></readings>
+                    <div id="loader2" class="loader hidden"></div>
+                <!-- <button v-for="item in readings.years" @click="showselectedyear(item)">{{ item.year }}</button> -->
                 </div>
                 <div class="col-6" :style="!loading && daydata.data[0].length>0?'display:inline-block;':'display:none;'">
                     <div class="dayscroll hidden">
@@ -153,7 +155,7 @@
 
         import { createApp, ref } from 'vue'
 
-        let Galltemperaturereadings = { values: [], filtered: [], filtersize: 7 }
+        let Galltemperaturereadings = { values: [], years: [], filtersize: 7 }
         let Gcharts = [];
 
         function selectFirstDay() {
@@ -168,7 +170,7 @@
         const vueapp = createApp({
             data() {
                 return {
-                    readings: { values: [], filtered: [], filtersize: 0 },
+                    readings: { values: [], years: [], filtersize: 0 },
 
                     testgraph: 'GraphLocation',
                     testgraph2: 'GraphLocation2',
@@ -193,6 +195,7 @@
                         selecteddayindex: -1,
                         scroll: false,
                     },
+                    selectedday: 0,
                     monthnames: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
                     monthnamesLong: ['Tammikuu', 'Helmikuu', 'Maaliskuu', 'Huhtikuu', 'Toukokuu', 'Kesäkuu', 'Heinäkuu', 'Elokuu', 'Syyskuu', 'Lokakuu', 'Marraskuu', 'Joulukuu'],
                     calculated : {
@@ -204,7 +207,7 @@
             async mounted() {
                 this.startSpinner(1);
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
-                //years.data = [2005,2006]
+                //years.data = [2021,2022,2023,2024]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
                 this.checkData(temperatures);
 
@@ -214,17 +217,13 @@
 
                 this.readings.filtersize = Galltemperaturereadings.filtersize;
                 this.readings.values = [];
-                const stoploading = this.stoploading;
-                fillTemperaturereadingtable(0, this.readings.values, Galltemperaturereadings.values[0].date.getFullYear());
+                const temp = Galltemperaturereadings.values.map((v, i) => ({year: v.date.getFullYear(), index: i}));
+                let prev = '';
+                this.readings.years = temp.filter(v => { let returnvalue = v.year != prev; prev = v.year; return returnvalue;});
 
-                function fillTemperaturereadingtable(index, desttable, year) {
-                    const maxyears = 2;
-                    let i;
-                    for (i = index; i < Galltemperaturereadings.values.length && i < index + 1000 && Galltemperaturereadings.values[i].date.getFullYear() > year-maxyears;i++) 
-                        desttable.push(Galltemperaturereadings.values[i]);
-                    if (i < Galltemperaturereadings.values.length && Galltemperaturereadings.values[i].date.getFullYear() > year-maxyears) setTimeout(fillTemperaturereadingtable, 200, i, desttable, year);
-                    else stoploading();
-                }
+                //const stoploading = this.stoploading;
+                this.fillTemperaturereadingtable(0, this.readings.values, Galltemperaturereadings.values[0].date.getFullYear(), this.stoploading);
+
 
                 this.calculated.monthlyaverages = CFcalculateMonthlyAverages();
 
@@ -256,7 +255,7 @@
             },
             components: {
                 readings: {
-                    props: ['temperatures'],
+                    props: ['temperatures', 'selectedday'],
                     emits: ['dayselected'],
                     data: function () {
                         return {
@@ -328,7 +327,7 @@
                             return `daybutton_${index}`;
                         },
                         markIfSelected(item, mode) {
-                            if (mode == 1 && item.morninglowest)
+                            if (this.selected == -1)
                                 console.log(item.morninglowest)
                             if (this.selected < 0) return { active: false, 
                                 morninghigh: (mode == 1 && item.morninghighest), morninglow: (mode == 1 && item.morninglowest),
@@ -465,7 +464,21 @@
                         let i = 0;
                         for (i = 0; i < elems.length; i++) elems[i].classList.add('hidden');
                     }
-                },                            
+                },     
+                showselectedyear(item) {
+                    this.dayselected({selected: -1, values: []});
+                    this.startSpinner(2);
+                    this.readings.values = [];
+                    setTimeout( () => {this.fillTemperaturereadingtable(item.index, this.readings.values, Galltemperaturereadings.values[item.index].date.getFullYear(), this.stopSpinner)}, 10);
+                },
+                fillTemperaturereadingtable(index, desttable, year, stopFunc) {
+                    const maxyears = 2;
+                    let i;
+                    for (i = index; i < Galltemperaturereadings.values.length && i < index + 1000 && Galltemperaturereadings.values[i].date.getFullYear() > year-maxyears;i++) 
+                        desttable.push(Galltemperaturereadings.values[i]);
+                    if (i < Galltemperaturereadings.values.length && Galltemperaturereadings.values[i].date.getFullYear() > year-maxyears) setTimeout(fillTemperaturereadingtable, 200, i, desttable, year);
+                    else stopFunc();
+                },
                 monthlytrendcallback(params) {
                     const seriestatus = Object.keys(params.selected).map(k => ({status: params.selected[k], name: k}));
                     let i = 0;
@@ -624,6 +637,7 @@
                 },
                 //------------------------------------------------------------------------------
                 dayselected(data) {
+                    this.selectedday = data.selected;
                     // create trend curve
                     if (data.selected >= 0) {
                         this.scrollday.selecteddate = this.scrollday.firstdate = null;
