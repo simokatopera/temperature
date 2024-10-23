@@ -220,10 +220,7 @@
                 const temp = Galltemperaturereadings.values.map((v, i) => ({year: v.date.getFullYear(), index: i}));
                 let prev = '';
                 this.readings.years = temp.filter(v => { let returnvalue = v.year != prev; prev = v.year; return returnvalue;});
-
-                //const stoploading = this.stoploading;
                 this.fillTemperaturereadingtable(0, this.readings.values, Galltemperaturereadings.values[0].date.getFullYear(), this.stoploading);
-
 
                 this.calculated.monthlyaverages = CFcalculateMonthlyAverages();
 
