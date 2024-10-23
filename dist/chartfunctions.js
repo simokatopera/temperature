@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CFcalculateTrend = exports.CFcreateAllYearsMonthlyAverageSeriedata = exports.CFcreateAllYearsAverageSeriedata = exports.CFcreateMonthlySpringTrendSeriedata = exports.CFcreateMonthlyFallTrendSeriedata = exports.CFcreateMonthlyWinterTrendSeriedata = exports.CFcreateMonthlySummerTrendSeriedata = exports.createTrendForGivenMonths = exports.CFcreateYearlyTrendSeriedata = exports.CFcalculateMonthlyAverages = exports.CFcreateYearlyHighValuedata = exports.CFcreateDailyDiffdata = exports.CFcreateLastYearsSeriedata = exports.CFcreateYearlyFilteredSeriedata = exports.CFcreateAllYearsFilteredSeriedata = exports.CFgetAllReadings = exports.CFinitTemperature = exports.getDateTxt = exports.isNumeric = exports.roundNumber = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = void 0;
 const TempMinDefaultValue = 99999;
 const TempMaxDefaultValue = -99999;
-const MonthlyEstimateLimit = 25;
 function getTempMinDefaultValue() { return TempMinDefaultValue; }
 exports.getTempMinDefaultValue = getTempMinDefaultValue;
 function getTempMaxDefaultValue() { return TempMaxDefaultValue; }
@@ -241,7 +240,8 @@ class Temperatures {
             let dcount = 0;
             let estimates = false;
             averagedata.months.forEach(month => {
-                if (month.monthlytemperaturecount >= MonthlyEstimateLimit) {
+                let daycount = new Date(year.info.year, month.monthno, 0).getDate();
+                if (month.monthlytemperaturecount >= daycount) {
                     count++;
                     sum += month.monthlytemperature;
                 }
@@ -390,10 +390,9 @@ class Temperatures {
                     sumindex++;
                     const value1ok = updateMinMaxTable(foundsum.morning, dayreadings.morning, dayreadings.datetimeLocal);
                     const value2ok = updateMinMaxTable(foundsum.evening, dayreadings.evening, dayreadings.datetimeLocal);
-                    if (value1ok)
-                        updateMinMaxTable(foundsum.total, dayreadings.morning, dayreadings.datetimeLocal);
-                    if (value2ok)
-                        updateMinMaxTable(foundsum.total, dayreadings.evening, dayreadings.datetimeLocal);
+                    if (value1ok && value2ok) {
+                        updateMinMaxTable(foundsum.total, (dayreadings.morning + dayreadings.evening) / 2, dayreadings.datetimeLocal);
+                    }
                     if (value1ok && value2ok) {
                         updateMinMaxTable(foundsum.difference, dayreadings.evening - dayreadings.morning, dayreadings.datetimeLocal);
                     }
@@ -628,6 +627,19 @@ function CFcreateLastYearsSeriedata() {
     }
     const morningserie = createSerie_4('Aamu', fillledlastyearreadings, (reading) => (reading.morning), null, serietooltipcallback);
     const eveningserie = createSerie_4('Ilta', fillledlastyearreadings, (reading) => (reading.evening), null, serietooltipcallback);
+    let estimateparams = [];
+    let today = new Date();
+    today = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (today.getHours() > 16 ? 1 : 0));
+    morningserie.values.forEach((day, dayindex) => {
+        if (day.date > today) {
+            estimateparams.push(createGraphParams(morningserie.name, 'triangle', 8, dayindex));
+        }
+    });
+    eveningserie.values.forEach((day, dayindex) => {
+        if (day.date > today) {
+            estimateparams.push(createGraphParams(eveningserie.name, 'triangle', 8, dayindex));
+        }
+    });
     const startyear = firstdate.getFullYear();
     let maxdataarray = [];
     let mindataarray = [];
@@ -652,10 +664,8 @@ function CFcreateLastYearsSeriedata() {
             dateindex++;
         }
     }
-    maxdataarray = maxdataarray.concat(createSerie_3(dailyminmaxtable, startyear + 1, (value) => (value.evening.max.value > value.morning.max.value ? value.evening.max.value : value.morning.max.value), (value) => (value.evening.max.value > value.morning.max.value ? value.evening.max.date.getFullYear() : value.morning.max.date.getFullYear()), serietooltipcallback));
-    const maxserie = createReturnDataType('Korkein', maxdataarray);
-    mindataarray = mindataarray.concat(createSerie_3(dailyminmaxtable, startyear + 1, (value) => (value.evening.min.value < value.morning.min.value ? value.evening.min.value : value.morning.min.value), (value) => (value.evening.min.value < value.morning.min.value ? value.evening.min.date.getFullYear() : value.morning.min.date.getFullYear()), serietooltipcallback));
-    const minserie = createReturnDataType('Matalin', mindataarray);
+    const maxserie = createReturnDataType('Korkein', maxdataarray.concat(createSerie_3(dailyminmaxtable, startyear + 1, (value) => (value.evening.max.value > value.morning.max.value ? value.evening.max.value : value.morning.max.value), (value) => (value.evening.max.value > value.morning.max.value ? value.evening.max.date.getFullYear() : value.morning.max.date.getFullYear()), serietooltipcallback)));
+    const minserie = createReturnDataType('Matalin', mindataarray.concat(createSerie_3(dailyminmaxtable, startyear + 1, (value) => (value.evening.min.value < value.morning.min.value ? value.evening.min.value : value.morning.min.value), (value) => (value.evening.min.value < value.morning.min.value ? value.evening.min.date.getFullYear() : value.morning.min.date.getFullYear()), serietooltipcallback)));
     const allseries = [morningserie, eveningserie, maxserie, minserie];
     const returnvalues = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
@@ -665,7 +675,7 @@ function CFcreateLastYearsSeriedata() {
     });
     return createGraphSerieType(returnvalues, { showlegend: true,
         selection: [`Aamu`, 'Ilta', 'Korkein', 'Matalin'],
-        series: [{ name: 'Matalin', color: '#777777' }, { 'name': 'Korkein', color: '#777777' }],
+        series: [{ name: 'Matalin', color: '#777777' }, { 'name': 'Korkein', color: '#777777' }].concat(estimateparams),
         legend: { items: temperatureClass.monthnames }
     });
 }
@@ -927,8 +937,7 @@ function CFcreateAllYearsMonthlyAverageSeriedata() {
         }));
         return allmonths;
     });
-    let allseries = [minserie, maxserie];
-    allseries = allseries.concat(allyears);
+    const allseries = [minserie, maxserie].concat(allyears);
     let estimateparams = addEstimatesToParameters(allyears);
     const returnvalues = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({

@@ -324,8 +324,6 @@
                             return `daybutton_${index}`;
                         },
                         markIfSelected(item, mode) {
-                            if (this.selected == -1)
-                                console.log(item.morninglowest)
                             if (this.selected < 0) return { active: false, 
                                 morninghigh: (mode == 1 && item.morninghighest), morninglow: (mode == 1 && item.morninglowest),
                                 eveninghigh: (mode == 2 && item.eveninghighest), eveninglow: (mode == 2 && item.eveninglowest) };
