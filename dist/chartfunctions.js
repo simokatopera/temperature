@@ -631,14 +631,12 @@ function CFcreateLastYearsSeriedata() {
     let today = new Date();
     today = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (today.getHours() > 16 ? 1 : 0));
     morningserie.values.forEach((day, dayindex) => {
-        if (day.date > today) {
-            estimateparams.push(createGraphParams(morningserie.name, 'triangle', 8, dayindex));
-        }
+        if (day.date > today)
+            estimateparams.push(createGraphParams(morningserie.name, 'circle', 8, dayindex));
     });
     eveningserie.values.forEach((day, dayindex) => {
-        if (day.date > today) {
-            estimateparams.push(createGraphParams(eveningserie.name, 'triangle', 8, dayindex));
-        }
+        if (day.date > today)
+            estimateparams.push(createGraphParams(eveningserie.name, 'circle', 8, dayindex));
     });
     const startyear = firstdate.getFullYear();
     let maxdataarray = [];
@@ -861,9 +859,9 @@ function createTrendForGivenMonths(monthnumbers, monthnames) {
         }
     });
     let trend = CFcalculateTrend(calctable);
-    let newvalues = years.map((ser) => ({
-        value: createGraphItem(new Date(ser.year, 0, 1), isNaN(trend.k) ? NaN : ser.year * trend.k + trend.b, false),
-        tooltip: `${ser.year} Suuntaus ${isNaN(trend.k) ? '???' : roundNumber(ser.year * trend.k + trend.b, 1)}`
+    let newvalues = years.map((yearserie) => ({
+        value: createGraphItem(new Date(yearserie.year, 0, 1), isNaN(trend.k) ? NaN : yearserie.year * trend.k + trend.b, false),
+        tooltip: `${yearserie.year} Suuntaus ${isNaN(trend.k) ? '???' : roundNumber(yearserie.year * trend.k + trend.b, 1)}`
     }));
     if (isNaN(trend.k))
         datavalues.push(createGraphSerie(`Trendi --- °C/10v`, 'location', 0, newvalues, true, -1));
@@ -920,8 +918,7 @@ function CFcreateAllYearsAverageSeriedata() {
 exports.CFcreateAllYearsAverageSeriedata = CFcreateAllYearsAverageSeriedata;
 function CFcreateAllYearsMonthlyAverageSeriedata() {
     function serietooltipcallback(seriename, value) {
-        let daytxt = isNaN(value.year) ? `${value.date.getDate()}.${value.date.getMonth() + 1}` : `${value.date.getMonth() + 1}/${value.year}`;
-        return `${seriename} ${daytxt} ${roundNumber(value.value, 1)}°C`;
+        return `${seriename} ${temperatureClass.monthnameslong[value.date.getMonth()]} ${roundNumber(value.value, 1)}°C`;
     }
     let maxserie = createSerie_2(`Matalin`, temperatureClass.yearlyMonthlyAverages.monthlydata, temperatureClass.defaultyear, (value) => (value.low < getTempMinDefaultValue() ? value.low : NaN), serietooltipcallback);
     let minserie = createSerie_2(`Korkein`, temperatureClass.yearlyMonthlyAverages.monthlydata, temperatureClass.defaultyear, (value) => (value.high > getTempMaxDefaultValue() ? value.high : NaN), serietooltipcallback);

@@ -82,3 +82,15 @@ async function apiGetTemperatures(guid, location, years) {
         return NaN;
     }
 }
+
+async function sendGetJsonAsync2(url) {
+    const response = await fetch(`https://www.ilmatieteenlaitos.fi/api/weather/observations?fmisid=100955&observations=true&radar=true&daily=true`, 
+        { method: "GET", headers: { "Content-Type": "application/json" } });
+    if (response.status == 200)
+        return await response.json();
+    return await response.json();
+}
+async function apiGetLatestTemperatures() {
+    //https://www.ilmatieteenlaitos.fi/api/weather/observations?fmisid=100955&observations=true&radar=true&daily=true
+    return await sendGetJsonAsync2();
+}

@@ -41,6 +41,12 @@
             border: 1px solid;
             text-align: center;
         }
+        .latestreadingtable,
+        .latestreadingtable th,
+        .latestreadingtable td  {
+            border: 1px solid;
+            text-align: center;
+        }
         .active {
             background-color: lightgreen;
         }
@@ -117,6 +123,10 @@
             <h1 id="ID_PageTitle">Lämpötilat</h1>
         </div>
         <div id="app" class="page-content">
+            <div :style="loading?'display:none;':'display:inline-block;'">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loadModal">Näytä viimeiset</button>
+            </div>
+
             <div id="loader1" class="loader hidden"></div>            
             <hr>
             <div class="row">
@@ -149,6 +159,38 @@
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph7" :active=true></trendgraph>
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph8" :active=true></trendgraph>
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph9" :active=true></trendgraph>
+
+<!-- Latest readings modal start---------------------------------------------------------- -->
+            <div id="loadModal" class="modal fade" tabindex="-1" aria-labelledby="modifyAccessLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="modifyAccessLabel">Viimeisimmät lukemat</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <table class="latestreadingtable">
+                                <tr>
+                                    <th>Päivä</th><th>Aamu</th><th>Ilta</th><th>Aamu</th><th>Ilta</th>
+                                </tr>
+                            <tr v-for="item in latestReadings">
+                                <td>{{item.observation.morningtime.getDate() }}.{{item.observation.morningtime.getMonth()+1 }}.{{item.observation.morningtime.getFullYear()}}</td>
+                                <td>{{ isNaN(item.observation.morning) ? '' : item.observation.morning }}</td>
+                                <td>{{ isNaN(item.observation.evening) ? '' : item.observation.evening }}</td>
+                                <td>{{ isNaN(item.reading.morning) ? '' : item.reading.morning }}</td>
+                                <td>{{ isNaN(item.reading.evening) ? '' : item.reading.evening }}</td>
+                            </tr>
+                            </table>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-success">Tallenna</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sulje</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+<!-- Latest readings modal end----------------------------------------------------------- -->
+
         </div>
     </div>
     <script type="module">
@@ -189,6 +231,7 @@
                     defaultyear: 1976,
                     loading: ref(true),
                     daydata: {data: [[],[]], chart: null},
+                    latestReadings: [],
                     scrollday: {
                         firstdate: null,
                         selecteddate: null,
@@ -205,11 +248,15 @@
                 }
             },
             async mounted() {
+
+
                 this.startSpinner(1);
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
                 //years.data = [2021,2022,2023,2024]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
                 this.checkData(temperatures);
+                await this.compareReadings(temperatures);
+
 
                 CFinitTemperature(temperatures, Galltemperaturereadings.filtersize, this.monthnames, this.monthnamesLong);
 
@@ -699,7 +746,7 @@
                 createSeries(series, params) {
                     let chartdata = series.data.map(values => ({
                         type: 'line',
-                        symbolSize: 3,
+                        symbolSize: 4,
                         symbol: 'circle',
                         data: values.values.map(s => ({
                             value: [s.value[0], s.value[1]],
@@ -763,6 +810,72 @@
                     });
                     return {data: datavalues, params: null}
                 },
+                getStationTime(ltime) {
+                    return new Date(`${ltime.substring(0, 4)}-${ltime.substring(4, 6)}-${ltime.substring(6, 11)}:${ltime.substring(11, 13)}:${ltime.substring(13, 15)}`);
+                },
+                async compareReadings(temperatures) {
+                    if (!temperatures || temperatures.length) return;
+                    const curyearIndex = temperatures.data.length-1;
+                    if (temperatures.data[curyearIndex].info.year != new Date().getFullYear()) return;
+                    const stationreadings = await sendGetJsonAsync2();
+                    if (!stationreadings || !stationreadings.observations || !stationreadings.observations.length) return;
+                    //let lastObservationIndex;
+                    const readings = stationreadings.observations.map(reading => {
+                        const ltime = this.getStationTime(reading.localtime);
+                        if ((ltime.getHours() == 15 || ltime.getHours() == 7) && ltime.getMinutes() == 0) {
+                            reading.ltime = ltime;
+                            return reading;
+                        }
+                        return null;
+                    }).filter(v => v !== null);
+
+                    function createReading(morning, morningtime, evening, eveningtime) {
+                        return {morning: morning, evening: evening, morningtime: morningtime, eveningtime: eveningtime}
+                    }
+                    this.latestReadings = [];
+                    readings.forEach(reading => {
+                        let i = 0;
+                        while (i < this.latestReadings.length && 
+                            (reading.ltime.getMonth() != this.latestReadings[i].observation.morningtime.getMonth() ||
+                            reading.ltime.getDate() != this.latestReadings[i].observation.morningtime.getDate())) i++;
+                        if (i < this.latestReadings.length) {
+                            if (reading.ltime.getHours() == 7) {
+                                this.latestReadings[i].observation.morning = reading.t2m;
+                                this.latestReadings[i].observation.morningtime = reading.ltime;
+                            }
+                            else {
+                                this.latestReadings[i].observation.evening = reading.t2m;
+                                this.latestReadings[i].observation.eveningtime = reading.ltime;
+                            }
+                        }
+                        else {
+                            this.latestReadings.push({name: reading.name, date: new Date(reading.ltime.getFullYear(), reading.ltime.getMonth(), reading.ltime.getDate()),
+                                observation: createReading(reading.ltime.getHours() == 7 ? reading.t2m : NaN,
+                                    reading.ltime.getHours() == 7 ? reading.ltime : NaN, 
+                                    reading.ltime.getHours() == 15 ? reading.t2m : NaN,
+                                    reading.ltime.getHours() == 15 ? reading.ltime : NaN), reading: null});
+                        }
+                    })
+                    let dayindex = 0;
+                    const curyeardata = temperatures.data[curyearIndex].data;
+                    while (dayindex < curyeardata.length &&
+                        curyeardata[dayindex].datetimeLocal.getMonth() != this.latestReadings[0].observation.morningtime.getMonth() ||
+                        curyeardata[dayindex].datetimeLocal.getDate() != this.latestReadings[0].observation.morningtime.getDate()) {
+                        dayindex++;
+                    }
+                    if (dayindex < curyeardata.length) {
+                        for (let i = 0; i < this.latestReadings.length || dayindex < curyeardata.length; i++, dayindex++) {
+                            if (i < this.latestReadings.length) {
+                                this.latestReadings[i].reading = createReading(curyeardata[dayindex].morning, curyeardata[dayindex].datetimeLocal, curyeardata[dayindex].evening, curyeardata[dayindex].datetimeLocal)
+                            }
+                            else {
+                                this.latestReadings.push({name: this.latestReadings[0].name, date: curyeardata[dayindex].datetimeLocal, 
+                                    observation: {morning: NaN, evening: NaN, morningtime: curyeardata[dayindex].datetimeLocal, eveningtime: curyeardata[dayindex].datetimeLocal},
+                                    reading: createReading(curyeardata[dayindex].morning, curyeardata[dayindex].datetimeLocal, curyeardata[dayindex].evening, curyeardata[dayindex].datetimeLocal)});
+                            }
+                        }
+                    }
+                }
                 //-end of methods-----------------------------------------------------------------------------
             }
         }).mount('#app');
