@@ -1050,10 +1050,7 @@ const MorningTime = 7;
 const EveningTime = 15;
 function compareReadings(temperatures, stationreadings) {
     let latestReadings = [];
-    if (!temperatures || !temperatures.data || temperatures.data.length === 0)
-        return latestReadings;
-    const curyearIndex = temperatures.data.length - 1;
-    if (temperatures.data[curyearIndex].info.year != new Date().getFullYear())
+    if (!temperatures || !temperatures || temperatures.length === 0)
         return latestReadings;
     if (!stationreadings || !stationreadings.observations || !stationreadings.observations.length)
         return latestReadings;
@@ -1064,7 +1061,7 @@ function compareReadings(temperatures, stationreadings) {
             return reading;
         }
         return null;
-    }).filter(v => v !== null);
+    }).filter((v) => v !== null);
     readings.forEach(reading => {
         let i = 0;
         let found = false;
@@ -1072,9 +1069,6 @@ function compareReadings(temperatures, stationreadings) {
             if (!isNaN(latestReadings[i].observation.morning)) {
                 found = (reading.ltime.getMonth() == latestReadings[i].observation.morningtime.getMonth() &&
                     reading.ltime.getDate() == latestReadings[i].observation.morningtime.getDate());
-            }
-            else {
-                console.log(i);
             }
             if (!found)
                 i++;
@@ -1094,28 +1088,27 @@ function compareReadings(temperatures, stationreadings) {
         }
     });
     let found = false;
-    const curyeardata = temperatures.data[curyearIndex].data;
-    let dayindex = curyeardata.length - 1;
+    let dayindex = temperatures.length - 1;
     while (dayindex > 0 && !found) {
         let time = latestReadings[0].observation.morningtime.getFullYear() > 1980 ? latestReadings[0].observation.morningtime : latestReadings[0].observation.eveningtime;
-        if (curyeardata[dayindex].datetimeLocal.getMonth() == time.getMonth() &&
-            curyeardata[dayindex].datetimeLocal.getDate() == time.getDate())
+        if (temperatures[dayindex].datetimeLocal.getMonth() == time.getMonth() &&
+            temperatures[dayindex].datetimeLocal.getDate() == time.getDate())
             found = true;
         else
             dayindex--;
     }
     if (found) {
-        for (let i = 0; i < latestReadings.length || dayindex < curyeardata.length; i++, dayindex++) {
+        for (let i = 0; i < latestReadings.length || dayindex < temperatures.length; i++, dayindex++) {
             if (i < latestReadings.length) {
-                if (dayindex < curyeardata.length) {
-                    latestReadings[i].reading = createLatestReadings(curyeardata[dayindex].morning, curyeardata[dayindex].datetimeLocal, curyeardata[dayindex].evening, curyeardata[dayindex].datetimeLocal);
+                if (dayindex < temperatures.length) {
+                    latestReadings[i].reading = createLatestReadings(temperatures[dayindex].morning, temperatures[dayindex].datetimeLocal, temperatures[dayindex].evening, temperatures[dayindex].datetimeLocal);
                 }
                 else {
                     latestReadings[i].reading = createLatestReadingsEmpty();
                 }
             }
             else {
-                latestReadings.push(createLatestReadingsGroup(latestReadings[0].name, curyeardata[dayindex].datetimeLocal, createLatestReadings(NaN, curyeardata[dayindex].datetimeLocal, NaN, curyeardata[dayindex].datetimeLocal), createLatestReadings(curyeardata[dayindex].morning, curyeardata[dayindex].datetimeLocal, curyeardata[dayindex].evening, curyeardata[dayindex].datetimeLocal)));
+                latestReadings.push(createLatestReadingsGroup(latestReadings[0].name, temperatures[dayindex].datetimeLocal, createLatestReadings(NaN, temperatures[dayindex].datetimeLocal, NaN, temperatures[dayindex].datetimeLocal), createLatestReadings(temperatures[dayindex].morning, temperatures[dayindex].datetimeLocal, temperatures[dayindex].evening, temperatures[dayindex].datetimeLocal)));
             }
         }
     }
