@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CFcalculateTrend = exports.CFcreateAllYearsMonthlyAverageSeriedata = exports.CFcreateAllYearsAverageSeriedata = exports.CFcreateMonthlySpringTrendSeriedata = exports.CFcreateMonthlyFallTrendSeriedata = exports.CFcreateMonthlyWinterTrendSeriedata = exports.CFcreateMonthlySummerTrendSeriedata = exports.createTrendForGivenMonths = exports.CFcreateYearlyTrendSeriedata = exports.CFcalculateMonthlyAverages = exports.CFcreateYearlyHighValuedata = exports.CFcreateDailyDiffdata = exports.CFcreateLastYearsSeriedata = exports.CFcreateYearlyFilteredSeriedata = exports.CFcreateAllYearsFilteredSeriedata = exports.CFgetAllReadings = exports.CFinitTemperature = exports.getDateTxt = exports.isNumeric = exports.roundNumber = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = void 0;
+exports.compareReadings = exports.CFcalculateTrend = exports.CFcreateAllYearsMonthlyAverageSeriedata = exports.CFcreateAllYearsAverageSeriedata = exports.CFcreateMonthlySpringTrendSeriedata = exports.CFcreateMonthlyFallTrendSeriedata = exports.CFcreateMonthlyWinterTrendSeriedata = exports.CFcreateMonthlySummerTrendSeriedata = exports.createTrendForGivenMonths = exports.CFcreateYearlyTrendSeriedata = exports.CFcalculateMonthlyAverages = exports.CFcreateYearlyHighValuedata = exports.CFcreateDailyDiffdata = exports.CFcreateLastYearsSeriedata = exports.CFcreateYearlyFilteredSeriedata = exports.CFcreateAllYearsFilteredSeriedata = exports.CFgetAllReadings = exports.CFinitTemperature = exports.getDateTxt = exports.isNumeric = exports.roundNumber = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = void 0;
 const TempMinDefaultValue = 99999;
 const TempMaxDefaultValue = -99999;
 function getTempMinDefaultValue() { return TempMinDefaultValue; }
@@ -1034,3 +1034,91 @@ function createSerie_10(seriename, days, dataFunc, yearFunc, cbFunc) {
         return createReturnDataValue(day.date, dataFunc(day), yearFunc(day), false, cbFunc);
     }));
 }
+function createLatestReadingsGroup(name, date, observation, reading) {
+    return { name: name, date: date, observation: observation, reading: reading };
+}
+function createLatestReadings(morning, morningtime, evening, eveningtime) {
+    return { morning: morning, evening: evening, morningtime: morningtime, eveningtime: eveningtime };
+}
+function createLatestReadingsEmpty() {
+    return createLatestReadings(NaN, new Date(0), NaN, new Date(0));
+}
+function getStationTime(ltime) {
+    return new Date(`${ltime.substring(0, 4)}-${ltime.substring(4, 6)}-${ltime.substring(6, 11)}:${ltime.substring(11, 13)}:${ltime.substring(13, 15)}`);
+}
+const MorningTime = 7;
+const EveningTime = 15;
+function compareReadings(temperatures, stationreadings) {
+    let latestReadings = [];
+    if (!temperatures || !temperatures.data || temperatures.data.length === 0)
+        return latestReadings;
+    const curyearIndex = temperatures.data.length - 1;
+    if (temperatures.data[curyearIndex].info.year != new Date().getFullYear())
+        return latestReadings;
+    if (!stationreadings || !stationreadings.observations || !stationreadings.observations.length)
+        return latestReadings;
+    const readings = stationreadings.observations.map(reading => {
+        const ltime = getStationTime(reading.localtime);
+        if ((ltime.getHours() == EveningTime || ltime.getHours() == MorningTime) && ltime.getMinutes() == 0) {
+            reading.ltime = ltime;
+            return reading;
+        }
+        return null;
+    }).filter(v => v !== null);
+    readings.forEach(reading => {
+        let i = 0;
+        let found = false;
+        while (i < latestReadings.length && !found) {
+            if (!isNaN(latestReadings[i].observation.morning)) {
+                found = (reading.ltime.getMonth() == latestReadings[i].observation.morningtime.getMonth() &&
+                    reading.ltime.getDate() == latestReadings[i].observation.morningtime.getDate());
+            }
+            else {
+                console.log(i);
+            }
+            if (!found)
+                i++;
+        }
+        if (found) {
+            if (reading.ltime.getHours() == MorningTime) {
+                latestReadings[i].observation.morning = reading.t2m;
+                latestReadings[i].observation.morningtime = reading.ltime;
+            }
+            else {
+                latestReadings[i].observation.evening = reading.t2m;
+                latestReadings[i].observation.eveningtime = reading.ltime;
+            }
+        }
+        else {
+            latestReadings.push(createLatestReadingsGroup(reading.name, new Date(reading.ltime.getFullYear(), reading.ltime.getMonth(), reading.ltime.getDate()), createLatestReadings(reading.ltime.getHours() == MorningTime ? reading.t2m : NaN, reading.ltime.getHours() == MorningTime ? reading.ltime : new Date(0), reading.ltime.getHours() == EveningTime ? reading.t2m : NaN, reading.ltime.getHours() == EveningTime ? reading.ltime : new Date(0)), createLatestReadingsEmpty()));
+        }
+    });
+    let found = false;
+    const curyeardata = temperatures.data[curyearIndex].data;
+    let dayindex = curyeardata.length - 1;
+    while (dayindex > 0 && !found) {
+        let time = latestReadings[0].observation.morningtime.getFullYear() > 1980 ? latestReadings[0].observation.morningtime : latestReadings[0].observation.eveningtime;
+        if (curyeardata[dayindex].datetimeLocal.getMonth() == time.getMonth() &&
+            curyeardata[dayindex].datetimeLocal.getDate() == time.getDate())
+            found = true;
+        else
+            dayindex--;
+    }
+    if (found) {
+        for (let i = 0; i < latestReadings.length || dayindex < curyeardata.length; i++, dayindex++) {
+            if (i < latestReadings.length) {
+                if (dayindex < curyeardata.length) {
+                    latestReadings[i].reading = createLatestReadings(curyeardata[dayindex].morning, curyeardata[dayindex].datetimeLocal, curyeardata[dayindex].evening, curyeardata[dayindex].datetimeLocal);
+                }
+                else {
+                    latestReadings[i].reading = createLatestReadingsEmpty();
+                }
+            }
+            else {
+                latestReadings.push(createLatestReadingsGroup(latestReadings[0].name, curyeardata[dayindex].datetimeLocal, createLatestReadings(NaN, curyeardata[dayindex].datetimeLocal, NaN, curyeardata[dayindex].datetimeLocal), createLatestReadings(curyeardata[dayindex].morning, curyeardata[dayindex].datetimeLocal, curyeardata[dayindex].evening, curyeardata[dayindex].datetimeLocal)));
+            }
+        }
+    }
+    return latestReadings;
+}
+exports.compareReadings = compareReadings;

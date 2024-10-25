@@ -83,7 +83,7 @@ async function apiGetTemperatures(guid, location, years) {
     }
 }
 
-async function sendGetJsonAsync2(url) {
+async function sendGetJsonAsync2() {
     const response = await fetch(`https://www.ilmatieteenlaitos.fi/api/weather/observations?fmisid=100955&observations=true&radar=true&daily=true`, 
         { method: "GET", headers: { "Content-Type": "application/json" } });
     if (response.status == 200)
