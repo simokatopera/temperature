@@ -65,8 +65,21 @@
         .actionbutton {
             background-color: lightblue;
         }
+        .yearbutton {
+            background-color: lightgray;
+            border-radius: 2px;
+            margin: 2px;
+        }
+        .yearbutton:hover {
+            background-color: gray;
+        }
+        .yearbuttonselected {
+            background-color: red;
+            color: white;
+        }
         .actionbutton.active {
             background-color: red;
+            color: white;
         }
         .setmargin5 {
             margin: 5px;
@@ -123,8 +136,7 @@
             <h1 id="ID_PageTitle">Lämpötilat</h1>
         </div>
         <div id="app" class="page-content">
-            <div :style="loading?'display:none;':'display:inline-block;'">
-                <!-- <button id="btnLoadModal" type="button" class="btn btn-primary">Näytä viimeiset</button> -->
+            <div class="hiddenstart hidden">
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loadModal">Näytä viimeiset</button>
             </div>
 
@@ -132,17 +144,19 @@
             <hr>
             <div class="row">
                 <div class="col-6" :style="loading?'display:none;':'display:inline-block;'">
-                    <readings :temperatures="readings" :selectedday="selectedday" :allreadings="alltemperaturereadings" @dayselected="dayselected"></readings>
+                    <readings :temperatures="listedtemperaturereadings" :selectedday="selectedday" :allreadings="alltemperaturereadings" @dayselected="dayselected"></readings>
+                    <div class="hiddenstart hidden">
+                        <button  class="yearbutton" v-for="item in listedtemperaturereadings.years" :class="{yearbuttonselected: this.selectedyearbutton == item.year }" @click="showselectedyear(item)">{{ item.year }}</button>
+                    </div>
                     <div id="loader2" class="loader hidden"></div>
-                <!-- <button v-for="item in readings.years" @click="showselectedyear(item)">{{ item.year }}</button> -->
                 </div>
-                <div class="col-6" :style="!loading && daydata.data[0].length>0?'display:inline-block;':'display:none;'">
-                    <div class="dayscroll hidden">
-                    <button type="button" :disabled="this.scrollday.scroll" class="btn btn-primary setmargin5" @click="rundays">Rullaa</button>
-                    <button type="button" :disabled="!this.scrollday.scroll" class="btn btn-primary setmargin5" @click="stopdays">Pysäytä</button>
-                    <hr>
-                    <p class="graphtitle">{{ dailycharttitle }}</p>
-                    <div id="daygraph"></div>
+                <div class="col-6" :style="!loading && selecteddayData.data[0].length>0?'display:inline-block;':'display:none;'">
+                    <div class="hiddenstart hidden">
+                        <button type="button" :disabled="this.scrollday.scroll" class="btn btn-primary setmargin5" @click="rundays">Rullaa</button>
+                        <button type="button" :disabled="!this.scrollday.scroll" class="btn btn-primary setmargin5" @click="stopdays">Pysäytä</button>
+                        <hr>
+                        <p class="graphtitle">{{ dailycharttitle }}</p>
+                        <div id="daygraph"></div>
                     </div>
                 </div>
             </div>
@@ -152,8 +166,8 @@
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph2" :active=true></trendgraph>
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph" :active=true></trendgraph>
             <trendgraph :titles="testgraphtitles":title="''" :elemid="testgraph3" :active=true></trendgraph>
-            <monthtable :title="'Kuukausittaiset lämpötilat'" :monthlydata="calculated.monthlyaverages.yearlyvalues" :monthaverages="calculated.monthlyaverages.monthlyaverages.temperature" :monthnames="monthnames" :datatype="'t'"></monthtable>
-            <monthtable :title="'Kuukausittaiset lämpötilaerot'":monthlydata="calculated.monthlyaverages.yearlyvalues" :monthaverages="calculated.monthlyaverages.monthlyaverages.diff" :monthnames="monthnames" :datatype="'d'"></monthtable>
+            <monthtable :title="'Kuukausittaiset lämpötilat'" :monthlydata="calculated.values.yearlyvalues" :monthaverages="calculated.values.monthlyvalues.temperature" :monthnames="monthnames" :datatype="'t'"></monthtable>
+            <monthtable :title="'Kuukausittaiset lämpötilaerot'":monthlydata="calculated.values.yearlyvalues" :monthaverages="calculated.values.monthlyvalues.diff" :monthnames="monthnames" :datatype="'d'"></monthtable>
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph11" :active=true></trendgraph>
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph5" :active=true></trendgraph>
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph6" :active=true></trendgraph>
@@ -174,7 +188,7 @@
                                 <tr>
                                     <th>Päivä</th><th>Aamu</th><th>Ilta</th><th>Aamu</th><th>Ilta</th>
                                 </tr>
-                            <tr v-for="item in latestReadings">
+                            <tr v-for="item in latestReadingsFromNet">
                                 <td>{{item.observation.morningtime.getDate() }}.{{item.observation.morningtime.getMonth()+1 }}.{{item.observation.morningtime.getFullYear()}}</td>
                                 <td>{{ isNaN(item.observation.morning) ? '' : item.observation.morning }}</td>
                                 <td>{{ isNaN(item.observation.evening) ? '' : item.observation.evening }}</td>
@@ -184,7 +198,7 @@
                             </table>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-success">Tallenna</button>
+                            <button disabled type="button" class="btn btn-success">Tallenna</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sulje</button>
                         </div>
                     </div>
@@ -198,6 +212,9 @@
 
         import { createApp, ref } from 'vue'
 
+        const months1 = ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'];
+        const months2 = ['Tammikuu', 'Helmikuu', 'Maaliskuu', 'Huhtikuu', 'Toukokuu', 'Kesäkuu', 'Heinäkuu', 'Elokuu', 'Syyskuu', 'Lokakuu', 'Marraskuu', 'Joulukuu'];
+
         function selectFirstDay() {
             let button = document.getElementsByClassName('daybutton_0');
             if (button && button.length) button[0].click();
@@ -207,12 +224,17 @@
         (async function () {
             setTimeout(() => { selectFirstDay(); }, 50);
         })();
-
+        
         const vueapp = createApp({
             data() {
                 return {
-                    readings: { values: [], years: [], filtersize: 0 },
 
+                    defaultyear: 1976,
+                    monthnames: months1,
+                    monthnamesLong: months2,
+
+                    loading: ref(true),
+                    
                     testgraph: 'GraphLocation',
                     testgraph2: 'GraphLocation2',
                     testgraph3: 'GraphLocation3',
@@ -226,27 +248,28 @@
                     testgraph11: 'GraphLocation11',
                     testgraph12: 'GraphLocation12',
                     testgraphtitles : [],
-                    dailycharttitle: '',
-                    defaultyear: 1976,
-                    loading: ref(true),
-                    daydata: {data: [[],[]], chart: null},
-                    latestReadings: [],
+
                     scrollday: {
                         firstdate: null,
                         selecteddate: null,
                         selecteddayindex: -1,
                         scroll: false,
                     },
-                    selectedday: 0,
-                    monthnames: ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'],
-                    monthnamesLong: ['Tammikuu', 'Helmikuu', 'Maaliskuu', 'Huhtikuu', 'Toukokuu', 'Kesäkuu', 'Heinäkuu', 'Elokuu', 'Syyskuu', 'Lokakuu', 'Marraskuu', 'Joulukuu'],
+                    selectedday: 0, // not used
+                    selecteddayData: {data: [[],[]], chart: null},
+
                     calculated : {
-                        monthlytrends: [],
-                        monthlyaverages: {yearlyvalues: [], calculated: [], monthlyaverages: []},
+                        values: {yearlyvalues: [], monthlyvalues: []},
                     },
-                    loadedTemperatures: [],
-                    alltemperaturereadings: { values: [], years: [], filtersize: 7 },
-                    Gcharts: [],
+
+                    alltemperaturereadings: { values: [], years: [], filtersize: 7 },    // all temperature values
+                    listedtemperaturereadings: { values: [], years: [], filtersize: 7 }, // contains values listed in table
+                    last10Temperatures: [],
+                    latestReadingsFromNet: [],
+                    dailycharttitle: '',
+
+                    screenCharts: [],
+                    selectedyearbutton: '',
                 }
             },
             async mounted() {
@@ -256,41 +279,21 @@
                 //years.data = [2021,2022,2023,2024]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
                 this.checkData(temperatures);
-
-                this.loadedTemperatures = [];
-                if (temperatures.data.length > 1 && temperatures.data[temperatures.data.length - 1].data.length < 10) {
-                    let len = temperatures.data[temperatures.data.length - 2].data.length;
-                    let i = len - (10-temperatures.data[temperatures.data.length - 1].data.length);
-                    while (i < len) {
-                        this.loadedTemperatures.push(temperatures.data[temperatures.data.length - 2].data[i]);
-                        i++;
-                    }
-                    i = 0;
-                    while (i <  temperatures.data[temperatures.data.length - 1].data.length) {
-                        this.loadedTemperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
-                        i++;
-                    }
-                }
-                else {
-                    let i = temperatures.data[temperatures.data.length - 1].data.length-10;
-                    while (i <  temperatures.data[temperatures.data.length - 1].data.length) {
-                        this.loadedTemperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
-                        i++;
-                    }
-                }
-
+                this.last10Temperatures = this.getLast10readings(temperatures);
+                
+                // initialize temperature readings
                 CFinitTemperature(temperatures, this.alltemperaturereadings.filtersize, this.monthnames, this.monthnamesLong);
 
                 this.alltemperaturereadings = CFgetAllReadings();
-
-                this.readings.filtersize = this.alltemperaturereadings.filtersize;
-                this.readings.values = [];
+                this.listedtemperaturereadings.filtersize = this.alltemperaturereadings.filtersize;
+                this.listedtemperaturereadings.values = [];
                 const temp = this.alltemperaturereadings.values.map((v, i) => ({year: v.date.getFullYear(), index: i}));
                 let prev = '';
-                this.readings.years = temp.filter(v => { let returnvalue = v.year != prev; prev = v.year; return returnvalue;});
-                this.fillTemperaturereadingtable(0, this.readings.values, this.alltemperaturereadings.values[0].date.getFullYear(), this.stoploading);
+                this.listedtemperaturereadings.years = temp.filter(v => { let returnvalue = v.year != prev; prev = v.year; return returnvalue;});
+                this.fillTemperaturereadingtable(0, this.listedtemperaturereadings.values, this.alltemperaturereadings.values[0].date.getFullYear(), this.stoploading);
 
-                this.calculated.monthlyaverages = CFcalculateMonthlyAverages();
+                // initialize graphics curves
+                this.calculated.values = CFcalculateMonthlyAverages();
 
                 this.createChart(this.testgraph10, 'Suodatetut lämpötilat', temperatures, CFcreateYearlyFilteredSeriedata);
                 this.createChart(this.testgraph2, 'Päivittäiset keskiarvot', temperatures, CFcreateAllYearsAverageSeriedata);
@@ -301,29 +304,29 @@
                 this.createChart(this.testgraph12, 'Korkeimmat ja matalimmat arvot/vuosi (kpl)', temperatures, CFcreateYearlyHighValuedata);
                 this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, CFcreateYearlyTrendSeriedata);
 
-                this.Gcharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, CFcreateMonthlySummerTrendSeriedata));
-                this.Gcharts[this.Gcharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                this.Gcharts.push(this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, CFcreateMonthlyWinterTrendSeriedata));
-                this.Gcharts[this.Gcharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                this.Gcharts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, CFcreateMonthlyFallTrendSeriedata));
-                this.Gcharts[this.Gcharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                this.Gcharts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, CFcreateMonthlySpringTrendSeriedata));
-                this.Gcharts[this.Gcharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                let item = document.getElementsByClassName("dayscroll hidden");
-                if (item && item.length) item[0].classList.remove("hidden");
-                this.stopSpinner();
+                this.screenCharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, CFcreateMonthlySummerTrendSeriedata));
+                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                this.screenCharts.push(this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, CFcreateMonthlyWinterTrendSeriedata));
+                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                this.screenCharts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, CFcreateMonthlyFallTrendSeriedata));
+                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                this.screenCharts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, CFcreateMonthlySpringTrendSeriedata));
+                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                let itemlist = document.querySelectorAll(".hiddenstart.hidden");
+                if (itemlist && itemlist.length) itemlist.forEach(i => i.classList.remove("hidden"))
+
+                this.stopSpinner(1);
 
                 setTimeout(() => {
-                let elem = document.getElementById('loadModal');
-                if (elem) {
-                    elem.addEventListener('show.bs.modal', async () => {
-                        const stationreadings = await apiGetLatestTemperatures();
-                        this.latestReadings = compareReadings(this.loadedTemperatures, stationreadings);
-                    });
-                }
-            }, 10);
-            },
-            updated() {
+                    let elem = document.getElementById('loadModal');
+                    if (elem) {
+                        elem.addEventListener('show.bs.modal', async () => {
+                            // get latest readings when modal opened
+                            const stationreadings = await apiGetLatestTemperatures();
+                            this.latestReadingsFromNet = compareReadings(this.last10Temperatures, stationreadings);
+                        });
+                    }
+                }, 10);
             },
             components: {
                 readings: {
@@ -337,18 +340,23 @@
                             arrowdn: String.fromCharCode(0x2193),
                         }
                     },
+                    // reading
                     computed: {
                         calculateAverage: function () {
                             this.sum = 0;
                         }
                     },
+                    // reading
                     methods: {
+                        // reading
                         setSum(value) {
                             this.sum = value;
                         },
+                        // reading
                         roundNumber(value, num) {
                             return roundNumber(value, num)
                         },
+                        // reading
                         calcSums() {
                             let setvalue = this.setSum;
                             setTimeout(function () {
@@ -357,10 +365,9 @@
                                     setvalue(0);
                                     return;
                                 }
-                                let index;
                                 let sum = 0;
                                 let count = 0;
-                                for (index = 0; index < elements.length; index++) {
+                                for (var index = 0; index < elements.length; index++) {
                                     if (isNumeric(elements[index].innerText)) {
                                         sum += Number(elements[index].innerText);
                                         count++;
@@ -370,18 +377,20 @@
                                 else setvalue(-1);
                             }, 1)
                         },
+                        // reading
                         getDateTxt(date) {
                             return getDateTxt(date);
                         },
+                        // reading
                         selectDay(item) {
                             if (this.selected == item.index) this.selected = -1;
                             else this.selected = item.index;
                             this.calcSums();
                             if (this.selected == item.index) {
-                                const selectedday = this.temperatures.values[this.selected].date.getDate();
+                                const selecteddate = this.temperatures.values[this.selected].date.getDate();
                                 const selectedmonth = this.temperatures.values[this.selected].date.getMonth();
                                 let values = this.allreadings.values.map(r => {
-                                    if (r && r.date && r.date.getDate() == selectedday && r.date.getMonth() == selectedmonth) {
+                                    if (r && r.date && r.date.getDate() == selecteddate && r.date.getMonth() == selectedmonth) {
                                         return {date: r.date, value: r.average, morning: r.morning, evening: r.evening, datetimeLocal: r.date}
                                     }
                                     else return null
@@ -390,14 +399,17 @@
                             }
                             else this.$emit('dayselected', {values: [], selected: -1});
                         },
+                        // reading
                         markIfPressed(item) {
                             if (this.selected < 0) return { active: false };
                             if (this.selected == item.index) return { active: true }
                             return { active: false };
                         },
+                        // reading
                         getClass(index) {
                             return `daybutton_${index}`;
                         },
+                        // reading
                         markIfSelected(item, mode) {
                             if (this.selected < 0) return { active: false, 
                                 morninghigh: (mode == 1 && item.morninghighest), morninglow: (mode == 1 && item.morninglowest),
@@ -415,6 +427,7 @@
                                     morninghigh: mode == 1 && item.morninghighest, morninglow: mode == 1 && item.morninglowest,
                                     eveninghigh: (mode == 2 && item.eveninghighest), eveninglow: (mode == 2 && item.eveninglowest)  }
                         },
+                        // reading
                         saveValuestoFile() {
                             let data = this.allreadings.values.map(line => (
                                 `${this.getDateTxt(line.date)}\t${roundNumber(line.morning, 1)}\t${roundNumber(line.evening, 1)}\t${roundNumber(line.averagefiltered, 1)}`
@@ -422,6 +435,7 @@
                             let filename = 'readings.txt';
                             this.saveToFile(`Päivämäärä\tAamu\tIlta\tSuodatettu(${this.allreadings.filtersize})\n${data.join('\n')}`, filename, `Tallennettu tiedostoon ${filename}`, '');
                         },
+                        // reading
                         saveToFile(dataToSave, fileName, successmsg, eventname) {
                             const temp = this.allreadings.values
                             var gameblob = new Blob([dataToSave], { type: 'text/plain' })
@@ -441,6 +455,7 @@
                         },
 
                     },
+                    // reading
                     template: `
                         <p class="graphtitle">Mittaustulokset ja suodatettu arvo</p>
                         <div><button type="button" class="btn btn-primary" @click="saveValuestoFile">Tallenna kaikki lukemat tiedostoon</button></div>
@@ -468,6 +483,7 @@
                 monthtable: {
                     props: ['monthlydata', 'monthnames', 'monthaverages', 'title', 'datatype'],
                     emits: ['lastyear'],
+                    // monthtable
                     methods: {
                         roundNumber(value, num) {
                             return roundNumber(value, num);
@@ -481,8 +497,10 @@
                             return `${m.estimate ? '(' : ''}${roundNumber(m.difference, 1)}${m.estimate ? ')' : ''}`;
                         },
                     },
+                    // monthtable
                     template: `
                         <hr>
+                        <div class="hiddenstart hidden">
                         <p class="graphtitle">{{ title }}</p>
                         <table class="datatable">
                             <thead>
@@ -505,6 +523,7 @@
                                 </tr>
                             </tfoot>
                         </table>
+                        </div>
                         `
                 },
                 trendgraph: {
@@ -529,38 +548,44 @@
                     const elem = document.getElementById(`loader${no}`);
                     if (elem) elem.classList.remove('hidden');
                 },
-                stopSpinner() {
+                stopSpinner(spinnerno) {
+                    if (spinnerno) {
+                        const elem = document.getElementById(`loader${spinnerno}`);
+                        if (elem) elem.classList.add('hidden');
+                    }
                     const elems = document.getElementsByClassName('loader')
                     if (elems) {
-                        let i = 0;
-                        for (i = 0; i < elems.length; i++) elems[i].classList.add('hidden');
+                        for (var i = 0; i < elems.length; i++) elems[i].classList.add('hidden');
                     }
                 },     
                 showselectedyear(item) {
                     this.dayselected({selected: -1, values: []});
                     this.startSpinner(2);
-                    this.readings.values = [];
-                    setTimeout( () => {this.fillTemperaturereadingtable(item.index, this.readings.values, this.alltemperaturereadings.values[item.index].date.getFullYear(), this.stopSpinner)}, 10);
+                    this.listedtemperaturereadings.values = [];
+                    setTimeout( () => {this.fillTemperaturereadingtable(item.index, this.listedtemperaturereadings.values, this.alltemperaturereadings.values[item.index].date.getFullYear(), this.stopSpinner)}, 10);
                 },
                 fillTemperaturereadingtable(index, desttable, year, stopFunc) {
                     const maxyears = 2;
                     let i;
-                    for (i = index; i < this.alltemperaturereadings.values.length && i < index + 1000 && this.alltemperaturereadings.values[i].date.getFullYear() > year-maxyears;i++) 
+                    let counter = 0;
+                    for (i = index; i < this.alltemperaturereadings.values.length && i < index + 1000 && this.alltemperaturereadings.values[i].date.getFullYear() > year-maxyears;i++) {
                         desttable.push(this.alltemperaturereadings.values[i]);
+                        desttable[desttable.length-1].index = counter++;
+                    }
+                    this.selectedyearbutton = year.toString();
                     if (i < this.alltemperaturereadings.values.length && this.alltemperaturereadings.values[i].date.getFullYear() > year-maxyears) setTimeout(fillTemperaturereadingtable, 200, i, desttable, year);
                     else stopFunc();
                 },
                 monthlytrendcallback(params) {
                     const seriestatus = Object.keys(params.selected).map(k => ({status: params.selected[k], name: k}));
                     let i = 0;
-                    let j;
                     let chart = null;
-                    while (!chart && i < this.Gcharts.length) {
-                        j = 0;
-                        while (j < this.Gcharts[i].serieOptions.series.length && !chart) {
+                    while (!chart && i < this.screenCharts.length) {
+                        let j = 0;
+                        while (j < this.screenCharts[i].serieOptions.series.length && !chart) {
                             // only one serie cheked, maybe should be more
-                            let search = seriestatus.find(s => this.Gcharts[i].serieOptions.series[j].trend == false && this.Gcharts[i].serieOptions.series[j].name == s.name);
-                            if (search) chart = this.Gcharts[i];
+                            let search = seriestatus.find(s => this.screenCharts[i].serieOptions.series[j].trend == false && this.screenCharts[i].serieOptions.series[j].name == s.name);
+                            if (search) chart = this.screenCharts[i];
                             else j++;
                         }
                         if (!chart) i++;
@@ -728,15 +753,15 @@
                         date: d.date,
                     }))
                     let series = [data.values, trend];
-                    this.daydata.data = series;
+                    this.selecteddayData.data = series;
                     this.dailycharttitle = `Päivän ${values.data.length ? values.data[0].date.getDate() : ''}.${values.data.length ? values.data[0].date.getMonth()+1 : ''} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`;
-                    this.daydata.chart = this.createChart('daygraph', 
+                    this.selecteddayData.chart = this.createChart('daygraph', 
                         this.dailycharttitle, 
-                        series, this.createDayGraph, this.daydata.chart);
+                        series, this.createDayGraph, this.selecteddayData.chart);
                 },
                 rundays() {
                     this.scrollday.scroll = true;
-                    this.scrollday.firstdate = this.scrollday.selecteddate = this.readings.values[this.scrollday.selecteddayindex].date;
+                    this.scrollday.firstdate = this.scrollday.selecteddate = this.listedtemperaturereadings.values[this.scrollday.selecteddayindex].date;
                     setTimeout(this.scrolldayfunction, 1);
                 },
                 stopdays() {
@@ -752,10 +777,10 @@
                     }
                     else this.scrollday.selecteddate = newday;
 
-                    const selectedday = this.scrollday.selecteddate.getDate();
+                    const selecteddate = this.scrollday.selecteddate.getDate();
                     const selectedmonth = this.scrollday.selecteddate.getMonth();
                     let values = this.alltemperaturereadings.values.map(r => {
-                        if (r && r.date && r.date.getDate() == selectedday && r.date.getMonth() == selectedmonth) {
+                        if (r && r.date && r.date.getDate() == selecteddate && r.date.getMonth() == selectedmonth) {
                             return {datetimeLocal: r.date, date: r.date, value: r.average, morning: r.morning, evening: r.evening}
                         }
                         else return null
@@ -763,11 +788,6 @@
 
                     this.dayselected({values: values, selected: -1});
                     setTimeout(this.scrolldayfunction, 200);
-                },
-                getDate(date) {
-                    let parts = date.split('/');
-                    if (parts && parts.length === 3) return new Date(parts[2], Number(parts[0]) - 1, parts[1]);
-                    return NaN;
                 },
                 getDateTxt(date, daymonth) {
                     return getDateTxt(date, daymonth == true ? true : false);
@@ -831,7 +851,7 @@
                 },
                 createDayGraph() {
                     let datavalues = [];
-                    this.daydata.data.forEach((serie, i) => {
+                    this.selecteddayData.data.forEach((serie, i) => {
                         let values = serie.map(dd => (
                             {value: [dd.date, dd.value], tooltip: `Päivä: ${this.getDateTxt(dd.date, false)} ${roundNumber(dd.value, 1)}`}
                         ))
@@ -839,6 +859,27 @@
                     });
                     return {data: datavalues, params: null}
                 },
+                getLast10readings(temperatures) {
+                    let last10Temperatures = [];
+                    if (temperatures.data.length > 1 && temperatures.data[temperatures.data.length - 1].data.length < 10) {
+                        let last = temperatures.data[temperatures.data.length - 2].data.length;
+                        const first = last - (10 - temperatures.data[temperatures.data.length - 1].data.length)
+                        for (var i = first; i < last; i++) {
+                            last10Temperatures.push(temperatures.data[temperatures.data.length - 2].data[i]);
+                        }
+                        for (var i = 0; i < temperatures.data[temperatures.data.length - 1].data.length; i++) {
+                            last10Temperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
+                        }
+                    }
+                    else {
+                        let first = temperatures.data[temperatures.data.length - 1].data.length - 10;
+                        for (var i = first; i < temperatures.data[temperatures.data.length - 1].data.length; i++) {
+                            last10Temperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
+                        }
+                    }
+                    return last10Temperatures;
+                },
+
                 //-end of methods-----------------------------------------------------------------------------
             }
         }).mount('#app');

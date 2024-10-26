@@ -467,7 +467,7 @@ function createNameValues(name, date, values) {
     return { name: name, date: date, values: values };
 }
 function createYearlyAveragesEstimates(yearlyvalues, monthlyaverages) {
-    return { yearlyvalues: yearlyvalues, monthlyaverages: monthlyaverages };
+    return { yearlyvalues: yearlyvalues, monthlyvalues: monthlyaverages };
 }
 function createMonthlyAverage(temperature, difference, estimate) {
     return { temperature: temperature, difference: difference, estimate: estimate };

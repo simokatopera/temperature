@@ -667,10 +667,10 @@ function createNameValues(name: string,date: Date, values: Filtered[]): NameValu
 // _______________________________________________________________________
 interface YearlyAveragesEstimates {
     yearlyvalues: YearlyAverage[],
-    monthlyaverages: TempDiffTable,
+    monthlyvalues: TempDiffTable,
 }
 function createYearlyAveragesEstimates(yearlyvalues: YearlyAverage[], monthlyaverages: TempDiffTable): YearlyAveragesEstimates {
-    return {yearlyvalues: yearlyvalues, monthlyaverages: monthlyaverages}
+    return {yearlyvalues: yearlyvalues, monthlyvalues: monthlyaverages}
 }
 interface MonthlyAverage {
     temperature: number;
