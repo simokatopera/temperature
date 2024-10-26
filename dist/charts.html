@@ -3,7 +3,7 @@
 <html>
 
 <head>
-    <title>Lämpötilat (2)</title>
+    <title>Lämpötilaseuranta</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -84,6 +84,11 @@
         .setmargin5 {
             margin: 5px;
         }
+        #loader2 {
+            position: absolute;
+            left: 200px;
+            z-index: 1;
+        }
         #daygraph {
             display: inline-block;
             width: 400px;
@@ -133,11 +138,12 @@
 <body>
     <div class="container-fluid">
         <div class="page-title">
-            <h1 id="ID_PageTitle">Lämpötilat</h1>
+            <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loadModal">Näytä viimeiset</button>
+                <!-- <div id="loader3" class="loader hidden"></div> -->
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loadModal">*</button>
             </div>
 
             <div id="loader1" class="loader hidden"></div>            
@@ -145,15 +151,15 @@
             <div class="row">
                 <div class="col-6" :style="loading?'display:none;':'display:inline-block;'">
                     <readings :temperatures="listedtemperaturereadings" :selectedday="selectedday" :allreadings="alltemperaturereadings" @dayselected="dayselected"></readings>
+                    <div id="loader2" class="loader hidden"></div>
                     <div class="hiddenstart hidden">
                         <button  class="yearbutton" v-for="item in listedtemperaturereadings.years" :class="{yearbuttonselected: this.selectedyearbutton == item.year }" @click="showselectedyear(item)">{{ item.year }}</button>
                     </div>
-                    <div id="loader2" class="loader hidden"></div>
                 </div>
                 <div class="col-6" :style="!loading && selecteddayData.data[0].length>0?'display:inline-block;':'display:none;'">
                     <div class="hiddenstart hidden">
-                        <button type="button" :disabled="this.scrollday.scroll" class="btn btn-primary setmargin5" @click="rundays">Rullaa</button>
-                        <button type="button" :disabled="!this.scrollday.scroll" class="btn btn-primary setmargin5" @click="stopdays">Pysäytä</button>
+                        <button id="scrolldays" type="button" class="btn btn-primary setmargin5" @click="rundays">Aloita rullaus</button>
+                        <!-- <button type="button" :disabled="!this.scrollday.scroll" class="btn btn-primary setmargin5" @click="stopdays">Pysäytä</button> -->
                         <hr>
                         <p class="graphtitle">{{ dailycharttitle }}</p>
                         <div id="daygraph"></div>
@@ -214,6 +220,8 @@
 
         const months1 = ['Tammi', 'Helmi', 'Maalis', 'Huhti', 'Touko', 'Kesä', 'Heinä', 'Elo', 'Syys', 'Loka', 'Marras', 'Joulu'];
         const months2 = ['Tammikuu', 'Helmikuu', 'Maaliskuu', 'Huhtikuu', 'Toukokuu', 'Kesäkuu', 'Heinäkuu', 'Elokuu', 'Syyskuu', 'Lokakuu', 'Marraskuu', 'Joulukuu'];
+        const NoSelection = -1;
+        const StopScrolling = -2;
 
         function selectFirstDay() {
             let button = document.getElementsByClassName('daybutton_0');
@@ -228,7 +236,6 @@
         const vueapp = createApp({
             data() {
                 return {
-
                     defaultyear: 1976,
                     monthnames: months1,
                     monthnamesLong: months2,
@@ -252,7 +259,7 @@
                     scrollday: {
                         firstdate: null,
                         selecteddate: null,
-                        selecteddayindex: -1,
+                        selecteddayindex: NoSelection,
                         scroll: false,
                     },
                     selectedday: 0, // not used
@@ -322,6 +329,7 @@
                     if (elem) {
                         elem.addEventListener('show.bs.modal', async () => {
                             // get latest readings when modal opened
+                            this.startSpinner(3);
                             const stationreadings = await apiGetLatestTemperatures();
                             this.latestReadingsFromNet = compareReadings(this.last10Temperatures, stationreadings);
                         });
@@ -334,7 +342,7 @@
                     emits: ['dayselected'],
                     data: function () {
                         return {
-                            selected: ref(-1),
+                            selected: ref(NoSelection),
                             sum: ref(0),
                             arrowup: String.fromCharCode(0x2191),
                             arrowdn: String.fromCharCode(0x2193),
@@ -383,7 +391,7 @@
                         },
                         // reading
                         selectDay(item) {
-                            if (this.selected == item.index) this.selected = -1;
+                            if (this.selected == item.index) this.selected = NoSelection;
                             else this.selected = item.index;
                             this.calcSums();
                             if (this.selected == item.index) {
@@ -397,7 +405,7 @@
                                 })
                                 this.$emit('dayselected', {values: values.filter(v => v !== null), selected: this.selected});
                             }
-                            else this.$emit('dayselected', {values: [], selected: -1});
+                            else this.$emit('dayselected', {values: [], selected: StopScrolling});
                         },
                         // reading
                         markIfPressed(item) {
@@ -559,7 +567,7 @@
                     }
                 },     
                 showselectedyear(item) {
-                    this.dayselected({selected: -1, values: []});
+                    this.dayselected({selected: NoSelection, values: []});
                     this.startSpinner(2);
                     this.listedtemperaturereadings.values = [];
                     setTimeout( () => {this.fillTemperaturereadingtable(item.index, this.listedtemperaturereadings.values, this.alltemperaturereadings.values[item.index].date.getFullYear(), this.stopSpinner)}, 10);
@@ -735,10 +743,9 @@
                 dayselected(data) {
                     this.selectedday = data.selected;
                     // create trend curve
-                    if (data.selected >= 0) {
-                        this.scrollday.selecteddate = this.scrollday.firstdate = null;
+                    if (data.selected >= 0 || data.selected == StopScrolling) {
                         this.scrollday.selecteddayindex = data.selected;
-                        this.scrollday.scroll = false;
+                        this.stopdays();
                     }
                     const values = {
                         data: data.values.map(d => ({
@@ -756,15 +763,23 @@
                     this.selecteddayData.data = series;
                     this.dailycharttitle = `Päivän ${values.data.length ? values.data[0].date.getDate() : ''}.${values.data.length ? values.data[0].date.getMonth()+1 : ''} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`;
                     this.selecteddayData.chart = this.createChart('daygraph', 
-                        this.dailycharttitle, 
-                        series, this.createDayGraph, this.selecteddayData.chart);
+                        this.dailycharttitle, series, this.createDayGraph, this.selecteddayData.chart);
                 },
                 rundays() {
-                    this.scrollday.scroll = true;
-                    this.scrollday.firstdate = this.scrollday.selecteddate = this.listedtemperaturereadings.values[this.scrollday.selecteddayindex].date;
-                    setTimeout(this.scrolldayfunction, 1);
+                    if (this.scrollday.scroll == false) {
+                        let elem = document.getElementById('scrolldays');
+                        elem.innerText='Lopeta rullaus';
+                        this.scrollday.scroll = true;
+                        this.scrollday.firstdate = this.scrollday.selecteddate = this.listedtemperaturereadings.values[this.scrollday.selecteddayindex].date;
+                        setTimeout(this.scrolldayfunction, 1);
+                    }
+                    else {
+                        this.stopdays();
+                    } 
                 },
                 stopdays() {
+                    let elem = document.getElementById('scrolldays');
+                    elem.innerText='Aloita rullaus';
                     this.scrollday.scroll = false;
                     this.scrollday.selecteddate = this.scrollday.firstdate = null;
                 },
@@ -786,7 +801,7 @@
                         else return null
                     }).filter(v => v !== null);
 
-                    this.dayselected({values: values, selected: -1});
+                    this.dayselected({values: values, selected: NoSelection});
                     setTimeout(this.scrolldayfunction, 200);
                 },
                 getDateTxt(date, daymonth) {
