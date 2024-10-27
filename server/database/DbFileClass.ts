@@ -32,7 +32,7 @@ temperaturedata.push(require("./files/Salo_2023.json"));
 temperaturedata.push(require("./files/Salo_2024.json"));
 
 
-export class FileDbClass implements DbApiClass {
+export class DbFileClass implements DbApiClass {
     readonly driverversion: string = 'FileDb-0.01';
     //readonly adminuserid: string = "00000000-0000-0000-0000-000000001964";
     //readonly dummyid: string = "dummy id";

@@ -1,6 +1,8 @@
 {
   "devDependencies": {
     "@netlify/functions": "^2.8.1",
-    "@types/node": "^22.5.4"
+    "@supabase/supabase-js": "^2.45.6",
+    "@types/node": "^22.5.4",
+    "supabase": "^1.207.9"
   }
 }

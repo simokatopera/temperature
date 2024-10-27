@@ -62,6 +62,9 @@
         .eveninglow {
             background-color: rgb(174, 139, 255);
         }
+        .estimatedvalue {
+            background-color: gray;
+        }
         .actionbutton {
             background-color: lightblue;
         }
@@ -142,7 +145,6 @@
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
-                <!-- <div id="loader3" class="loader hidden"></div> -->
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loadModal">*</button>
             </div>
 
@@ -190,16 +192,18 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
+                            <div id="loader3" class="loader hidden"></div>
+
                             <table class="latestreadingtable">
                                 <tr>
                                     <th>Päivä</th><th>Aamu</th><th>Ilta</th><th>Aamu</th><th>Ilta</th>
                                 </tr>
                             <tr v-for="item in latestReadingsFromNet">
                                 <td>{{item.observation.morningtime.getDate() }}.{{item.observation.morningtime.getMonth()+1 }}.{{item.observation.morningtime.getFullYear()}}</td>
-                                <td>{{ isNaN(item.observation.morning) ? '' : item.observation.morning }}</td>
-                                <td>{{ isNaN(item.observation.evening) ? '' : item.observation.evening }}</td>
-                                <td>{{ isNaN(item.reading.morning) ? '' : item.reading.morning }}</td>
-                                <td>{{ isNaN(item.reading.evening) ? '' : item.reading.evening }}</td>
+                                <td>{{ isNaN(item.observation.morning) ? '' : this.roundNumber(item.observation.morning, 1) }}</td>
+                                <td>{{ isNaN(item.observation.evening) ? '' : this.roundNumber(item.observation.evening, 1) }}</td>
+                                <td>{{ isNaN(item.reading.morning) ? '' : this.roundNumber(item.reading.morning, isNaN(item.observation.morning) ? 0 : 1) }}</td>
+                                <td :class="isNaN(item.observation.evening) ? 'estimatedvalue' : ''">{{ isNaN(item.reading.evening) ? '' : this.roundNumber(item.reading.evening, isNaN(item.observation.evening) ? 0 : 1) }}</td>
                             </tr>
                             </table>
                         </div>
@@ -332,6 +336,7 @@
                             this.startSpinner(3);
                             const stationreadings = await apiGetLatestTemperatures();
                             this.latestReadingsFromNet = compareReadings(this.last10Temperatures, stationreadings);
+                            this.stopSpinner(3);
                         });
                     }
                 }, 10);
@@ -421,17 +426,10 @@
                         markIfSelected(item, mode) {
                             if (this.selected < 0) return { active: false, 
                                 morninghigh: (mode == 1 && item.morninghighest), morninglow: (mode == 1 && item.morninglowest),
-                                eveninghigh: (mode == 2 && item.eveninghighest), eveninglow: (mode == 2 && item.eveninglowest) };
-
-                            if (item.date >= this.temperatures.values[this.selected].firstdayfilter &&
-                                item.date < this.temperatures.values[this.selected].lastdayfilter) {
-                                return { active: true, 
-                                    morninghigh: mode == 1 && item.morninghighest, morninglow: mode == 1 && item.morninglowest,
-                                    eveninghigh: (mode == 2 && item.eveninghighest), eveninglow: (mode == 2 && item.eveninglowest) 
-                                };
-                                
-                            }
-                            return { active: false, 
+                                eveninghigh: (mode == 2 && item.eveninghighest), eveninglow: (mode == 2 && item.eveninglowest) 
+                            };
+                            return { active: item.date >= this.temperatures.values[this.selected].firstdayfilter &&
+                                    item.date < this.temperatures.values[this.selected].lastdayfilter, 
                                     morninghigh: mode == 1 && item.morninghighest, morninglow: mode == 1 && item.morninglowest,
                                     eveninghigh: (mode == 2 && item.eveninghighest), eveninglow: (mode == 2 && item.eveninglowest)  }
                         },
@@ -551,6 +549,9 @@
             methods: {
                 stoploading() {
                     this.loading = false;
+                },
+                roundNumber(value, num) {
+                    return roundNumber(value, num)
                 },
                 startSpinner(no) {
                     const elem = document.getElementById(`loader${no}`);
