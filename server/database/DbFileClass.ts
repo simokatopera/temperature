@@ -88,7 +88,7 @@ export class DbFileClass implements DbApiClass {
                 for (dataindex = 0; dataindex < temperaturedata.length; dataindex++) {
                     if (temperaturedata[dataindex].info.location == location && temperaturedata[dataindex].info.year == years[yearindex]) {
                         let dailyreadings: TemperatureDataType[] = temperaturedata[dataindex].data;
-                        dailyreadings.map(reading => {
+                        dailyreadings.forEach(reading => {
                             //;console.log(reading.date)
                             reading.datetimeUtc = getDate(reading.date);
                         })

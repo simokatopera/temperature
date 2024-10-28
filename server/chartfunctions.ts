@@ -455,6 +455,7 @@ class Temperatures {
     }
     createLinearContTable(temperatures: TemperatureMsg): FilterValue[] {
         let lineartable:FilterValue[] = [];
+        if (temperatures.data.length == 0) return lineartable;
         for (let year: number = temperatures.data[0].info.year; year <= temperatures.data[temperatures.data.length - 1].info.year; year++) {
             const lastday = year % 4 == 0 ? 366 : 365;
             for (let day: number = 1; day <= lastday; day++) lineartable.push(createFilterValueEmpty(new Date(year, 0, day)));

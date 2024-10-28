@@ -102,6 +102,10 @@
             width: 520px;
             overflow: scroll;
         }
+        #Error {
+            color: red;
+            font-size: 24px;
+        }
         .hidden {
             display: none;
         }
@@ -150,6 +154,7 @@
 
             <div id="loader1" class="loader hidden"></div>            
             <hr>
+            <div id="Error"></div>
             <div class="row">
                 <div class="col-6" :style="loading?'display:none;':'display:inline-block;'">
                     <readings :temperatures="listedtemperaturereadings" :selectedday="selectedday" :allreadings="alltemperaturereadings" @dayselected="dayselected"></readings>
@@ -202,8 +207,8 @@
                                 <td>{{item.observation.morningtime.getDate() }}.{{item.observation.morningtime.getMonth()+1 }}.{{item.observation.morningtime.getFullYear()}}</td>
                                 <td>{{ isNaN(item.observation.morning) ? '' : this.roundNumber(item.observation.morning, 1) }}</td>
                                 <td>{{ isNaN(item.observation.evening) ? '' : this.roundNumber(item.observation.evening, 1) }}</td>
-                                <td>{{ isNaN(item.reading.morning) ? '' : this.roundNumber(item.reading.morning, isNaN(item.observation.morning) ? 0 : 1) }}</td>
-                                <td :class="isNaN(item.observation.evening) ? 'estimatedvalue' : ''">{{ isNaN(item.reading.evening) ? '' : this.roundNumber(item.reading.evening, isNaN(item.observation.evening) ? 0 : 1) }}</td>
+                                <td :class="isNaN(item.observation.morning) ? (isNaN(item.reading.morning) ? '' : 'estimatedvalue') : ''">{{ isNaN(item.reading.morning) ? '' : this.roundNumber(item.reading.morning, isNaN(item.observation.morning) ? 0 : 1) }}</td>
+                                <td :class="isNaN(item.observation.evening) ? (isNaN(item.reading.evening) ? '' : 'estimatedvalue') : ''">{{ isNaN(item.reading.evening) ? '' : this.roundNumber(item.reading.evening, isNaN(item.observation.evening) ? 0 : 1) }}</td>
                             </tr>
                             </table>
                         </div>
@@ -287,11 +292,15 @@
 
                 this.startSpinner(1);
                 let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
-                //years.data = [2021,2022,2023,2024]
+                //years.data = [2023, 2024]
                 let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
                 this.checkData(temperatures);
                 this.last10Temperatures = this.getLast10readings(temperatures);
-                
+                if (this.last10Temperatures.length == 0) {
+                    this.stopSpinner(1);
+                    document.getElementById('Error').innerText = "Ei lämpötilalukemia"
+                    return;
+                }
                 // initialize temperature readings
                 CFinitTemperature(temperatures, this.alltemperaturereadings.filtersize, this.monthnames, this.monthnamesLong);
 
@@ -877,6 +886,7 @@
                 },
                 getLast10readings(temperatures) {
                     let last10Temperatures = [];
+                    if (temperatures.data.length <= 0 ) return [];
                     if (temperatures.data.length > 1 && temperatures.data[temperatures.data.length - 1].data.length < 10) {
                         let last = temperatures.data[temperatures.data.length - 2].data.length;
                         const first = last - (10 - temperatures.data[temperatures.data.length - 1].data.length)

@@ -282,6 +282,8 @@ class Temperatures {
     }
     createLinearContTable(temperatures) {
         let lineartable = [];
+        if (temperatures.data.length == 0)
+            return lineartable;
         for (let year = temperatures.data[0].info.year; year <= temperatures.data[temperatures.data.length - 1].info.year; year++) {
             const lastday = year % 4 == 0 ? 366 : 365;
             for (let day = 1; day <= lastday; day++)
