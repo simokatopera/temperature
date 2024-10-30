@@ -204,16 +204,19 @@
                                     <th>Päivä</th><th>Aamu</th><th>Ilta</th><th>Aamu</th><th>Ilta</th>
                                 </tr>
                             <tr v-for="item in latestReadingsFromNet">
-                                <td>{{item.observation.morningtime.getDate() }}.{{item.observation.morningtime.getMonth()+1 }}.{{item.observation.morningtime.getFullYear()}}</td>
+                                <td>{{ isNaN(item.observation.morning) ?  item.observation.eveningtime.getDate() : item.observation.morningtime.getDate() }}.
+                                    {{ isNaN(item.observation.morning) ?  item.observation.eveningtime.getMonth()+1: item.observation.morningtime.getMonth()+1 }}.
+                                    {{  isNaN(item.observation.morning) ?  item.observation.eveningtime.getFullYear(): item.observation.morningtime.getFullYear()}}</td>
                                 <td>{{ isNaN(item.observation.morning) ? '' : this.roundNumber(item.observation.morning, 1) }}</td>
                                 <td>{{ isNaN(item.observation.evening) ? '' : this.roundNumber(item.observation.evening, 1) }}</td>
-                                <td :class="isNaN(item.observation.morning) ? (isNaN(item.reading.morning) ? '' : 'estimatedvalue') : ''">{{ isNaN(item.reading.morning) ? '' : this.roundNumber(item.reading.morning, isNaN(item.observation.morning) ? 0 : 1) }}</td>
+                                <td :class="isNaN(item.observation.morning) ? (isNaN(item.reading.morning) ? 'estimatedvalue' : '') : ''">{{ isNaN(item.reading.morning) ? '' : this.roundNumber(item.reading.morning, isNaN(item.observation.morning) ? 0 : 1) }}</td>
                                 <td :class="isNaN(item.observation.evening) ? (isNaN(item.reading.evening) ? '' : 'estimatedvalue') : ''">{{ isNaN(item.reading.evening) ? '' : this.roundNumber(item.reading.evening, isNaN(item.observation.evening) ? 0 : 1) }}</td>
+                                <td><input v-model="item.obsselected" :disabled="!(!isNaN(item.observation.morning) && isNaN(item.reading.morning)) && !(!isNaN(item.observation.evening) && isNaN(item.reading.evening))" type="checkbox" name="select"></td>
                             </tr>
                             </table>
                         </div>
                         <div class="modal-footer">
-                            <button disabled type="button" class="btn btn-success">Tallenna</button>
+                            <button  :disabled="!latestReadingsFromNet.saveenable || !latestReadingsFromNet.find(l => l.obsselected)" @click="savereadings" type="button" class="btn btn-success">Tallenna</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sulje</button>
                         </div>
                     </div>
@@ -289,66 +292,7 @@
                 }
             },
             async mounted() {
-
-                this.startSpinner(1);
-                let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
-                //years.data = [2023, 2024]
-                let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
-                this.checkData(temperatures);
-                this.last10Temperatures = this.getLast10readings(temperatures);
-                if (this.last10Temperatures.length == 0) {
-                    this.stopSpinner(1);
-                    document.getElementById('Error').innerText = "Ei lämpötilalukemia"
-                    return;
-                }
-                // initialize temperature readings
-                CFinitTemperature(temperatures, this.alltemperaturereadings.filtersize, this.monthnames, this.monthnamesLong);
-
-                this.alltemperaturereadings = CFgetAllReadings();
-                this.listedtemperaturereadings.filtersize = this.alltemperaturereadings.filtersize;
-                this.listedtemperaturereadings.values = [];
-                const temp = this.alltemperaturereadings.values.map((v, i) => ({year: v.date.getFullYear(), index: i}));
-                let prev = '';
-                this.listedtemperaturereadings.years = temp.filter(v => { let returnvalue = v.year != prev; prev = v.year; return returnvalue;});
-                this.fillTemperaturereadingtable(0, this.listedtemperaturereadings.values, this.alltemperaturereadings.values[0].date.getFullYear(), this.stoploading);
-
-                // initialize graphics curves
-                this.calculated.values = CFcalculateMonthlyAverages();
-
-                this.createChart(this.testgraph10, 'Suodatetut lämpötilat', temperatures, CFcreateYearlyFilteredSeriedata);
-                this.createChart(this.testgraph2, 'Päivittäiset keskiarvot', temperatures, CFcreateAllYearsAverageSeriedata);
-                this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, CFcreateAllYearsMonthlyAverageSeriedata);
-                this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, CFcreateAllYearsFilteredSeriedata);
-                this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, CFcreateLastYearsSeriedata);
-                this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', temperatures, CFcreateDailyDiffdata);
-                this.createChart(this.testgraph12, 'Korkeimmat ja matalimmat arvot/vuosi (kpl)', temperatures, CFcreateYearlyHighValuedata);
-                this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, CFcreateYearlyTrendSeriedata);
-
-                this.screenCharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, CFcreateMonthlySummerTrendSeriedata));
-                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                this.screenCharts.push(this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, CFcreateMonthlyWinterTrendSeriedata));
-                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                this.screenCharts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, CFcreateMonthlyFallTrendSeriedata));
-                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                this.screenCharts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, CFcreateMonthlySpringTrendSeriedata));
-                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                let itemlist = document.querySelectorAll(".hiddenstart.hidden");
-                if (itemlist && itemlist.length) itemlist.forEach(i => i.classList.remove("hidden"))
-
-                this.stopSpinner(1);
-
-                setTimeout(() => {
-                    let elem = document.getElementById('loadModal');
-                    if (elem) {
-                        elem.addEventListener('show.bs.modal', async () => {
-                            // get latest readings when modal opened
-                            this.startSpinner(3);
-                            const stationreadings = await apiGetLatestTemperatures();
-                            this.latestReadingsFromNet = compareReadings(this.last10Temperatures, stationreadings);
-                            this.stopSpinner(3);
-                        });
-                    }
-                }, 10);
+                await this.loadAll()
             },
             components: {
                 readings: {
@@ -556,6 +500,70 @@
                 }
             },
             methods: {
+                async loadAll() {
+                    this.startSpinner(1);
+                let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
+                //years.data = [2023, 2024]
+                let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
+                this.checkData(temperatures);
+                this.last10Temperatures = this.getLast10readings(temperatures);
+                if (this.last10Temperatures.length == 0) {
+                    this.stopSpinner(1);
+                    document.getElementById('Error').innerText = "Ei lämpötilalukemia"
+                    return;
+                }
+                // initialize temperature readings
+                CFinitTemperature(temperatures, this.alltemperaturereadings.filtersize, this.monthnames, this.monthnamesLong);
+
+                this.alltemperaturereadings = CFgetAllReadings();
+                this.listedtemperaturereadings.filtersize = this.alltemperaturereadings.filtersize;
+                this.listedtemperaturereadings.values = [];
+                const temp = this.alltemperaturereadings.values.map((v, i) => ({year: v.date.getFullYear(), index: i}));
+                let prev = '';
+                this.listedtemperaturereadings.years = temp.filter(v => { let returnvalue = v.year != prev; prev = v.year; return returnvalue;});
+                this.fillTemperaturereadingtable(0, this.listedtemperaturereadings.values, this.alltemperaturereadings.values[0].date.getFullYear(), this.stoploading);
+
+                // initialize graphics curves
+                this.calculated.values = CFcalculateMonthlyAverages();
+
+                this.createChart(this.testgraph10, 'Suodatetut lämpötilat', temperatures, CFcreateYearlyFilteredSeriedata);
+                this.createChart(this.testgraph2, 'Päivittäiset keskiarvot', temperatures, CFcreateAllYearsAverageSeriedata);
+                this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, CFcreateAllYearsMonthlyAverageSeriedata);
+                this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, CFcreateAllYearsFilteredSeriedata);
+                this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, CFcreateLastYearsSeriedata);
+                this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', temperatures, CFcreateDailyDiffdata);
+                this.createChart(this.testgraph12, 'Korkeimmat ja matalimmat arvot/vuosi (kpl)', temperatures, CFcreateYearlyHighValuedata);
+                this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, CFcreateYearlyTrendSeriedata);
+
+                this.screenCharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, CFcreateMonthlySummerTrendSeriedata));
+                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                this.screenCharts.push(this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, CFcreateMonthlyWinterTrendSeriedata));
+                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                this.screenCharts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, CFcreateMonthlyFallTrendSeriedata));
+                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                this.screenCharts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, CFcreateMonthlySpringTrendSeriedata));
+                this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                let itemlist = document.querySelectorAll(".hiddenstart.hidden");
+                if (itemlist && itemlist.length) itemlist.forEach(i => i.classList.remove("hidden"))
+
+                this.stopSpinner(1);
+
+                setTimeout(() => {
+                    let elem = document.getElementById('loadModal');
+                    if (elem) {
+                        elem.addEventListener('show.bs.modal', async () => {
+                            // get latest readings when modal opened
+                            this.startSpinner(3);
+                            const stationreadings = await apiGetLatestTemperatures();
+                            this.latestReadingsFromNet = compareReadings(this.last10Temperatures, stationreadings);
+                            const saving = await apiGetSavingAllowed('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc');
+                            this.latestReadingsFromNet.saveenable = saving.data.access;
+                            this.stopSpinner(3);
+                        });
+                    }
+                }, 10);
+
+                },
                 stoploading() {
                     this.loading = false;
                 },
@@ -576,6 +584,28 @@
                         for (var i = 0; i < elems.length; i++) elems[i].classList.add('hidden');
                     }
                 },     
+                async savereadings() {
+                    let tobesaved = this.latestReadingsFromNet.map(l => l.obsselected ? 
+                        {date: l.date.toString(), morning: l.observation.morning, evening: l.observation.evening, morningtime: l.observation.morningtime, eveningtime: l.observation.eveningtime}
+                         : null).filter(a => a !== null);
+
+                    if (tobesaved.length && this.latestReadingsFromNet.saveenable) {
+                        // save selected readings
+                        /*
+                        debug data
+                        */
+                        tobesaved = [
+                            {date: new Date(2025, 0, 1).toString(), 
+                            morning: 11.1, 
+                            evening: 22.2, 
+                            morningtime: new Date(2025, 0, 1), 
+                            eveningtime: new Date(2025, 0, 1)}
+                        ];
+
+                        let status = await apiSaveReadings('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', '1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', tobesaved);
+                        console.log(status)
+                    }
+                },
                 showselectedyear(item) {
                     this.dayselected({selected: NoSelection, values: []});
                     this.startSpinner(2);

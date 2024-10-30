@@ -1405,9 +1405,10 @@ interface LatestReadingsGroup {
     date: Date;
     observation: LatestReadings;
     reading: LatestReadings | null;
+    obsselected: boolean;
 }
 function createLatestReadingsGroup(name: string, date: Date, observation: LatestReadings, reading: LatestReadings): LatestReadingsGroup {
-    return {name: name, date: date, observation: observation, reading: reading}
+    return {name: name, date: date, observation: observation, reading: reading, obsselected: false}
 }
 interface LatestReadings {
     morning: number;

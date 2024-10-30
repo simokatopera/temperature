@@ -5,9 +5,10 @@ export interface TemperatureInfoType {
 export interface TemperatureType {
     info: TemperatureInfoType;
     data: TemperatureDataType[];
+    saveenable: boolean;
 }
 export function createTemperatureType(year, location, data): TemperatureType {
-    return {info: {location: location, year: year}, data: data}
+    return {info: {location: location, year: year}, data: data, saveenable: false}
 }
 export interface TemperatureDataType {
     date: string;
@@ -18,4 +19,21 @@ export interface TemperatureDataType {
 }
 export function createTemperatureDataType(date: string, morning: number, evening: number, datetimeUtc: Date | null, datetimeLocal: Date | null): TemperatureDataType {
     return {date: date, datetimeLocal: datetimeLocal, datetimeUtc: datetimeUtc, morning: morning, evening: evening}
+}
+
+
+export interface DbTemperatureType {
+    info: TemperatureInfoType;
+    data: DbTemperatureDataType[];
+}
+export function createDbTemperatureType(year, location, data): TemperatureType {
+    return {info: {location: location, year: year}, data: data, saveenable: false}
+}
+export interface DbTemperatureDataType {
+    date: string;
+    morning: number;
+    evening: number;
+}
+export function createDbTemperatureDataType(date: string, morning: number, evening: number): DbTemperatureDataType {
+    return {date: date, morning: morning, evening: evening}
 }

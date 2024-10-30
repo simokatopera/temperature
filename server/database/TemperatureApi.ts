@@ -11,6 +11,14 @@ export class TemperatureApi {
         if (this.db === null) return '';
         return await this.db.version();
     }
+    async savingallowed(): Promise<boolean>{
+        if (this.db === null) return false;
+        return await this.db.savingallowed();
+    }
+    async savereadings(pwd, data): Promise<number>{
+        if (this.db === null) return -1;
+        return await this.db.savereadings(pwd, data);
+    }
     async locations(): Promise<string[]> {
         if (this.db === null) return [];
         return await this.db.locations();

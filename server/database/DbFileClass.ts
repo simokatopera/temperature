@@ -51,6 +51,12 @@ export class DbFileClass implements DbApiClass {
     async version(): Promise<string>{
         return this.driverversion;
     }
+    async savingallowed(): Promise<boolean>{
+        return false;
+    }
+    async savereadings(pwd, data): Promise<number>{
+        return -1;
+    }    
     async locations(): Promise<string[]> {
         if (this.operationAllowed('get', 'location')) {
             let i: number;

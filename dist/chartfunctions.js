@@ -1037,7 +1037,7 @@ function createSerie_10(seriename, days, dataFunc, yearFunc, cbFunc) {
     }));
 }
 function createLatestReadingsGroup(name, date, observation, reading) {
-    return { name: name, date: date, observation: observation, reading: reading };
+    return { name: name, date: date, observation: observation, reading: reading, obsselected: false };
 }
 function createLatestReadings(morning, morningtime, evening, eveningtime) {
     return { morning: morning, evening: evening, morningtime: morningtime, eveningtime: eveningtime };
