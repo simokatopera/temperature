@@ -1,7 +1,7 @@
 
 import {DbApiClass} from "./DbApiClass.js";
 import { guidValid } from "../utils.js";
-import { TemperatureType, TemperatureDataType } from "./definitions.js";
+import { TemperatureUpdateData, DBStatus, TemperatureType, TemperatureDataType, setFailResult } from "./definitions.js";
 
 
 let temperaturedata: TemperatureType[] = [];
@@ -54,8 +54,8 @@ export class DbFileClass implements DbApiClass {
     async savingallowed(): Promise<boolean>{
         return false;
     }
-    async savereadings(pwd, data): Promise<number>{
-        return -1;
+    async savereadings(pwd: string, data: TemperatureUpdateData[]): Promise<DBStatus>{
+        return setFailResult("Not implemented")
     }    
     async locations(): Promise<string[]> {
         if (this.operationAllowed('get', 'location')) {

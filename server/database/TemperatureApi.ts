@@ -1,5 +1,5 @@
 import {DbApiClass} from "./DbApiClass.js";
-import { TemperatureType } from "./definitions.js";
+import { TemperatureType, TemperatureUpdateData, DBStatus, setFailResult } from "./definitions.js";
 
 export class TemperatureApi {
     db: DbApiClass | null = null;
@@ -15,8 +15,8 @@ export class TemperatureApi {
         if (this.db === null) return false;
         return await this.db.savingallowed();
     }
-    async savereadings(pwd, data): Promise<number>{
-        if (this.db === null) return -1;
+    async savereadings(pwd: string, data: TemperatureUpdateData[]): Promise<DBStatus>{
+        if (this.db === null || data == null) return setFailResult("Not implemented");
         return await this.db.savereadings(pwd, data);
     }
     async locations(): Promise<string[]> {

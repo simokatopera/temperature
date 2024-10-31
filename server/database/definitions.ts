@@ -21,7 +21,6 @@ export function createTemperatureDataType(date: string, morning: number, evening
     return {date: date, datetimeLocal: datetimeLocal, datetimeUtc: datetimeUtc, morning: morning, evening: evening}
 }
 
-
 export interface DbTemperatureType {
     info: TemperatureInfoType;
     data: DbTemperatureDataType[];
@@ -36,4 +35,22 @@ export interface DbTemperatureDataType {
 }
 export function createDbTemperatureDataType(date: string, morning: number, evening: number): DbTemperatureDataType {
     return {date: date, morning: morning, evening: evening}
+}
+export interface TemperatureUpdateData {
+    date: string;
+    morning: number;
+    evening: number;
+    morningtimeUtc: string;
+    eveningtimeUtc: string;
+}
+export interface DBStatus {
+    errormsg: string | null;
+    status: string | null;
+    id: number;
+}
+export function setFailResult(errorMsg: string): DBStatus {
+    return {errormsg: errorMsg, status: 'Fail', id: 0}
+}
+export function setOkResult(status: string | null, id: number): DBStatus {
+    return {errormsg: null, status: status ?? 'Ok', id: id}
 }

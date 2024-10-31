@@ -27,8 +27,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                     // save new values
                     const values = JSON.parse(event.body);
                     const status = await api.savereadings(event.queryStringParameters.pwd, values);
-                    if (status >= 0) return createHttpJsonOkResponse(null, {status: true});
-                    console.log(`Saving failed, status: ${status}`)
+                    if (status.errormsg === null) return createHttpJsonOkResponse(null, {status: true});
+                    console.log(`Saving failed, error: ${status.errormsg}`)
                     return createJsonErrorResponse( 404, 'Saving failed');
                 }
                 return createJsonErrorResponse(HttpResponseType.Unautorized, 'Not done');

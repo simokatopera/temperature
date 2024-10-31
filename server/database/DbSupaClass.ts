@@ -5,7 +5,7 @@ const supabase = createClient("https://stehwqimpfcpzydxovha.supabase.co",
 
     import {DbApiClass} from "./DbApiClass.js";
     import { guidValid } from "../utils.js";
-    import { TemperatureType, createDbTemperatureDataType, createTemperatureType, createTemperatureDataType, DbTemperatureDataType, createDbTemperatureType } from "./definitions.js";
+    import { setFailResult, setOkResult, TemperatureUpdateData, DBStatus, TemperatureType, createDbTemperatureDataType, createTemperatureType, createTemperatureDataType, DbTemperatureDataType, createDbTemperatureType } from "./definitions.js";
 
 /*
 npm install @supabase/supabase-js --save-dev
@@ -54,29 +54,27 @@ export class DbSupaClass implements DbApiClass {
     private createDbDate(date: Date): string {
         return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;
     }
-    async savereadings(pwd: string, data: TemperatureUpdateData[]): Promise<number>{
+    async savereadings(pwd: string, data: TemperatureUpdateData[]): Promise<DBStatus>{
+        /*
+        all data given as parameter must be data for same year
+        */
         console.log('savereadings')
-        if (this.operationAllowed('post', 'savereadings')) {
-            if (data.length == 0) return -7;
-            if (!pwd) return -2;
-            const curyears = data.map(d => new Date(d.date).getFullYear()).filter(this.onlyUnique);
-            let dbreadings: TemperatureType[] = await this.temperatures('', curyears);
-            console.log(`Amount of records: ${dbreadings.length}`)
-            if (dbreadings.length > curyears.length) return -8;
+        if (!pwd) return setFailResult("Not allowed");
 
-            let recordstoupdate = dbreadings.length == curyears.length;
+        if (this.operationAllowed('post', 'savereadings')) {
+            if (data.length == 0) return setFailResult("Ivalid parameter");
+
+            const curyears = data.map(d => new Date(d.date).getFullYear()).filter(this.onlyUnique);
+            if (curyears.length > 1) return setFailResult("Ivalid parameter");
+
+            let dbreadings: TemperatureType[] = await this.temperatures('', curyears);
+            if (dbreadings.length > curyears.length) return setFailResult("Ivalid parameter");
+
             if (dbreadings.length < curyears.length) {
-                console.log('-----!!!!!------')
-                recordstoupdate = false;
-                // some years missing from db
-                // create new yearly record
+                // create new yearly record (curyears.length is always 1)
                 let yearsread = dbreadings.map(year => year.info.year);
-                console.log('yearsread')
-                console.log(yearsread)
                 let missingyears = curyears.map(y => yearsread.find(yy => y == yy) ? null : y).filter(yyy => yyy !== null);
-                console.log('missingyears')
-                console.log(missingyears)
-                if (missingyears.length != 1) return -11;
+                if (missingyears.length != 1) return setFailResult("Ivalid parameter");
 
                 let newreadings: DbTemperatureDataType[]  = data.map(d => {
                     if (new Date(d.date).getFullYear() == missingyears[0]) {
@@ -88,65 +86,59 @@ export class DbSupaClass implements DbApiClass {
                     return null;
                 }).filter(val => val !== null);
                 
-                // add new year record
+                // start a record for new year
                 const result = await supabase
                     .from('temperatures')
                     .insert({ year: missingyears[0], readings: {info: {year: missingyears[0], location: ''}, data: newreadings }})
                     .select('id')
 
-                if (result.error) return -3;
-                return result.data[0].id; 
+                if (result.error) return setFailResult("Ivalid parameter");
+
+                return setOkResult( null, result.data[0].id);
             }
-            
-            if (recordstoupdate) {
-                if (dbreadings.length > 1) return -4;
-                console.log(`saving...`)
-
-                let readingstobesaved: DbTemperatureDataType[] = dbreadings[0].data.map(r => (createDbTemperatureDataType(r.date, r.morning, r.evening)));
-                // date: '1/1/2024', morning, evening
-                console.log(`First readingtobesaved: ${JSON.stringify(readingstobesaved[0])}`)
-
-                // add new readings
-                data.forEach(d => {
-                    let index = readingstobesaved.length - 1;                   
-                    while (index >= 0 && this.getDate(readingstobesaved[index].date) >= new Date(d.date)) index--;
-                    if (index >= 0) {
-                        console.log(`index:${index}`)
-                        if (this.getDate(readingstobesaved[index].date) == new Date(d.date)) {
-                            if (!isNaN(d.morning) && d.morning !== null) readingstobesaved[index].morning = d.morning;
-                            if (!isNaN(d.evening) && d.evening !== null) readingstobesaved[index].evening = d.evening;
-                        }
-                        else {
-                            let newreading: any = {date: this.createDbDate(new Date(d.date))}
-                            if (!isNaN(d.morning) && d.morning !== null) newreading.morning = d.morning;
-                            if (!isNaN(d.evening) && d.evening != null) newreading.evening = d.evening;
-                            readingstobesaved.push(newreading);
-                        }
+            // update current yearly record
+            let readingstobesaved: DbTemperatureDataType[] = dbreadings[0].data.map(r => {
+                let newdata: any = { date: r.date }
+                if (r.morning) newdata.morning = r.morning;
+                if (r.evening) newdata.evening = r.evening;
+                return newdata;
+            });
+            // add new readings
+            data.forEach(d => {
+                let index = readingstobesaved.length - 1;
+                while (index >= 0 && this.getDate(readingstobesaved[index].date) > new Date(d.date)) {
+                    index--;
+                }
+                if (index >= 0) {
+                    if (readingstobesaved[index].date == this.createDbDate(new Date(d.date))) {
+                        if (!isNaN(d.morning) && d.morning !== null) readingstobesaved[index].morning = d.morning;
+                        if (!isNaN(d.evening) && d.evening !== null) readingstobesaved[index].evening = d.evening;
                     }
-                    else return -10; // ?????
-                })
-                // save record
-                const result = await supabase
-                    .from('temperatures')
-                    .update({ year: curyears[0], readings: {info: dbreadings[0].info, data: readingstobesaved }})
-                    .select('id')
-                    .eq('year', curyears[0])
-                console.log('save done')
-                console.log(result)
-                if (result.error) {
-                    console.log(`Error: ${result.error}`)
-                    return -5;
+                    else {
+                        let newreading: any = { date: this.createDbDate(new Date(d.date)) }
+                        if (!isNaN(d.morning) && d.morning !== null) newreading.morning = d.morning;
+                        if (!isNaN(d.evening) && d.evening != null) newreading.evening = d.evening;
+                        readingstobesaved.push(newreading);
+                    }
                 }
-                if (result.data.length) {
-                    console.log('saving success')
-                    return Number(result.data[0].id); 
-                }
-                console.log('Saving done without saving')
-                return -6;
+                else return setFailResult("Ivalid parameter");
+            })
+
+            // save record
+            const result = await supabase
+                .from('temperatures')
+                .update({ year: curyears[0], readings: { info: dbreadings[0].info, data: readingstobesaved } })
+                .select('id')
+                .eq('year', curyears[0])
+            if (result.error) {
+                return setFailResult("Ivalid parameter");
             }
-            return -9;
+            if (result.data.length) {
+                return setOkResult(null, Number(result.data[0].id));
+            }
+            return setFailResult("Ivalid parameter");
         }
-        return -1;
+        return setFailResult("Not allowed");
     }    
     async locations(): Promise<string[]> {
         if (this.operationAllowed('get', 'location')) {
@@ -216,10 +208,10 @@ interface DbTemperature {
     year: number;
     readings: TemperatureType | null;
 }   
-interface TemperatureUpdateData {
-    date: string;
-    morning: number;
-    evening: number;
-    morningtimeUtc: string;
-    eveningtimeUtc: string;
-}
+// interface TemperatureUpdateData {
+//     date: string;
+//     morning: number;
+//     evening: number;
+//     morningtimeUtc: string;
+//     eveningtimeUtc: string;
+// }

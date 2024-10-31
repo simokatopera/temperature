@@ -1467,7 +1467,8 @@ export function compareReadings(temperatures: DbData[], stationreadings: any): L
             }
         }
         else {
-            latestReadings.push(createLatestReadingsGroup(reading.name, new Date(reading.ltime.getFullYear(), reading.ltime.getMonth(), reading.ltime.getDate()),
+            latestReadings.push(createLatestReadingsGroup(reading.name, 
+                    new Date(reading.ltime.getFullYear(), reading.ltime.getMonth(), reading.ltime.getDate()),
                 createLatestReadings(reading.ltime.getHours() == MorningTime ? reading.t2m : NaN,
                     reading.ltime.getHours() == MorningTime ? reading.ltime : new Date(0), 
                     reading.ltime.getHours() == EveningTime ? reading.t2m : NaN,

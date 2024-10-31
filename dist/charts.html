@@ -211,7 +211,7 @@
                                 <td>{{ isNaN(item.observation.evening) ? '' : this.roundNumber(item.observation.evening, 1) }}</td>
                                 <td :class="isNaN(item.observation.morning) ? (isNaN(item.reading.morning) ? 'estimatedvalue' : '') : ''">{{ isNaN(item.reading.morning) ? '' : this.roundNumber(item.reading.morning, isNaN(item.observation.morning) ? 0 : 1) }}</td>
                                 <td :class="isNaN(item.observation.evening) ? (isNaN(item.reading.evening) ? '' : 'estimatedvalue') : ''">{{ isNaN(item.reading.evening) ? '' : this.roundNumber(item.reading.evening, isNaN(item.observation.evening) ? 0 : 1) }}</td>
-                                <td><input v-model="item.obsselected" :disabled="!(!isNaN(item.observation.morning) && isNaN(item.reading.morning)) && !(!isNaN(item.observation.evening) && isNaN(item.reading.evening))" type="checkbox" name="select"></td>
+                                <td><input v-model="item.obsselected" :disabled="daydisabled(item)" type="checkbox" name="select"></td>
                             </tr>
                             </table>
                         </div>
@@ -555,6 +555,29 @@
                             // get latest readings when modal opened
                             this.startSpinner(3);
                             const stationreadings = await apiGetLatestTemperatures();
+
+                            // Debug data
+                            /*
+                            let values = [];
+                            
+                            let day = 28;
+                            for (var i = 0; i < 10; i++) {
+                                values.push({
+                                    localtime: (day > 20 ? "202412" : "202501") +   (day < 10 ? '0' : '') + day.toString() + "T070000",
+                                    name: "Kärkkä",
+                                    t2m: i,
+                                })
+                                values.push({
+                                    localtime: (day > 20 ? "202412" : "202501") +   (day < 10 ? '0' : '') + day.toString() + "T150000",
+                                    name: "Kärkkä",
+                                    t2m: i+0.5,
+                                })
+                                day++;
+                                if (day > 31) day = 1;
+                            }
+                            stationreadings.observations = stationreadings.observations.concat(values);
+                            */
+
                             this.latestReadingsFromNet = compareReadings(this.last10Temperatures, stationreadings);
                             const saving = await apiGetSavingAllowed('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc');
                             this.latestReadingsFromNet.saveenable = saving.data.access;
@@ -584,6 +607,14 @@
                         for (var i = 0; i < elems.length; i++) elems[i].classList.add('hidden');
                     }
                 },     
+                daydisabled(item) {
+                    let selected = this.latestReadingsFromNet.find(i => i.obsselected);
+                    if (selected != null) {
+                        if (selected.date.getFullYear() != item.date.getFullYear()) return true;
+                    };
+
+                    return !(!isNaN(item.observation.morning) && isNaN(item.reading.morning)) && !(!isNaN(item.observation.evening) && isNaN(item.reading.evening))
+                },
                 async savereadings() {
                     let tobesaved = this.latestReadingsFromNet.map(l => l.obsselected ? 
                         {date: l.date.toString(), morning: l.observation.morning, evening: l.observation.evening, morningtime: l.observation.morningtime, eveningtime: l.observation.eveningtime}
@@ -594,16 +625,16 @@
                         /*
                         debug data
                         */
-                        tobesaved = [
-                            {date: new Date(2025, 0, 1).toString(), 
-                            morning: 11.1, 
-                            evening: 22.2, 
-                            morningtime: new Date(2025, 0, 1), 
-                            eveningtime: new Date(2025, 0, 1)}
-                        ];
+                        // tobesaved = [
+                        //     {date: new Date(2025, 0, 1).toString(), 
+                        //     morning: 11.1, 
+                        //     evening: 22.2, 
+                        //     morningtime: new Date(2025, 0, 1), 
+                        //     eveningtime: new Date(2025, 0, 1)}
+                        // ];
 
                         let status = await apiSaveReadings('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', '1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', tobesaved);
-                        console.log(status)
+                        if (status.message) alert(status.message)
                     }
                 },
                 showselectedyear(item) {
