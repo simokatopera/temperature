@@ -209,7 +209,7 @@
                                     {{  isNaN(item.observation.morning) ?  item.observation.eveningtime.getFullYear(): item.observation.morningtime.getFullYear()}}</td>
                                 <td>{{ isNaN(item.observation.morning) ? '' : this.roundNumber(item.observation.morning, 1) }}</td>
                                 <td>{{ isNaN(item.observation.evening) ? '' : this.roundNumber(item.observation.evening, 1) }}</td>
-                                <td :class="isNaN(item.observation.morning) ? (isNaN(item.reading.morning) ? 'estimatedvalue' : '') : ''">{{ isNaN(item.reading.morning) ? '' : this.roundNumber(item.reading.morning, isNaN(item.observation.morning) ? 0 : 1) }}</td>
+                                <td :class="isNaN(item.observation.morning) ? (isNaN(item.reading.morning) ? '' : 'estimatedvalue') : ''">{{ isNaN(item.reading.morning) ? '' : this.roundNumber(item.reading.morning, isNaN(item.observation.morning) ? 0 : 1) }}</td>
                                 <td :class="isNaN(item.observation.evening) ? (isNaN(item.reading.evening) ? '' : 'estimatedvalue') : ''">{{ isNaN(item.reading.evening) ? '' : this.roundNumber(item.reading.evening, isNaN(item.observation.evening) ? 0 : 1) }}</td>
                                 <td><input v-model="item.obsselected" :disabled="daydisabled(item)" type="checkbox" name="select"></td>
                             </tr>
@@ -234,6 +234,8 @@
         const months2 = ['Tammikuu', 'Helmikuu', 'Maaliskuu', 'Huhtikuu', 'Toukokuu', 'Kesäkuu', 'Heinäkuu', 'Elokuu', 'Syyskuu', 'Lokakuu', 'Marraskuu', 'Joulukuu'];
         const NoSelection = -1;
         const StopScrolling = -2;
+        const adminGuid = '1eb8859e-21d9-49cd-8fa5-b09ff5d32add';
+        let userguid = '';
 
         function selectFirstDay() {
             let button = document.getElementsByClassName('daybutton_0');
@@ -242,6 +244,8 @@
         }
 
         (async function () {
+            userguid = new URLSearchParams(document.location.search).get("userid");
+
             setTimeout(() => { selectFirstDay(); }, 50);
         })();
         
@@ -283,7 +287,7 @@
 
                     alltemperaturereadings: { values: [], years: [], filtersize: 7 },    // all temperature values
                     listedtemperaturereadings: { values: [], years: [], filtersize: 7 }, // contains values listed in table
-                    last10Temperatures: [],
+                    last20Temperatures: [],
                     latestReadingsFromNet: [],
                     dailycharttitle: '',
 
@@ -502,14 +506,19 @@
             methods: {
                 async loadAll() {
                     this.startSpinner(1);
-                let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', 'Salo');
-                //years.data = [2023, 2024]
-                let temperatures = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', "Salo", years.data);
-                this.checkData(temperatures);
-                this.last10Temperatures = this.getLast10readings(temperatures);
-                if (this.last10Temperatures.length == 0) {
+                let years = await apiGetYears(userguid, 'Salo');
+                //years.data = [2024]
+                let temperatures = await apiGetTemperatures(userguid, "Salo", years.data);
+                if (temperatures.error)  {
                     this.stopSpinner(1);
-                    document.getElementById('Error').innerText = "Ei lämpötilalukemia"
+                    document.getElementById('Error').innerText = temperatures.error.msg;
+                    return;
+                }
+                this.checkData(temperatures);
+                this.last20Temperatures = this.getLastreadings(temperatures);
+                if (this.last20Temperatures.length == 0) {
+                    this.stopSpinner(1);
+                    document.getElementById('Error').innerText = "Ei lämpötilalukemia";
                     return;
                 }
                 // initialize temperature readings
@@ -578,8 +587,8 @@
                             stationreadings.observations = stationreadings.observations.concat(values);
                             */
 
-                            this.latestReadingsFromNet = compareReadings(this.last10Temperatures, stationreadings);
-                            const saving = await apiGetSavingAllowed('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc');
+                            this.latestReadingsFromNet = compareReadings(this.last20Temperatures, stationreadings);
+                            const saving = await apiGetSavingAllowed(userguid);
                             this.latestReadingsFromNet.saveenable = saving.data.access;
                             this.stopSpinner(3);
                         });
@@ -633,8 +642,9 @@
                         //     eveningtime: new Date(2025, 0, 1)}
                         // ];
 
-                        let status = await apiSaveReadings('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', '1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', tobesaved);
-                        if (status.message) alert(status.message)
+                        let status = await apiSaveReadings(userguid, userguid, tobesaved);
+                        if (status.data.msg == 'Ok') await this.loadAll();
+                        else alert(`Debugging on: ${status.data.msg}`)
                     }
                 },
                 showselectedyear(item) {
@@ -945,26 +955,27 @@
                     });
                     return {data: datavalues, params: null}
                 },
-                getLast10readings(temperatures) {
-                    let last10Temperatures = [];
+                getLastreadings(temperatures) {
+                    const lasttemperaturesamount = 20;
+                    let last20Temperatures = [];
                     if (temperatures.data.length <= 0 ) return [];
-                    if (temperatures.data.length > 1 && temperatures.data[temperatures.data.length - 1].data.length < 10) {
+                    if (temperatures.data.length > 1 && temperatures.data[temperatures.data.length - 1].data.length < lasttemperaturesamount) {
                         let last = temperatures.data[temperatures.data.length - 2].data.length;
-                        const first = last - (10 - temperatures.data[temperatures.data.length - 1].data.length)
+                        const first = last - (lasttemperaturesamount - temperatures.data[temperatures.data.length - 1].data.length)
                         for (var i = first; i < last; i++) {
-                            last10Temperatures.push(temperatures.data[temperatures.data.length - 2].data[i]);
+                            last20Temperatures.push(temperatures.data[temperatures.data.length - 2].data[i]);
                         }
                         for (var i = 0; i < temperatures.data[temperatures.data.length - 1].data.length; i++) {
-                            last10Temperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
+                            last20Temperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
                         }
                     }
                     else {
-                        let first = temperatures.data[temperatures.data.length - 1].data.length - 10;
+                        let first = temperatures.data[temperatures.data.length - 1].data.length - lasttemperaturesamount;
                         for (var i = first; i < temperatures.data[temperatures.data.length - 1].data.length; i++) {
-                            last10Temperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
+                            last20Temperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
                         }
                     }
-                    return last10Temperatures;
+                    return last20Temperatures;
                 },
 
                 //-end of methods-----------------------------------------------------------------------------

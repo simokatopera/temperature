@@ -46,7 +46,7 @@ export interface guidResponseType {
     msg: string | null;
 }
 export function requestGuidValid(event): guidResponseType {
-    if (!event.queryStringParameters || !event.queryStringParameters.userid || event.queryStringParameters.userid === "") return {msg: "Invalid parameter", guid: ""};
-    if (!guidValid(event.queryStringParameters.userid)) return {msg: "Invalid parameter", guid: ""};
+    if (!event.queryStringParameters || !event.queryStringParameters.userid || event.queryStringParameters.userid === "" || event.queryStringParameters.userid === "null") return {msg: null, guid: ""};
+    if (!guidValid(event.queryStringParameters.userid)) return {msg: "Invalid parameter", guid: event.queryStringParameters.userid};
     return {msg: null, guid:event.queryStringParameters.userid}; // guid ok
 }

@@ -7,14 +7,12 @@ class TemperatureApi  {
         let separator = '?';
         if (url.indexOf('?') >= 0) separator = '&';
         const response = await fetch(`${this.apipath}${url}${separator}userid=${this.guid}`, { method: "GET", headers: { "Content-Type": "application/json" } });
-        if (response.status == 200)
-            return await response.json();
         return await response.json();
     }
     async sendPostJsonAsync(url, data) {
+        // const response = fetch(`${this.apipath}${url}`, { method: "POST", body: JSON.stringify(data) }).then(r => r.json())
+        // return response;
         const response = await fetch(`${this.apipath}${url}`, { method: "POST", body: JSON.stringify(data) });
-        if (response.status == 200)
-            return await response.json();
         return await response.json();
     }
     async sendGetTxtAsync(url) {
@@ -59,7 +57,8 @@ class TemperatureApi  {
     }
     async saveReadings(pwd, data) {
         const path = `admin/save?userid=${this.guid}&pwd=${pwd}`;
-        return await this.sendPostJsonAsync(path, data);
+        const ret = await this.sendPostJsonAsync(path, data);
+        return ret;
     }
 }
 

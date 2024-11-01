@@ -52,5 +52,8 @@ export function setFailResult(errorMsg: string): DBStatus {
     return {errormsg: errorMsg, status: 'Fail', id: 0}
 }
 export function setOkResult(status: string | null, id: number): DBStatus {
-    return {errormsg: null, status: status ?? 'Ok', id: id}
+    console.log(`status: ${status}`)
+    const ret = {errormsg: null, status: status == null ? 'Ok' : status, id: id}
+    console.log(ret)
+    return ret
 }

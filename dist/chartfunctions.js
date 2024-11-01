@@ -516,13 +516,13 @@ function addEstimatesToParameters(series) {
     let currentmonth = new Date().getMonth();
     series.forEach(serie => {
         if (serie.values && serie.values.length) {
-            serie.values.forEach((value, index) => {
-                if (value.estimate) {
-                    if (value.year < currentyear || (value.year == currentyear && value.date.getMonth() <= currentmonth)) {
-                        estimateitems.push(createGraphParams(serie.name, 'circle', 14, index));
+            serie.values.forEach((month, monthindex) => {
+                if (month.estimate) {
+                    if (month.year < currentyear || (month.year == currentyear && month.date.getMonth() <= currentmonth)) {
+                        estimateitems.push(createGraphParams(serie.name, 'circle', 14, monthindex));
                     }
                     else {
-                        value.value = NaN;
+                        month.value = NaN;
                     }
                 }
             });
@@ -905,10 +905,11 @@ function CFcreateAllYearsAverageSeriedata() {
     const curyearno = yearlyarrangeddata[yearlyarrangeddata.length - 1].date.getFullYear();
     const minserie = createSerie_10(`Matalin`, days, (day) => (day.min.value < getTempMinDefaultValue() ? day.min.value : NaN), (day) => (day.min.value < getTempMinDefaultValue() ? day.min.date.getFullYear() : ''), serietooltipcallback);
     const maxserie = createSerie_10(`Korkein`, days, (day) => (day.max.value > getTempMaxDefaultValue() ? day.max.value : NaN), (day) => (day.max.value > getTempMaxDefaultValue() ? day.max.date.getFullYear() : ''), serietooltipcallback);
+    const averageserie = createSerie_10(`Keskiarvo`, days, (day) => (day.average), (day) => (day.date.getFullYear()), serietooltipcallback);
     const curyear = createReturnDataType(`Vuosi ${curyearno}`, yearlyarrangeddata[yearlyarrangeddata.length - 1].values.map(day => {
         return createReturnDataValue(new Date(temperatureClass.defaultyear, day.date.getMonth(), day.date.getDate()), day.average, day.date.getFullYear(), false, serietooltipcallback);
     }));
-    const allseries = [minserie, maxserie, curyear];
+    const allseries = [minserie, maxserie, averageserie, curyear];
     const returnvalues = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
             value: createGraphItem(value.date, value.value, false),
@@ -1051,11 +1052,11 @@ function getStationTime(ltime) {
 const MorningTime = 7;
 const EveningTime = 15;
 function compareReadings(temperatures, stationreadings) {
-    let latestReadings = [];
+    let updatedReadings = [];
     if (!temperatures || !temperatures || temperatures.length === 0)
-        return latestReadings;
+        return updatedReadings;
     if (!stationreadings || !stationreadings.observations || !stationreadings.observations.length)
-        return latestReadings;
+        return updatedReadings;
     const readings = stationreadings.observations.map(reading => {
         const ltime = getStationTime(reading.localtime);
         if ((ltime.getHours() == EveningTime || ltime.getHours() == MorningTime) && ltime.getMinutes() == 0) {
@@ -1067,53 +1068,59 @@ function compareReadings(temperatures, stationreadings) {
     readings.forEach(reading => {
         let i = 0;
         let found = false;
-        while (i < latestReadings.length && !found) {
-            if (!isNaN(latestReadings[i].observation.morning)) {
-                found = (reading.ltime.getMonth() == latestReadings[i].observation.morningtime.getMonth() &&
-                    reading.ltime.getDate() == latestReadings[i].observation.morningtime.getDate());
+        while (i < updatedReadings.length && !found) {
+            if (!isNaN(updatedReadings[i].observation.morning)) {
+                found = (reading.ltime.getMonth() == updatedReadings[i].observation.morningtime.getMonth() &&
+                    reading.ltime.getDate() == updatedReadings[i].observation.morningtime.getDate());
             }
             if (!found)
                 i++;
         }
         if (found) {
             if (reading.ltime.getHours() == MorningTime) {
-                latestReadings[i].observation.morning = reading.t2m;
-                latestReadings[i].observation.morningtime = reading.ltime;
+                updatedReadings[i].observation.morning = reading.t2m;
+                updatedReadings[i].observation.morningtime = reading.ltime;
             }
             else {
-                latestReadings[i].observation.evening = reading.t2m;
-                latestReadings[i].observation.eveningtime = reading.ltime;
+                updatedReadings[i].observation.evening = reading.t2m;
+                updatedReadings[i].observation.eveningtime = reading.ltime;
             }
         }
         else {
-            latestReadings.push(createLatestReadingsGroup(reading.name, new Date(reading.ltime.getFullYear(), reading.ltime.getMonth(), reading.ltime.getDate()), createLatestReadings(reading.ltime.getHours() == MorningTime ? reading.t2m : NaN, reading.ltime.getHours() == MorningTime ? reading.ltime : new Date(0), reading.ltime.getHours() == EveningTime ? reading.t2m : NaN, reading.ltime.getHours() == EveningTime ? reading.ltime : new Date(0)), createLatestReadingsEmpty()));
+            updatedReadings.push(createLatestReadingsGroup(reading.name, new Date(reading.ltime.getFullYear(), reading.ltime.getMonth(), reading.ltime.getDate()), createLatestReadings(reading.ltime.getHours() == MorningTime ? reading.t2m : NaN, reading.ltime.getHours() == MorningTime ? reading.ltime : new Date(0), reading.ltime.getHours() == EveningTime ? reading.t2m : NaN, reading.ltime.getHours() == EveningTime ? reading.ltime : new Date(0)), createLatestReadingsEmpty()));
         }
     });
-    let found = false;
-    let dayindex = temperatures.length - 1;
-    while (dayindex > 0 && !found) {
-        let time = latestReadings[0].observation.morningtime.getFullYear() > 1980 ? latestReadings[0].observation.morningtime : latestReadings[0].observation.eveningtime;
-        if (temperatures[dayindex].datetimeLocal.getMonth() == time.getMonth() &&
-            temperatures[dayindex].datetimeLocal.getDate() == time.getDate())
-            found = true;
-        else
-            dayindex--;
-    }
-    if (found) {
-        for (let i = 0; i < latestReadings.length || dayindex < temperatures.length; i++, dayindex++) {
-            if (i < latestReadings.length) {
-                if (dayindex < temperatures.length) {
-                    latestReadings[i].reading = createLatestReadings(temperatures[dayindex].morning, temperatures[dayindex].datetimeLocal, temperatures[dayindex].evening, temperatures[dayindex].datetimeLocal);
-                }
-                else {
-                    latestReadings[i].reading = createLatestReadingsEmpty();
-                }
-            }
+    let tempindex = 0;
+    updatedReadings.forEach(updated => {
+        while (tempindex < temperatures.length && temperatures[tempindex].datetimeLocal < updated.date) {
+            tempindex++;
+        }
+        if (tempindex < temperatures.length && temperatures[tempindex].datetimeLocal > updated.date) {
+        }
+        else {
+            if (tempindex < temperatures.length)
+                updated.reading = createLatestReadings(temperatures[tempindex].morning, temperatures[tempindex].datetimeLocal, temperatures[tempindex].evening, temperatures[tempindex].datetimeLocal);
             else {
-                latestReadings.push(createLatestReadingsGroup(latestReadings[0].name, temperatures[dayindex].datetimeLocal, createLatestReadings(NaN, temperatures[dayindex].datetimeLocal, NaN, temperatures[dayindex].datetimeLocal), createLatestReadings(temperatures[dayindex].morning, temperatures[dayindex].datetimeLocal, temperatures[dayindex].evening, temperatures[dayindex].datetimeLocal)));
+                updated.reading = createLatestReadingsEmpty();
             }
         }
+    });
+    if (updatedReadings[updatedReadings.length - 1].date < temperatures[temperatures.length - 1].datetimeLocal) {
+        console.log(temperatures[temperatures.length - 1]);
+        let index = temperatures.length - 1;
+        while (temperatures[index].datetimeLocal > updatedReadings[updatedReadings.length - 1].date)
+            index--;
+        console.log(temperatures[index]);
+        console.log(updatedReadings[updatedReadings.length - 1]);
+        while (++index < temperatures.length) {
+            let newreading = { date: temperatures[index].datetimeLocal };
+            if (temperatures[index].morning && !isNaN(temperatures[index].morning))
+                newreading.morning = temperatures[index].morning;
+            if (temperatures[index].evening && !isNaN(temperatures[index].evening))
+                newreading.evening = temperatures[index].evening;
+            updatedReadings.push(createLatestReadingsGroup(updatedReadings[0].name, temperatures[index].datetimeLocal, createLatestReadings(NaN, temperatures[index].datetimeLocal, NaN, temperatures[index].datetimeLocal), newreading));
+        }
     }
-    return latestReadings;
+    return updatedReadings;
 }
 exports.compareReadings = compareReadings;
