@@ -153,9 +153,7 @@
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
-                <div id="hiddenbutton">
-                    <!-- <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loadModal">*</button> -->
-                </div>
+                <div id="hiddenbutton"></div>
             </div>
 
             <div id="loader1" class="loader hidden"></div>            
@@ -172,7 +170,6 @@
                 <div class="col-6" :style="!loading && selecteddayData.data[0].length>0?'display:inline-block;':'display:none;'">
                     <div class="hiddenstart hidden">
                         <button id="scrolldays" type="button" class="btn btn-primary setmargin5" @click="rundays">Aloita rullaus</button>
-                        <!-- <button type="button" :disabled="!this.scrollday.scroll" class="btn btn-primary setmargin5" @click="stopdays">Pysäytä</button> -->
                         <hr>
                         <p class="graphtitle">{{ dailycharttitle }}</p>
                         <div id="daygraph"></div>
@@ -215,12 +212,10 @@
                                     {{  isNaN(item.observation.morning) ?  item.observation.eveningtime.getFullYear(): item.observation.morningtime.getFullYear()}}</td>
                                 <td>{{ isNaN(item.observation.morning) ? '' : this.roundNumber(item.observation.morning, 1) }}</td>
                                 <td>{{ isNaN(item.observation.evening) ? '' : this.roundNumber(item.observation.evening, 1) }}</td>
-                                <td :class="isNaN(item.observation.morning) ? (isNaN(item.reading.morning) ? '' : 'estimatedvalue') : 
-                                    !isNaN(item.reading.morning) && item.reading.morning != item.observation.morning ? 'diffvalue' : '' ">
-                                    {{ isNaN(item.reading.morning) ? '' : this.roundNumber(item.reading.morning, isNaN(item.observation.morning) ? 0 : 1) }}</td>
-                                <td :class="isNaN(item.observation.evening) ? (isNaN(item.reading.evening) ? '' : 'estimatedvalue') : 
-                                    !isNaN(item.reading.evening) && item.reading.evening != item.observation.evening ? 'diffvalue' : '' ">
-                                    {{ isNaN(item.reading.evening) ? '' : this.roundNumber(item.reading.evening, isNaN(item.observation.evening) ? 0 : 1) }}</td>
+                                <td :class="this.getclass(item.reading.morning, item.observation.morning)">
+                                    {{ this.printvalue(item.reading.morning, item.observation.morning) }}</td>
+                                <td :class="this.getclass(item.reading.evening, item.observation.evening)">
+                                    {{ this.printvalue(item.reading.evening, item.observation.evening) }}</td>
                                 <td><input v-model="item.obsselected" :disabled="daydisabled(item)" type="checkbox" name="select"></td>
                             </tr>
                             </table>
@@ -534,9 +529,8 @@
                     document.getElementById('Error').innerText = "Ei lämpötilalukemia";
                     return;
                 }
-                const value = await apiAdminStatus(userguid);
-                if (value.data.access) {
-                    const data = await apiAdminButton1(userguid);
+                const data = await apiAdminButton1(userguid);
+                if (data.statusCode == 200) {
                     const elem = document.getElementById('hiddenbutton');
                     if (elem) elem.innerHTML = data.data.html;
                 }
@@ -637,8 +631,12 @@
                         for (var i = 0; i < elems.length; i++) elems[i].classList.add('hidden');
                     }
                 },     
+                getclass(reading, observation) {
+                    return isNaN(observation) ? (isNaN(reading) ? '' : 'estimatedvalue') : 
+                                    !isNaN(reading) && reading != observation ? 'diffvalue' : '' 
+                },
                 printvalue(reading, observation) {
-                    return reading;
+                    return isNaN(reading) ? '' : this.roundNumber(reading, isNaN(observation) ? 0 : 1)
                 },
                 daydisabled(item) {
                     let selected = this.latestReadingsFromNet.find(i => i.obsselected);

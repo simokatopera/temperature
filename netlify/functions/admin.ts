@@ -9,6 +9,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     const guidresp = requestGuidValid(event);
 	if (guidresp.msg !== null) return createJsonErrorResponse(HttpResponseType.BadRequest, guidresp.msg);
     const api = await GetProvider(guidresp.guid);
+    console.log(event.httpMethod)
     if (event.httpMethod == "GET") {
         if (event.path.indexOf('/savingallowed') > 0) {
             const resp = await api.savingallowed();
@@ -18,9 +19,13 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             const resp = await api.admin();
             return createHttpJsonOkResponse(null, {access: resp});
         }
+        console.log('if buttin1')
         if (event.path.indexOf('admin/button1') > 0) {
             if (await api.admin()) {
                 return createHttpJsonOkResponse(null, {html: `<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loadModal">*</button>`});
+            }
+            else {
+                return createHttpJsonOkResponse(null, {html: ``});
             }
         }        
         return createJsonErrorResponse(404, "");
