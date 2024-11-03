@@ -14,6 +14,15 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             const resp = await api.savingallowed();
             return createHttpJsonOkResponse(null, {access: resp});
         }
+        if (event.path.indexOf('admin/status') > 0) {
+            const resp = await api.admin();
+            return createHttpJsonOkResponse(null, {access: resp});
+        }
+        if (event.path.indexOf('admin/button1') > 0) {
+            if (await api.admin()) {
+                return createHttpJsonOkResponse(null, {html: `<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loadModal">*</button>`});
+            }
+        }        
         return createJsonErrorResponse(404, "");
   	}
   	if (event.httpMethod == "POST") {
@@ -27,7 +36,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                     // save new values
                     const values = JSON.parse(event.body);
                     const status = await api.savereadings(event.queryStringParameters.pwd, values);
-                    if (status.errormsg === null) {
+                   if (status.errormsg === null) {
                         return  createHttpJsonOkResponse(status.errormsg, {status: true, msg: status.status});
                     }
                     return createJsonErrorResponse( 404, 'Saving failed');

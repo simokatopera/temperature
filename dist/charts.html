@@ -29,6 +29,7 @@
 
     <script src="chartfunctions.js" defer></script>
 
+    <!-- <script src="js/a.js"></script>" -->
     <style>
 
         .graphelement {
@@ -64,6 +65,9 @@
         }
         .estimatedvalue {
             background-color: gray;
+        }
+        .diffvalue {
+            background-color: yellow;
         }
         .actionbutton {
             background-color: lightblue;
@@ -149,7 +153,9 @@
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loadModal">*</button>
+                <div id="hiddenbutton">
+                    <!-- <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loadModal">*</button> -->
+                </div>
             </div>
 
             <div id="loader1" class="loader hidden"></div>            
@@ -157,7 +163,7 @@
             <div id="Error"></div>
             <div class="row">
                 <div class="col-6" :style="loading?'display:none;':'display:inline-block;'">
-                    <readings :temperatures="listedtemperaturereadings" :selectedday="selectedday" :allreadings="alltemperaturereadings" @dayselected="dayselected"></readings>
+                    <readings :temperatures="listedtemperaturereadings" :selectedday="selectedday" :allreadings="alltemperaturereadings" @dayselected="dayselected" @savefile="savefile"></readings>
                     <div id="loader2" class="loader hidden"></div>
                     <div class="hiddenstart hidden">
                         <button  class="yearbutton" v-for="item in listedtemperaturereadings.years" :class="{yearbuttonselected: this.selectedyearbutton == item.year }" @click="showselectedyear(item)">{{ item.year }}</button>
@@ -189,11 +195,11 @@
             <trendgraph :titles="testgraphtitles" :title="''" :elemid="testgraph9" :active=true></trendgraph>
 
 <!-- Latest readings modal start---------------------------------------------------------- -->
-            <div id="loadModal" class="modal fade" tabindex="-1" aria-labelledby="modifyAccessLabel" aria-hidden="true">
+            <div id="loadModal" class="modal fade" tabindex="-1" aria-labelledby="loadModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="modifyAccessLabel">Viimeisimmät lukemat</h5>
+                            <h5 class="modal-title" id="loadModalLabel">Viimeisimmät lukemat</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
@@ -209,13 +215,18 @@
                                     {{  isNaN(item.observation.morning) ?  item.observation.eveningtime.getFullYear(): item.observation.morningtime.getFullYear()}}</td>
                                 <td>{{ isNaN(item.observation.morning) ? '' : this.roundNumber(item.observation.morning, 1) }}</td>
                                 <td>{{ isNaN(item.observation.evening) ? '' : this.roundNumber(item.observation.evening, 1) }}</td>
-                                <td :class="isNaN(item.observation.morning) ? (isNaN(item.reading.morning) ? '' : 'estimatedvalue') : ''">{{ isNaN(item.reading.morning) ? '' : this.roundNumber(item.reading.morning, isNaN(item.observation.morning) ? 0 : 1) }}</td>
-                                <td :class="isNaN(item.observation.evening) ? (isNaN(item.reading.evening) ? '' : 'estimatedvalue') : ''">{{ isNaN(item.reading.evening) ? '' : this.roundNumber(item.reading.evening, isNaN(item.observation.evening) ? 0 : 1) }}</td>
+                                <td :class="isNaN(item.observation.morning) ? (isNaN(item.reading.morning) ? '' : 'estimatedvalue') : 
+                                    !isNaN(item.reading.morning) && item.reading.morning != item.observation.morning ? 'diffvalue' : '' ">
+                                    {{ isNaN(item.reading.morning) ? '' : this.roundNumber(item.reading.morning, isNaN(item.observation.morning) ? 0 : 1) }}</td>
+                                <td :class="isNaN(item.observation.evening) ? (isNaN(item.reading.evening) ? '' : 'estimatedvalue') : 
+                                    !isNaN(item.reading.evening) && item.reading.evening != item.observation.evening ? 'diffvalue' : '' ">
+                                    {{ isNaN(item.reading.evening) ? '' : this.roundNumber(item.reading.evening, isNaN(item.observation.evening) ? 0 : 1) }}</td>
                                 <td><input v-model="item.obsselected" :disabled="daydisabled(item)" type="checkbox" name="select"></td>
                             </tr>
                             </table>
                         </div>
                         <div class="modal-footer">
+                            <input type="checkbox" :disabled="!latestReadingsFromNet.saveenable" name="saveyeartemperatures">
                             <button  :disabled="!latestReadingsFromNet.saveenable || !latestReadingsFromNet.find(l => l.obsselected)" @click="savereadings" type="button" class="btn btn-success">Tallenna</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sulje</button>
                         </div>
@@ -301,7 +312,7 @@
             components: {
                 readings: {
                     props: ['temperatures', 'selectedday', 'allreadings'],
-                    emits: ['dayselected'],
+                    emits: ['dayselected', 'savefile'],
                     data: function () {
                         return {
                             selected: ref(NoSelection),
@@ -396,26 +407,28 @@
                                 `${this.getDateTxt(line.date)}\t${roundNumber(line.morning, 1)}\t${roundNumber(line.evening, 1)}\t${roundNumber(line.averagefiltered, 1)}`
                             ));
                             let filename = 'readings.txt';
-                            this.saveToFile(`Päivämäärä\tAamu\tIlta\tSuodatettu(${this.allreadings.filtersize})\n${data.join('\n')}`, filename, `Tallennettu tiedostoon ${filename}`, '');
+                            //this.saveToFile(`Päivämäärä\tAamu\tIlta\tSuodatettu(${this.allreadings.filtersize})\n${data.join('\n')}`, filename, `Tallennettu tiedostoon ${filename}`, '');
+                            this.$emit('savefile', {data: `Päivämäärä\tAamu\tIlta\tSuodatettu(${this.allreadings.filtersize})\n${data.join('\n')}`,
+                                filename: filename, message: `Tallennettu tiedostoon ${filename}`});
                         },
                         // reading
-                        saveToFile(dataToSave, fileName, successmsg, eventname) {
-                            const temp = this.allreadings.values
-                            var gameblob = new Blob([dataToSave], { type: 'text/plain' })
-                            if (this.objUrl !== null) window.URL.revokeObjectURL(this.objUrl);
-                            this.objUrl = (window.webkitURL || window.URL).createObjectURL(gameblob);
-                            var anchor = document.createElement('a');
-                            anchor.download = fileName;
-                            anchor.href = this.objUrl;
-                            anchor.dataset.downloadurl = ['text/plain', anchor.download, anchor.href].join(':');
-                            anchor.click();
-                            // document.querySelector("body").dispatchEvent(
-                            //     new CustomEvent(eventname, {
-                            //         bubbles: true,
-                            //         detail: { text: () => successmsg },
-                            //     })
-                            // );
-                        },
+                        // saveToFile(dataToSave, fileName, successmsg, eventname) {
+                        //     const temp = this.allreadings.values
+                        //     var gameblob = new Blob([dataToSave], { type: 'text/plain' })
+                        //     if (this.objUrl !== null) window.URL.revokeObjectURL(this.objUrl);
+                        //     this.objUrl = (window.webkitURL || window.URL).createObjectURL(gameblob);
+                        //     var anchor = document.createElement('a');
+                        //     anchor.download = fileName;
+                        //     anchor.href = this.objUrl;
+                        //     anchor.dataset.downloadurl = ['text/plain', anchor.download, anchor.href].join(':');
+                        //     anchor.click();
+                        //     // document.querySelector("body").dispatchEvent(
+                        //     //     new CustomEvent(eventname, {
+                        //     //         bubbles: true,
+                        //     //         detail: { text: () => successmsg },
+                        //     //     })
+                        //     // );
+                        // },
 
                     },
                     // reading
@@ -521,6 +534,12 @@
                     document.getElementById('Error').innerText = "Ei lämpötilalukemia";
                     return;
                 }
+                const value = await apiAdminStatus(userguid);
+                if (value.data.access) {
+                    const data = await apiAdminButton1(userguid);
+                    const elem = document.getElementById('hiddenbutton');
+                    if (elem) elem.innerHTML = data.data.html;
+                }
                 // initialize temperature readings
                 CFinitTemperature(temperatures, this.alltemperaturereadings.filtersize, this.monthnames, this.monthnamesLong);
 
@@ -564,7 +583,8 @@
                             // get latest readings when modal opened
                             this.startSpinner(3);
                             const stationreadings = await apiGetLatestTemperatures();
-
+                            //const stationreadings = debugdata;
+                            
                             // Debug data
                             /*
                             let values = [];
@@ -590,6 +610,7 @@
                             this.latestReadingsFromNet = compareReadings(this.last20Temperatures, stationreadings);
                             const saving = await apiGetSavingAllowed(userguid);
                             this.latestReadingsFromNet.saveenable = saving.data.access;
+
                             this.stopSpinner(3);
                         });
                     }
@@ -616,6 +637,9 @@
                         for (var i = 0; i < elems.length; i++) elems[i].classList.add('hidden');
                     }
                 },     
+                printvalue(reading, observation) {
+                    return reading;
+                },
                 daydisabled(item) {
                     let selected = this.latestReadingsFromNet.find(i => i.obsselected);
                     if (selected != null) {
@@ -624,6 +648,25 @@
 
                     return !(!isNaN(item.observation.morning) && isNaN(item.reading.morning)) && !(!isNaN(item.observation.evening) && isNaN(item.reading.evening))
                 },
+                savefile(params) {
+                    this.saveToFile(params.data, params.filename, params.message, '')
+                },
+                saveToFile(dataToSave, fileName, successmsg, eventname) {
+                    var gameblob = new Blob([dataToSave], { type: 'text/plain' })
+                    if (this.objUrl !== null) window.URL.revokeObjectURL(this.objUrl);
+                    this.objUrl = (window.webkitURL || window.URL).createObjectURL(gameblob);
+                    var anchor = document.createElement('a');
+                    anchor.download = fileName;
+                    anchor.href = this.objUrl;
+                    anchor.dataset.downloadurl = ['text/plain', anchor.download, anchor.href].join(':');
+                    anchor.click();
+                    // document.querySelector("body").dispatchEvent(
+                    //     new CustomEvent(eventname, {
+                    //         bubbles: true,
+                    //         detail: { text: () => successmsg },
+                    //     })
+                    // );
+                },                
                 async savereadings() {
                     let tobesaved = this.latestReadingsFromNet.map(l => l.obsselected ? 
                         {date: l.date.toString(), morning: l.observation.morning, evening: l.observation.evening, morningtime: l.observation.morningtime, eveningtime: l.observation.eveningtime}
@@ -631,19 +674,23 @@
 
                     if (tobesaved.length && this.latestReadingsFromNet.saveenable) {
                         // save selected readings
-                        /*
-                        debug data
-                        */
-                        // tobesaved = [
-                        //     {date: new Date(2025, 0, 1).toString(), 
-                        //     morning: 11.1, 
-                        //     evening: 22.2, 
-                        //     morningtime: new Date(2025, 0, 1), 
-                        //     eveningtime: new Date(2025, 0, 1)}
-                        // ];
-
                         let status = await apiSaveReadings(userguid, userguid, tobesaved);
-                        if (status.data.msg == 'Ok') await this.loadAll();
+                        if (status.statusCode == 200) {
+                            if (status.data.msg.saved == true) {
+                                bootstrap.Modal.getInstance(document.getElementById('loadModal')).hide();
+                                await this.loadAll();
+                                let elems = document.getElementsByName("saveyeartemperatures");
+                                if (elems && elems.length) {
+                                    if (elems[0].checked == true && status.data.msg.record.length) {
+                                        this.saveToFile(JSON.stringify(status.data.msg.record[0].readings, null, 4), 'LatestRecord.json', 'Tallennus tehty', '');
+                                    }
+                                }
+                            }
+                            else {
+
+                                alert(`Not saved, Debugging on`)
+                            }
+                        }
                         else alert(`Debugging on: ${status.data.msg}`)
                     }
                 },

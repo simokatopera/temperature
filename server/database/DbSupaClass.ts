@@ -53,6 +53,9 @@ export class DbSupaClass implements DbApiClass {
     async savingallowed(): Promise<boolean>{
         return this.checkAdminGuid();
     }
+    async admin(): Promise<boolean>{
+        return this.checkAdminGuid();
+    }    
     private getDate(date: string): Date {
         let parts = date.split('/');
         if (parts && parts.length === 3) {
@@ -98,9 +101,8 @@ export class DbSupaClass implements DbApiClass {
                         if (!isNaN(itemtoadd.evening) && itemtoadd.evening != null) newreading.evening = itemtoadd.evening;
 
                         readingstobesaved.splice(0, 0, newreading);
-                        for (let i = 0; i < 5; i++)
-                            console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)                        
-                        //return setFailResult("Ivalid parameter");
+                        // for (let i = 0; i < 5; i++)
+                        //     console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)                        
                     }
 
                     if (readingstobesaved[index].date == this.createDbDate(new Date(itemtoadd.date))) {
@@ -115,11 +117,14 @@ export class DbSupaClass implements DbApiClass {
                         if (index == readingstobesaved.length - 1) readingstobesaved.push(newreading);
                         else readingstobesaved.splice(index + 1, 0, newreading);
 
-                        for (let i = index-5; i < index+5 && i < readingstobesaved.length; i++)
-                            console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)
+                        // for (let i = index-5; i < index+5 && i < readingstobesaved.length; i++)
+                            // console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)
                     }
                 })
-                if (pwd == this.adminpwd_debugnosave) return setOkResult('Not saved', 0);
+                if (pwd == this.adminpwd_debugnosave) {
+                    const record = await getUpdatedData(this.DbTemperatureTable, curyears[0]);
+                    return setOkResult({record: record, saved: false}, -1);
+                } 
 
                 // save record
                 const result = await supabase
@@ -131,11 +136,19 @@ export class DbSupaClass implements DbApiClass {
                     return setFailResult("Ivalid parameter");
                 }
                 if (result.data.length) {
-                    return setOkResult(null, Number(result.data[0].id));
+                    const record = await getUpdatedData(this.DbTemperatureTable, curyears[0]);
+                    return setOkResult({record: record, saved: true}, Number(result.data[0].id));
                 }
                 return setFailResult("Ivalid parameter");
             }
-
+            async function getUpdatedData(table: string, year: number) {
+                let dbdata = await supabase
+                    .from(table)
+                    .select('readings')
+                    .eq('year', year)
+                if (dbdata.error || dbdata.data.length == 0) return null;
+                return dbdata.data;
+            }
             // create new yearly record (curyears.length is always 1)
             let yearsread = dbreadings.map(year => year.info.year);
             let missingyears = curyears.map(y => yearsread.find(yy => y == yy) ? null : y).filter(yyy => yyy !== null);
@@ -152,7 +165,8 @@ export class DbSupaClass implements DbApiClass {
             }).filter(val => val !== null);
 
             if (pwd == this.adminpwd_debugnosave) {
-                return setOkResult('Not saved', 0);
+                const record = await getUpdatedData(this.DbTemperatureTable, curyears[0]);
+                return setOkResult({record: record, saved: false}, -1);
             }
 
             // create a new record yearly
@@ -163,7 +177,9 @@ export class DbSupaClass implements DbApiClass {
 
             if (result.error) return setFailResult("Ivalid parameter");
 
-            return setOkResult(null, result.data[0].id);
+            const record = await getUpdatedData(this.DbTemperatureTable, curyears[0]);
+
+            return setOkResult({record: record, saved: true}, result.data[0].id);
 
         }
         return setFailResult("Not allowed");

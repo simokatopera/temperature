@@ -54,6 +54,9 @@ export class DbFileClass implements DbApiClass {
     async savingallowed(): Promise<boolean>{
         return false;
     }
+    async admin(): Promise<boolean>{
+        return false;
+    }    
     async savereadings(pwd: string, data: TemperatureUpdateData[]): Promise<DBStatus>{
         return setFailResult("Not implemented")
     }    

@@ -1499,15 +1499,12 @@ export function compareReadings(temperatures: DbData[], stationreadings: any): L
         }
     })
     if (updatedReadings[updatedReadings.length - 1].date < temperatures[temperatures.length-1].datetimeLocal) {
-        console.log(temperatures[temperatures.length-1]);
         let index = temperatures.length-1;
         while (temperatures[index].datetimeLocal > updatedReadings[updatedReadings.length - 1].date) index--;
-        console.log(temperatures[index])
-        console.log(updatedReadings[updatedReadings.length - 1])   
         while (++index < temperatures.length) {
             let newreading: any = {date: temperatures[index].datetimeLocal}
-            if (temperatures[index].morning && !isNaN(temperatures[index].morning)) newreading.morning = temperatures[index].morning;
-            if (temperatures[index].evening && !isNaN(temperatures[index].evening)) newreading.evening = temperatures[index].evening;
+            if (temperatures[index].morning !== null && !isNaN(temperatures[index].morning)) newreading.morning = temperatures[index].morning;
+            if (temperatures[index].evening !== null && !isNaN(temperatures[index].evening)) newreading.evening = temperatures[index].evening;
             updatedReadings.push(createLatestReadingsGroup(updatedReadings[0].name, temperatures[index].datetimeLocal, 
                 createLatestReadings(NaN, temperatures[index].datetimeLocal, NaN, temperatures[index].datetimeLocal), newreading))
         }
