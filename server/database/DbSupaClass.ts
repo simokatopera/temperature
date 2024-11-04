@@ -54,6 +54,7 @@ export class DbSupaClass implements DbApiClass {
         return this.checkAdminGuid();
     }
     async admin(): Promise<boolean>{
+        console.log('admin()')
         return this.checkAdminGuid();
     }    
     private getDate(date: string): Date {

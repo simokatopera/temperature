@@ -468,8 +468,8 @@ function createReturnDataType(name, values) {
 function createNameValues(name, date, values) {
     return { name: name, date: date, values: values };
 }
-function createYearlyAveragesEstimates(yearlyvalues, monthlyaverages) {
-    return { yearlyvalues: yearlyvalues, monthlyvalues: monthlyaverages };
+function createYearlyAveragesEstimates(yearlyvalues, monthlyaverages, values) {
+    return { yearlyvalues: yearlyvalues, monthlyvalues: monthlyaverages, monthlystatvalues: values };
 }
 function createMonthlyAverage(temperature, difference, estimate) {
     return { temperature: temperature, difference: difference, estimate: estimate };
@@ -768,7 +768,7 @@ function CFcalculateMonthlyAverages() {
     const years = temperatureClass.yearlyMonthlyAverages.yearlydata;
     let tempaverages = months.map(month => month.total.value);
     let diffaverages = months.map(month => month.difference.value);
-    let yearlyMonthaverages = years.map(year => {
+    const yearlyMonthaverages = years.map(year => {
         return createYearlyAverage(year.year, year.yearlyaverage, year.yearlyaveragediff, year.months.map(month => {
             return createMonthlyAverage(month.monthlytemperature, month.monthlydifference, month.estimate);
         }), year.estimate);
@@ -777,7 +777,38 @@ function CFcalculateMonthlyAverages() {
     const sumdiff = diffaverages.reduce((a, b) => a += isNaN(b) ? 0 : b, 0);
     tempaverages.push(sumtemp / tempaverages.length);
     diffaverages.push(sumdiff / diffaverages.length);
-    return createYearlyAveragesEstimates(yearlyMonthaverages, createTempDiffTable(tempaverages, diffaverages));
+    function standardDeviation(arr, usePopulation = false) {
+        const mean = arr.reduce((acc, val) => acc + val, 0) / arr.length;
+        return Math.sqrt(arr.reduce((acc, val) => acc.concat((val - mean) ** 2), []).reduce((acc, val) => acc + val, 0) /
+            (arr.length - (usePopulation ? 0 : 1)));
+    }
+    ;
+    let stdevarray = [];
+    const allvalues = CFgetAllReadings();
+    for (var month = 0; month < 12; month++) {
+        let arr = allvalues.values.map(val => (val.date.getMonth() == month ? val.average : null)).filter(v => v !== null);
+        let average = arr.reduce((acc, val) => (acc + val)) / (arr.length > 0 ? arr.length : 1);
+        let min = Math.min(...arr);
+        let max = Math.max(...arr);
+        stdevarray.push({ stdev: standardDeviation(arr, true), min: min, max: max, average: average });
+    }
+    const monthlyvalues = createTempDiffTable(tempaverages, diffaverages);
+    let monthlystats = [];
+    monthlyvalues.temperature.forEach((m, i) => {
+        if (i < 12) {
+            let l = 5 * Math.floor(stdevarray[i].min / 5);
+            let h = 5 * (Math.floor(stdevarray[i].max / 5) + 1);
+            if (h - l > 25) {
+                l = 5 * Math.floor((stdevarray[i].average - 14) / 5);
+                h = l + 25;
+            }
+            monthlystats.push({ monthno: i + 1, average: stdevarray[i].average,
+                min: l, max: h,
+                stdev: stdevarray[i].stdev,
+                high: stdevarray[i].max, low: stdevarray[i].min });
+        }
+    });
+    return createYearlyAveragesEstimates(yearlyMonthaverages, monthlyvalues, monthlystats);
 }
 exports.CFcalculateMonthlyAverages = CFcalculateMonthlyAverages;
 function CFcreateYearlyTrendSeriedata() {

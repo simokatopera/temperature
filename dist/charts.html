@@ -299,6 +299,7 @@
 
                     screenCharts: [],
                     selectedyearbutton: '',
+                    monthlylimits: [],
                 }
             },
             async mounted() {
@@ -547,6 +548,8 @@
 
                 // initialize graphics curves
                 this.calculated.values = CFcalculateMonthlyAverages();
+                this.monthlylimits = this.calculated.values.monthlystatvalues;
+
 
                 this.createChart(this.testgraph10, 'Suodatetut lämpötilat', temperatures, CFcreateYearlyFilteredSeriedata);
                 this.createChart(this.testgraph2, 'Päivittäiset keskiarvot', temperatures, CFcreateAllYearsAverageSeriedata);
@@ -849,11 +852,17 @@
                         },
                     };
                     if (series.params) {
-                        if (series.params.rangeoffset) {
+                        if (series.params.rangeoffset != null) {
                             let minmax = this.getMinMaxValue(series);
                             let offset = Number(series.params.rangeoffset);
                             chartoptions.yAxis.min = roundNumber(minmax.min - offset - 1, 0);
                             chartoptions.yAxis.max = roundNumber(minmax.max + offset, 0);
+                        }
+                        if (series.params.rangemin != null) {
+                            chartoptions.yAxis.min = series.params.rangemin;
+                        }
+                        if (series.params.rangemax != null) {
+                            chartoptions.yAxis.max = series.params.rangemax;
                         }
                         if (series.params.showlegend) {
                             chartoptions.legend.show = true;
@@ -888,6 +897,7 @@
                     let series = [data.values, trend];
                     this.selecteddayData.data = series;
                     this.dailycharttitle = `Päivän ${values.data.length ? values.data[0].date.getDate() : ''}.${values.data.length ? values.data[0].date.getMonth()+1 : ''} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`;
+
                     this.selecteddayData.chart = this.createChart('daygraph', 
                         this.dailycharttitle, series, this.createDayGraph, this.selecteddayData.chart);
                 },
@@ -998,7 +1008,9 @@
                         ))
                         datavalues.push({values: values, location: '', year: 0});
                     });
-                    return {data: datavalues, params: null}
+                    const month =  datavalues.length > 0 && datavalues[0].values.length > 0 ?  datavalues[0].values[0].value[0].getMonth() : -1;
+                    let limits = month >= 0 ? this.monthlylimits[month] : {min: -20, max: 20};
+                    return {data: datavalues, params: {rangemin: limits.min, rangemax: limits.max}}
                 },
                 getLastreadings(temperatures) {
                     const lasttemperaturesamount = 20;

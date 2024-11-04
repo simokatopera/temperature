@@ -5,11 +5,7 @@ import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
     console.log('Years');
-	console.log('queryStringParameters')
-	console.log(event.queryStringParameters)
 	const guidresp = requestGuidValid(event);
-	console.log('resp')
-	console.log(guidresp)
 	if (guidresp.msg !== null) return createJsonErrorResponse(HttpResponseType.BadRequest, guidresp.msg);
     if (!event.queryStringParameters || !event.queryStringParameters.location) return createJsonErrorResponse(HttpResponseType.BadRequest, "Invalid parameter");
     const api = await GetProvider(guidresp.guid);
