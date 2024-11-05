@@ -169,7 +169,7 @@
                 </div>
                 <div class="col-6" :style="!loading && selecteddayData.data[0].length>0?'display:inline-block;':'display:none;'">
                     <div class="hiddenstart hidden">
-                        <button id="scrolldays" type="button" class="btn btn-primary setmargin5" @click="rundays">Aloita rullaus</button>
+                        <button id="scrolldays" type="button" class="btn btn-primary setmargin5" @click="rundays">Rullaa</button>
                         <hr>
                         <p class="graphtitle">{{ dailycharttitle }}</p>
                         <div id="daygraph"></div>
@@ -647,7 +647,17 @@
                         if (selected.date.getFullYear() != item.date.getFullYear()) return true;
                     };
 
-                    return !(!isNaN(item.observation.morning) && isNaN(item.reading.morning)) && !(!isNaN(item.observation.evening) && isNaN(item.reading.evening))
+                    if (((!isNaN(item.observation.morning) && isNaN(item.reading.morning)) ||
+                        (!isNaN(item.observation.evening) && isNaN(item.reading.evening))) == true) {
+                        return false;
+                    }
+                    if (!isNaN(item.observation.morning) && !isNaN(item.reading.morning)) {
+                        if (item.observation.morning !== item.reading.morning) return false;
+                    }
+                    if (!isNaN(item.observation.evening) && !isNaN(item.reading.evening)) {
+                        if (item.observation.evening !== item.reading.evening) return false;
+                    }
+                    return true;
                 },
                 savefile(params) {
                     this.saveToFile(params.data, params.filename, params.message, '')
@@ -918,7 +928,7 @@
                 },
                 stopdays() {
                     let elem = document.getElementById('scrolldays');
-                    elem.innerText='Aloita rullaus';
+                    elem.innerText='Rullaa';
                     this.scrollday.scroll = false;
                     this.scrollday.selecteddate = this.scrollday.firstdate = null;
                 },
