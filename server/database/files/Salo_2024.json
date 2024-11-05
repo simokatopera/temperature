@@ -308,7 +308,8 @@
 	,{ "date": "11/1/2024", "morning": 2.5, "evening": 3.7}
 	,{ "date": "11/2/2024", "morning": 2.0, "evening": 5.2}
 	,{ "date": "11/3/2024", "morning": 2.8, "evening": 4.0}
-	,{ "date": "11/4/2024", "morning": 0, "evening": 5.0}
+	,{ "date": "11/4/2024", "morning": -1.1, "evening": 3.7}
+	,{ "date": "11/5/2024", "morning": 7.1, "evening": 9.2}
 ]}
 
 
