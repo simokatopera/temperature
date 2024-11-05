@@ -54,7 +54,6 @@ export class DbSupaClass implements DbApiClass {
         return this.checkAdminGuid();
     }
     async admin(): Promise<boolean>{
-        console.log('admin()')
         return this.checkAdminGuid();
     }    
     private getDate(date: string): Date {
@@ -67,7 +66,12 @@ export class DbSupaClass implements DbApiClass {
     private createDbDate(date: Date): string {
         return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;
     }
-    async savereadings(pwd: string, data: TemperatureUpdateData[]): Promise<DBStatus>{
+    private getYear(date: string): number {
+        let parts = date.split('/');
+        if (parts && parts.length === 3) return Number(parts[2]);
+        return 0;
+    }
+    async savereadings(pwd: string, data: TemperatureUpdateData[]): Promise<DBStatus> {
         /*
         all data given as parameter must be data for same year
         */
@@ -77,7 +81,7 @@ export class DbSupaClass implements DbApiClass {
         if (this.operationAllowed('post', 'savereadings')) {
             if (pwd !== this.adminpwd && pwd !== this.adminpwd_debugnosave) return setFailResult("Not allowed");
 
-            const curyears = data.map(d => new Date(d.date).getFullYear()).filter(this.onlyUnique);
+            const curyears = data.map(d => this.getYear(d.date)).filter(this.onlyUnique);
             if (curyears.length > 1) return setFailResult("Ivalid parameter");
 
             let dbreadings: TemperatureType[] = await this.temperatures('', curyears);
@@ -94,38 +98,41 @@ export class DbSupaClass implements DbApiClass {
                 // add new readings
                 data.forEach(itemtoadd => {
                     let index = readingstobesaved.length - 1;
-                    while (index >= 0 && this.getDate(readingstobesaved[index].date) > new Date(itemtoadd.date)) index--;
+                    while (index >= 0 && this.getDate(readingstobesaved[index].date) > this.getDate(itemtoadd.date)) index--;
                     if (index < 0) {
                         // add first item into list
-                        let newreading: any = { date: this.createDbDate(new Date(itemtoadd.date)) }
+                        let newreading: any = { date: itemtoadd.date }
                         if (!isNaN(itemtoadd.morning) && itemtoadd.morning !== null) newreading.morning = itemtoadd.morning;
                         if (!isNaN(itemtoadd.evening) && itemtoadd.evening != null) newreading.evening = itemtoadd.evening;
 
                         readingstobesaved.splice(0, 0, newreading);
+
+                        // console.log('add new readings 1')
                         // for (let i = 0; i < 5; i++)
-                        //     console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)                        
+                        //     console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)
                     }
 
-                    if (readingstobesaved[index].date == this.createDbDate(new Date(itemtoadd.date))) {
+                    if (readingstobesaved[index].date == itemtoadd.date) {
                         if (!isNaN(itemtoadd.morning) && itemtoadd.morning !== null) readingstobesaved[index].morning = itemtoadd.morning;
                         if (!isNaN(itemtoadd.evening) && itemtoadd.evening !== null) readingstobesaved[index].evening = itemtoadd.evening;
                     }
                     else {
-                        let newreading: any = { date: this.createDbDate(new Date(itemtoadd.date)) }
+                        let newreading: any = { date: itemtoadd.date }
                         if (!isNaN(itemtoadd.morning) && itemtoadd.morning !== null) newreading.morning = itemtoadd.morning;
                         if (!isNaN(itemtoadd.evening) && itemtoadd.evening != null) newreading.evening = itemtoadd.evening;
 
                         if (index == readingstobesaved.length - 1) readingstobesaved.push(newreading);
                         else readingstobesaved.splice(index + 1, 0, newreading);
 
-                        // for (let i = index-5; i < index+5 && i < readingstobesaved.length; i++)
-                            // console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)
+                        // console.log('add new readings 2')
+                        // for (let i = index - 5; i < index + 5 && i < readingstobesaved.length; i++)
+                        //     console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)
                     }
                 })
                 if (pwd == this.adminpwd_debugnosave) {
                     const record = await getUpdatedData(this.DbTemperatureTable, curyears[0]);
-                    return setOkResult({record: record, saved: false}, -1);
-                } 
+                    return setOkResult({ record: record, saved: false }, -1);
+                }
 
                 // save record
                 const result = await supabase
@@ -138,11 +145,13 @@ export class DbSupaClass implements DbApiClass {
                 }
                 if (result.data.length) {
                     const record = await getUpdatedData(this.DbTemperatureTable, curyears[0]);
-                    return setOkResult({record: record, saved: true}, Number(result.data[0].id));
+                    return setOkResult({ record: record, saved: true }, Number(result.data[0].id));
                 }
                 return setFailResult("Ivalid parameter");
             }
+
             async function getUpdatedData(table: string, year: number) {
+                // local function
                 let dbdata = await supabase
                     .from(table)
                     .select('readings')
@@ -150,14 +159,15 @@ export class DbSupaClass implements DbApiClass {
                 if (dbdata.error || dbdata.data.length == 0) return null;
                 return dbdata.data;
             }
+
             // create new yearly record (curyears.length is always 1)
             let yearsread = dbreadings.map(year => year.info.year);
             let missingyears = curyears.map(y => yearsread.find(yy => y == yy) ? null : y).filter(yyy => yyy !== null);
             if (missingyears.length != 1) return setFailResult("Ivalid parameter");
 
             let newreadings: DbTemperatureDataType[] = data.map(d => {
-                if (new Date(d.date).getFullYear() == missingyears[0]) {
-                    let value: any = { date: this.createDbDate(new Date(d.date)) };
+                if (this.getYear(d.date) == missingyears[0]) {
+                    let value: any = { date: d.date };
                     if (!isNaN(d.morning) && d.morning !== null) value.morning = d.morning;
                     if (!isNaN(d.evening) && d.evening !== null) value.evening = d.evening;
                     return value;
@@ -165,9 +175,13 @@ export class DbSupaClass implements DbApiClass {
                 return null;
             }).filter(val => val !== null);
 
+            // console.log('add new readings 4')
+            // for (let i = 0; i < 10 && i < newreadings.length; i++)
+            //     console.log(`${i} ${JSON.stringify(newreadings[i])}`)
+
             if (pwd == this.adminpwd_debugnosave) {
                 const record = await getUpdatedData(this.DbTemperatureTable, curyears[0]);
-                return setOkResult({record: record, saved: false}, -1);
+                return setOkResult({ record: record, saved: false }, -1);
             }
 
             // create a new record yearly
@@ -180,7 +194,7 @@ export class DbSupaClass implements DbApiClass {
 
             const record = await getUpdatedData(this.DbTemperatureTable, curyears[0]);
 
-            return setOkResult({record: record, saved: true}, result.data[0].id);
+            return setOkResult({ record: record, saved: true }, result.data[0].id);
 
         }
         return setFailResult("Not allowed");
@@ -232,13 +246,7 @@ export class DbSupaClass implements DbApiClass {
                 console.log(`Error: ${err}`)
             }
 
-            // function getDate(date: string): Date | null {
-            //     let parts = date.split('/');
-            //     if (parts && parts.length === 3) {
-            //         return new Date(Number(parts[2]), Number(parts[0])-1, Number(parts[1]), 0, 0, 0, 0);
-            //      }
-            //     return null;
-            // }
+
 
             return temperatures;
         }

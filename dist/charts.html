@@ -668,9 +668,12 @@
                     //     })
                     // );
                 },                
+                createDbDate(date)  {
+                    return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;
+                },
                 async savereadings() {
                     let tobesaved = this.latestReadingsFromNet.map(l => l.obsselected ? 
-                        {date: l.date.toString(), morning: l.observation.morning, evening: l.observation.evening, morningtime: l.observation.morningtime, eveningtime: l.observation.eveningtime}
+                        {date: this.createDbDate(l.date), morning: l.observation.morning, evening: l.observation.evening, morningtime: l.observation.morningtime, eveningtime: l.observation.eveningtime}
                          : null).filter(a => a !== null);
 
                     if (tobesaved.length && this.latestReadingsFromNet.saveenable) {
