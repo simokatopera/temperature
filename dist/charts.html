@@ -29,7 +29,6 @@
 
     <script src="chartfunctions.js" defer></script>
 
-    <!-- <script src="js/a.js"></script>" -->
     <style>
 
         .graphelement {
@@ -407,25 +406,6 @@
                             this.$emit('savefile', {data: `Päivämäärä\tAamu\tIlta\tSuodatettu(${this.allreadings.filtersize})\n${data.join('\n')}`,
                                 filename: filename, message: `Tallennettu tiedostoon ${filename}`});
                         },
-                        // reading
-                        // saveToFile(dataToSave, fileName, successmsg, eventname) {
-                        //     const temp = this.allreadings.values
-                        //     var gameblob = new Blob([dataToSave], { type: 'text/plain' })
-                        //     if (this.objUrl !== null) window.URL.revokeObjectURL(this.objUrl);
-                        //     this.objUrl = (window.webkitURL || window.URL).createObjectURL(gameblob);
-                        //     var anchor = document.createElement('a');
-                        //     anchor.download = fileName;
-                        //     anchor.href = this.objUrl;
-                        //     anchor.dataset.downloadurl = ['text/plain', anchor.download, anchor.href].join(':');
-                        //     anchor.click();
-                        //     // document.querySelector("body").dispatchEvent(
-                        //     //     new CustomEvent(eventname, {
-                        //     //         bubbles: true,
-                        //     //         detail: { text: () => successmsg },
-                        //     //     })
-                        //     // );
-                        // },
-
                     },
                     // reading
                     template: `
@@ -433,7 +413,7 @@
                         <div><button type="button" class="btn btn-primary" @click="saveValuestoFile">Tallenna kaikki lukemat tiedostoon</button></div>
                         <div class="scrollbox">
                         <table class="datatable">
-                            <thead><tr><td></td><td>Aamu</td><td>Ilta</td><td>Suod({{temperatures.filtersize}})</td><td class="hideifnarrow">Alkupvm</td><td class="hideifnarrow">Loppupvm</td></tr></thead>
+                            <thead><tr><td></td><td>Aamu</td><td>Ilta</td><td>Suod({{temperatures.filtersize}})</td><td class="hideifnarrow">Keskiarvo</td></tr></thead>
                             <tbody>
                                 <tr v-for="(item, index) in temperatures.values">
                                     <td :class="markIfPressed(item)" align="center"> 
@@ -444,8 +424,7 @@
                                     <td class="xxx" :class="markIfSelected(item, 1)"> {{ roundNumber(item.morning, 1) }}{{ item.morninghighest ? this.arrowup : "" }}{{ item.morninglowest ? this.arrowdn : "" }}</td>
                                     <td class="xxx" :class="markIfSelected(item, 2)"> {{ roundNumber(item.evening, 1) }}{{ item.eveninghighest ? this.arrowup : "" }}{{ item.eveninglowest ? this.arrowdn : "" }} </td>
                                     <td :class="markIfPressed(item)"> {{ roundNumber(item.averagefiltered, 1) }} </td>
-                                    <td class="hideifnarrow"> {{ getDateTxt(item.firstdayfilter) }} </td>
-                                    <td class="hideifnarrow"> {{ getDateTxt(item.lastdayfilter) }} </td>
+                                    <td class="xxx hideifnarrow" :class="markIfSelected(item, 2)"> {{ roundNumber(item.average, 1) }} </td>
                                 </tr>                                
                             </tbody>
                         </table>            
