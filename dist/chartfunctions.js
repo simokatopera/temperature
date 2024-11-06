@@ -936,9 +936,9 @@ function CFcreateAllYearsAverageSeriedata() {
     const curyearno = yearlyarrangeddata[yearlyarrangeddata.length - 1].date.getFullYear();
     const minserie = createSerie_10(`Matalin`, days, (day) => (day.min.value < getTempMinDefaultValue() ? day.min.value : NaN), (day) => (day.min.value < getTempMinDefaultValue() ? day.min.date.getFullYear() : ''), serietooltipcallback);
     const maxserie = createSerie_10(`Korkein`, days, (day) => (day.max.value > getTempMaxDefaultValue() ? day.max.value : NaN), (day) => (day.max.value > getTempMaxDefaultValue() ? day.max.date.getFullYear() : ''), serietooltipcallback);
-    const averageserie = createSerie_10(`Keskiarvo`, days, (day) => (day.average), (day) => (day.date.getFullYear()), serietooltipcallback);
+    const averageserie = createSerie_10(`Keskiarvo`, days, (day) => (day.average), (day) => (NaN), serietooltipcallback);
     const curyear = createReturnDataType(`Vuosi ${curyearno}`, yearlyarrangeddata[yearlyarrangeddata.length - 1].values.map(day => {
-        return createReturnDataValue(new Date(temperatureClass.defaultyear, day.date.getMonth(), day.date.getDate()), day.average, day.date.getFullYear(), false, serietooltipcallback);
+        return createReturnDataValue(new Date(temperatureClass.defaultyear, day.date.getMonth(), day.date.getDate()), day.average, NaN, false, serietooltipcallback);
     }));
     const allseries = [minserie, maxserie, averageserie, curyear];
     const returnvalues = allseries.map(serie => {
@@ -952,10 +952,10 @@ function CFcreateAllYearsAverageSeriedata() {
 exports.CFcreateAllYearsAverageSeriedata = CFcreateAllYearsAverageSeriedata;
 function CFcreateAllYearsMonthlyAverageSeriedata() {
     function serietooltipcallback(seriename, value) {
-        return `${seriename} ${temperatureClass.monthnameslong[value.date.getMonth()]} ${roundNumber(value.value, 1)}°C`;
+        return `${seriename} ${temperatureClass.monthnameslong[value.date.getMonth()]} ${isNaN(value.year) ? '' : value.year} ${roundNumber(value.value, 1)}°C`;
     }
-    let maxserie = createSerie_2(`Matalin`, temperatureClass.yearlyMonthlyAverages.monthlydata, temperatureClass.defaultyear, (value) => (value.low < getTempMinDefaultValue() ? value.low : NaN), serietooltipcallback);
-    let minserie = createSerie_2(`Korkein`, temperatureClass.yearlyMonthlyAverages.monthlydata, temperatureClass.defaultyear, (value) => (value.high > getTempMaxDefaultValue() ? value.high : NaN), serietooltipcallback);
+    let minserie = createSerie_2(`Matalin`, temperatureClass.yearlyMonthlyAverages.monthlydata, temperatureClass.defaultyear, (value) => (value.low < getTempMinDefaultValue() ? value.low : NaN), (value) => (value.lowdate.getFullYear()), serietooltipcallback);
+    let maxserie = createSerie_2(`Korkein`, temperatureClass.yearlyMonthlyAverages.monthlydata, temperatureClass.defaultyear, (value) => (value.high > getTempMaxDefaultValue() ? value.high : NaN), (value) => (value.highdate.getFullYear()), serietooltipcallback);
     const yearsstatistics = temperatureClass.yearlyMonthlyAverages.yearlydata;
     let lastyear = 0;
     const allyears = yearsstatistics.map(year => {
@@ -968,7 +968,7 @@ function CFcreateAllYearsMonthlyAverageSeriedata() {
         }));
         return allmonths;
     });
-    const allseries = [minserie, maxserie].concat(allyears);
+    const allseries = [maxserie, minserie].concat(allyears);
     let estimateparams = addEstimatesToParameters(allyears);
     const returnvalues = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
@@ -1007,9 +1007,9 @@ function CFcalculateTrend(valuearray) {
     return { k, b };
 }
 exports.CFcalculateTrend = CFcalculateTrend;
-function createSerie_2(seriename, monthlydata, year, dataFunc, cbFunc) {
+function createSerie_2(seriename, monthlydata, year, dataFunc, yearFunc, cbFunc) {
     return createReturnDataType(seriename, monthlydata.map(month => {
-        return createReturnDataValue(new Date(year, month.date.getMonth(), month.date.getDate()), dataFunc(month.total), month.total.highdate.getFullYear(), false, cbFunc);
+        return createReturnDataValue(new Date(year, month.date.getMonth(), month.date.getDate()), dataFunc(month.total), yearFunc(month.total), false, cbFunc);
     }));
 }
 function createSerie_4(seriename, dailyminmaxtable, dataFunc, yearFunc, cbFunc) {
