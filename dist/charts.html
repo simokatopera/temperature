@@ -73,7 +73,7 @@
         }
         .yearbutton {
             background-color: lightgray;
-            border-radius: 2px;
+            border-radius: 4px;
             margin: 2px;
         }
         .yearbutton:hover {
@@ -81,6 +81,10 @@
         }
         .yearbuttonselected {
             background-color: red;
+            color: white;
+        }
+        .yearbuttonselected:hover {
+            background-color: rgb(246, 130, 130);
             color: white;
         }
         .actionbutton.active {
@@ -115,6 +119,13 @@
         .graphtitle {
             font-size: 20px;
             font-weight: bold;
+        }
+        .backbutton {
+            margin-bottom: 10px;
+            border-radius: 10px;
+            color: #fff;
+            border-color: #0d6efd;;
+            background-color: #0d6efd
         }
         .loader {
             border: 5px solid #f3f3f3;
@@ -152,7 +163,7 @@
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
-                <button onclick="history.back()">Takaisin</button>
+                <button class="backbutton" onclick="history.back()">&laquo;Takaisin</button>
                 <div id="hiddenbutton"></div>
             </div>
 

@@ -45,6 +45,8 @@
             color: #fff;
             border-radius: 5px;
             font-size: 20px;
+            margin-left: 4px;
+            margin-bottom: 20px;
         }
         .groupbutton {
             margin: 4px;
@@ -78,10 +80,14 @@
             <div id="app">
                 <div class="card">
                     <div class="page-title">
-                        <h1 id="ID_PageTitle">Lämpötilat</h1>
+                    </div>
+                    <div class="page-content col-md-6">
+                        <h1 id="ID_PageTitle">Lämpötilatilastot</h1>
                         <hr>
+                        <p>Valitse näytettävät vuodet</p>
                         <button class="yearbutton" @click="selectyear(item)" :class="{selected:item.selected}" v-for="item in years">{{ item.year }}</button>
                         <hr>
+                        <p>Valitse ryhmä</p>
                         <button class="groupbutton" @click="selectgroup(item)" :class="{selected: item.selected}" v-for="item in yeargroups">{{ item.first }}-{{ item.last }}</button>
                         <hr>
                         <button class="showbutton" @click="showstatistics" :disabled="!years.find(y => y.selected == true)">Näytä tilastot</button>
