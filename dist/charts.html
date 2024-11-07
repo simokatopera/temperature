@@ -152,6 +152,7 @@
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
+                <button onclick="history.back()">Takaisin</button>
                 <div id="hiddenbutton"></div>
             </div>
 
@@ -239,8 +240,8 @@
         const months2 = ['Tammikuu', 'Helmikuu', 'Maaliskuu', 'Huhtikuu', 'Toukokuu', 'Kesäkuu', 'Heinäkuu', 'Elokuu', 'Syyskuu', 'Lokakuu', 'Marraskuu', 'Joulukuu'];
         const NoSelection = -1;
         const StopScrolling = -2;
-        const adminGuid = '1eb8859e-21d9-49cd-8fa5-b09ff5d32add';
         let userguid = '';
+        let givenyears = null;
 
         function selectFirstDay() {
             let button = document.getElementsByClassName('daybutton_0');
@@ -250,6 +251,12 @@
 
         (async function () {
             userguid = new URLSearchParams(document.location.search).get("userid");
+            const years = new URLSearchParams(document.location.search).get("years");
+            if (years === null) givenyears = null;
+            else {
+                const yearlist = years.split(',')
+                givenyears = {data: yearlist.map(y => Number(y))};
+            }
 
             setTimeout(() => { selectFirstDay(); }, 50);
         })();
@@ -260,6 +267,7 @@
                     defaultyear: 1976,
                     monthnames: months1,
                     monthnamesLong: months2,
+                    givenyears: givenyears,
 
                     loading: ref(true),
                     
@@ -494,7 +502,9 @@
             methods: {
                 async loadAll() {
                     this.startSpinner(1);
-                let years = await apiGetYears(userguid, 'Salo');
+                    let years = null;
+                    if (this.givenyears === null) years = await apiGetYears(userguid, 'Salo');
+                    else years = this.givenyears;
                 //years.data = [2024]
                 let temperatures = await apiGetTemperatures(userguid, "Salo", years.data);
                 if (temperatures.error)  {
@@ -595,6 +605,9 @@
                 },
                 stoploading() {
                     this.loading = false;
+                },
+                mainpage() {
+                    window.location.href = `./charts.html?${userid === null ? '' : userid=userid + '&'}years=${yearparams}`;
                 },
                 roundNumber(value, num) {
                     return roundNumber(value, num)

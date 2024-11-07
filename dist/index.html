@@ -26,6 +26,50 @@
         <script src="api/api.js" defer></script>
 
     <style>
+
+        .yearbutton {
+            margin: 4px;
+            border-radius: 5px;
+            background-color: rgb(206, 228, 236);
+            color: black;
+            font-size: 20px;
+        }
+        .yearbutton:hover {
+            background-color: rgb(82, 213, 252);
+        }
+        .yearbutton.selected:hover {
+            background-color: rgb(182, 182, 242);
+        }
+        .showbutton {
+            background-color: #0d6efd;
+            color: #fff;
+            border-radius: 5px;
+            font-size: 20px;
+        }
+        .groupbutton {
+            margin: 4px;
+            border-radius: 5px;
+            background-color: lightblue;
+            color: black;
+            font-size: 20px;
+        }
+        .groupbutton:hover {
+            background-color: rgb(82, 213, 252);
+        }
+        .groupbutton.selected:hover {
+            background-color: rgb(182, 182, 242);
+        } 
+
+        .selected {
+            background-color: rgb(127, 127, 247);
+        }    
+        button:disabled {
+            background-color: grey;
+        }    
+        .margin5 {
+            margin: 5px;
+        }
+
     </style>
 </head>
 
@@ -35,9 +79,13 @@
                 <div class="card">
                     <div class="page-title">
                         <h1 id="ID_PageTitle">Lämpötilat</h1>
-                        <div id="cities">
-
-                        </div>
+                        <hr>
+                        <button class="yearbutton" @click="selectyear(item)" :class="{selected:item.selected}" v-for="item in years">{{ item.year }}</button>
+                        <hr>
+                        <button class="groupbutton" @click="selectgroup(item)" :class="{selected: item.selected}" v-for="item in yeargroups">{{ item.first }}-{{ item.last }}</button>
+                        <hr>
+                        <button class="showbutton" @click="showstatistics" :disabled="!years.find(y => y.selected == true)">Näytä tilastot</button>
+                        <div>{{ !years.find(y => y.selected == true) ? 'Valitse jokin vuosi' : ''}}</div>
                     </div>
 
                 </div>
@@ -48,18 +96,80 @@
     <script type="module">
 
         import { createApp, ref } from 'vue'
-
+        
 
         (async function () {
-            
-            let resp = await apiGetLocations('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc');
-            let elem = document.getElementById("cities");
-            elem.textContent = JSON.stringify(resp);
-            let years = await apiGetYears('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', resp.data[0]);
-
-            let temps = await apiGetTemperatures('1eb8859e-21d9-49cd-8fa5-b09ff5d32adc', resp.data[0], years.data);
+            const userguid = new URLSearchParams(document.location.search).get("userid");
+            const vueapp = createvueapp(userguid);
         })();
 
+            function createvueapp(userid) {
+                return createApp({
+                    data() {
+                        return {
+                            locations: [],
+                            years: [],
+                            yeargroups: [],
+                            userid: userid,
+                        }
+                    },
+                    async mounted() {
+                        this.locations = await apiGetLocations(userid);
+                        const years = await apiGetYears(userid, this.locations);
+                        this.years = years.data.map(y => ({selected: true, year: y}));
+                        if (years.data && years.data.length > 1) {
+                            let count = years.data.length;
+                            let firstyear = years.data[0];
+                            let lastyear = years.data[count - 1];
+                            if (count > 10) {
+                                if (count < 20) {
+                                    this.yeargroups.push({first: firstyear,last: years.data[count/2], selected: true});
+                                    this.yeargroups.push({first: years.data[count/2] + 1,last: lastyear, selected: true});
+                                }
+                                else {
+                                    let index = 0;
+                                    while (index < count) {
+                                        this.yeargroups.push({first: years.data[index], last: years.data[(index + 9) >= count-1 ? count-1 : index+9], selected: true});
+                                        index += 10;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    components: {
+                    },
+                    methods: {
+                        selectyear(item) {
+                            item.selected = !item.selected;
+                        },
+                        showstatistics() {
+                            const yearparams = this.years.map(y => y.selected ? y.year : null).filter(y => y !== null).join(',');
+                            window.location.href = `./charts.html?${userid === null ? '' : userid=userid + '&'}years=${yearparams}`;
+                        },
+                        selectgroup(group) {
+                            if (group.selected === true) {
+                                setYearGroup(this.years, group, false);
+                            }
+                            else {
+                                //this.yeargroups.forEach(g => {
+                                    // if (g.selected === true) {
+                                    //     setYearGroup(this.years, g, false);
+                                    //     g.selected = false;
+                                    // }
+                                //});
+                            }
+                            group.selected = !group.selected;
+                            if (group.selected) setYearGroup(this.years, group, true);
+
+                            function setYearGroup(years, groupitem, state) {
+                                years.forEach(y => {
+                                    if (y.year >= groupitem.first && y.year <= groupitem.last) y.selected = state;
+                                })
+                            }
+                        }
+                    },
+                }).mount('#app');
+            }
     </script>
 
 </html>

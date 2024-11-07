@@ -3,6 +3,7 @@
     "@netlify/functions": "^2.8.1",
     "@supabase/supabase-js": "^2.45.6",
     "@types/node": "^22.5.4",
+    "netlify-cli": "^17.37.2",
     "supabase": "^1.207.9"
   }
 }
