@@ -110,14 +110,22 @@ async function apiGetTemperatures(guid, location, years) {
     }
 }
 
-async function sendGetJsonAsync2() {
-    const response = await fetch(`https://www.ilmatieteenlaitos.fi/api/weather/observations?fmisid=100955&observations=true&radar=true&daily=true`, 
+async function sendGetJsonAsync2(command) {
+    const response = await fetch(command, 
         { method: "GET", headers: { "Content-Type": "application/json" } });
     if (response.status == 200)
         return await response.json();
     return await response.json();
 }
 async function apiGetLatestTemperatures() {
-    //https://www.ilmatieteenlaitos.fi/api/weather/observations?fmisid=100955&observations=true&radar=true&daily=true
-    return await sendGetJsonAsync2();
+    return await sendGetJsonAsync2(`https://www.ilmatieteenlaitos.fi/api/weather/observations?fmisid=100955&observations=true&radar=false&daily=false`);
 }
+
+async function apiGetForecast(location) {
+    const values = await sendGetJsonAsync2(`https://www.ilmatieteenlaitos.fi/api/weather/forecasts?place=${location}&area=`);
+    if (values && values.forecastValues && values.forecastValues.length > 0) {
+        return values.forecastValues.map(f => ({localtime: f.isolocaltime, temperature: f.Temperature}));
+    }
+    return null;
+}
+

@@ -47,6 +47,10 @@
             border: 1px solid;
             text-align: center;
         }
+        .forecast {
+            background-color: lightgray;
+            color: black;
+        }
         .active {
             background-color: lightgreen;
         }
@@ -94,12 +98,20 @@
         .setmargin5 {
             margin: 5px;
         }
+        .marginbottom5 {
+            margin-bottom: 5px;
+        }
         #loader2 {
             position: absolute;
             left: 200px;
             z-index: 1;
         }
         #daygraph {
+            display: inline-block;
+            width: 400px;
+            height: 380px;
+        }
+        #forecastgraph {
             display: inline-block;
             width: 400px;
             height: 380px;
@@ -121,6 +133,13 @@
             font-weight: bold;
         }
         .backbutton {
+            margin-bottom: 10px;
+            border-radius: 10px;
+            color: #fff;
+            border-color: #0d6efd;;
+            background-color: #0d6efd
+        }
+        .forecastbutton {
             margin-bottom: 10px;
             border-radius: 10px;
             color: #fff;
@@ -172,7 +191,7 @@
             <div id="Error"></div>
             <div class="row">
                 <div class="col-6" :style="loading?'display:none;':'display:inline-block;'">
-                    <readings :temperatures="listedtemperaturereadings" :selectedday="selectedday" :allreadings="alltemperaturereadings" @dayselected="dayselected" @savefile="savefile"></readings>
+                    <readings :temperatures="listedtemperaturereadings" :selectedday="selectedday" :allreadings="alltemperaturereadings" :lastreadings="lastTemperatures" @dayselected="dayselected" @savefile="savefile" @forecastvalues="addforecasts"></readings>
                     <div id="loader2" class="loader hidden"></div>
                     <div class="hiddenstart hidden">
                         <button  class="yearbutton" v-for="item in listedtemperaturereadings.years" :class="{yearbuttonselected: this.selectedyearbutton == item.year }" @click="showselectedyear(item)">{{ item.year }}</button>
@@ -241,6 +260,27 @@
             </div>
 <!-- Latest readings modal end----------------------------------------------------------- -->
 
+<!-- Forecast modal start---------------------------------------------------------- -->
+<div id="forecastModal" class="modal fade" tabindex="-1" aria-labelledby="forecastModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="forecastModalLabel">Viimeaikaiset ja ennuste</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="loader3" class="loader hidden"></div>
+                
+                <div id="forecastgraph"></div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sulje</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Forecast modal end----------------------------------------------------------- -->
         </div>
     </div>
     <script type="module">
@@ -311,11 +351,12 @@
 
                     alltemperaturereadings: { values: [], years: [], filtersize: 7 },    // all temperature values
                     listedtemperaturereadings: { values: [], years: [], filtersize: 7 }, // contains values listed in table
-                    last20Temperatures: [],
+                    lastTemperatures: [],
                     latestReadingsFromNet: [],
                     dailycharttitle: '',
 
                     screenCharts: [],
+                    forecastData: {data: [[],[]], chart: null},
                     selectedyearbutton: '',
                     monthlylimits: [],
                 }
@@ -325,8 +366,8 @@
             },
             components: {
                 readings: {
-                    props: ['temperatures', 'selectedday', 'allreadings'],
-                    emits: ['dayselected', 'savefile'],
+                    props: ['temperatures', 'selectedday', 'allreadings', 'lastreadings'],
+                    emits: ['dayselected', 'savefile', 'forecastvalues'],
                     data: function () {
                         return {
                             selected: ref(NoSelection),
@@ -340,6 +381,8 @@
                         calculateAverage: function () {
                             this.sum = 0;
                         }
+                    },
+                    updated() {
                     },
                     // reading
                     methods: {
@@ -396,6 +439,9 @@
                         },
                         // reading
                         markIfPressed(item) {
+                            if (item.forecast === true) {
+                                return {active: false, forecast: true}
+                            }                            
                             if (this.selected < 0) return { active: false };
                             if (this.selected == item.index) return { active: true }
                             return { active: false };
@@ -406,6 +452,9 @@
                         },
                         // reading
                         markIfSelected(item, mode) {
+                            if (item.forecast === true) {
+                                return {active: false, forecast: true}
+                            }
                             if (this.selected < 0) return { active: false, 
                                 morninghigh: (mode == 1 && item.morninghighest), morninglow: (mode == 1 && item.morninglowest),
                                 eveninghigh: (mode == 2 && item.eveninghighest), eveninglow: (mode == 2 && item.eveninglowest) 
@@ -428,8 +477,10 @@
                     },
                     // reading
                     template: `
-                        <p class="graphtitle">Mittaustulokset ja suodatettu arvo</p>
-                        <div><button type="button" class="btn btn-primary" @click="saveValuestoFile">Tallenna kaikki lukemat tiedostoon</button></div>
+                        <p class="graphtitle">Lämpötilalukemat ja suodatettu arvo</p>
+                        <button type="button" class="btn btn-primary marginbottom5" data-bs-toggle="modal" data-bs-target="#forecastModal">Näytä ennusteet</button>
+
+                        <div><button type="button" class="btn btn-primary marginbottom5" @click="saveValuestoFile">Tallenna kaikki lukemat tiedostoon</button></div>
                         <div class="scrollbox">
                         <table class="datatable">
                             <thead><tr><td></td><td>Aamu</td><td>Ilta</td><td>Suod({{temperatures.filtersize}})</td><td class="hideifnarrow">Keskiarvo</td></tr></thead>
@@ -442,8 +493,8 @@
                                     </td>
                                     <td class="xxx" :class="markIfSelected(item, 1)"> {{ roundNumber(item.morning, 1) }}{{ item.morninghighest ? this.arrowup : "" }}{{ item.morninglowest ? this.arrowdn : "" }}</td>
                                     <td class="xxx" :class="markIfSelected(item, 2)"> {{ roundNumber(item.evening, 1) }}{{ item.eveninghighest ? this.arrowup : "" }}{{ item.eveninglowest ? this.arrowdn : "" }} </td>
-                                    <td :class="markIfPressed(item)"> {{ roundNumber(item.averagefiltered, 1) }} </td>
-                                    <td class="xxx hideifnarrow" :class="markIfSelected(item, 2)"> {{ roundNumber(item.average, 1) }} </td>
+                                    <td :class="markIfPressed(item)"> {{ item.averagefiltered ? roundNumber(item.averagefiltered, 1):'' }} </td>
+                                    <td class="xxx hideifnarrow" :class="markIfSelected(item, 3)"> {{ roundNumber(item.average, 1) }} </td>
                                 </tr>                                
                             </tbody>
                         </table>            
@@ -524,8 +575,8 @@
                     return;
                 }
                 this.checkData(temperatures);
-                this.last20Temperatures = this.getLastreadings(temperatures);
-                if (this.last20Temperatures.length == 0) {
+                this.lastTemperatures = this.getLastreadings(temperatures);
+                if (this.lastTemperatures.length == 0) {
                     this.stopSpinner(1);
                     document.getElementById('Error').innerText = "Ei lämpötilalukemia";
                     return;
@@ -572,7 +623,7 @@
                 if (itemlist && itemlist.length) itemlist.forEach(i => i.classList.remove("hidden"))
 
                 this.stopSpinner(1);
-
+                
                 setTimeout(() => {
                     let elem = document.getElementById('loadModal');
                     if (elem) {
@@ -604,13 +655,37 @@
                             stationreadings.observations = stationreadings.observations.concat(values);
                             */
 
-                            this.latestReadingsFromNet = compareReadings(this.last20Temperatures, stationreadings);
+                            this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
                             const saving = await apiGetSavingAllowed(userguid);
                             this.latestReadingsFromNet.saveenable = saving.data.access;
 
                             this.stopSpinner(3);
                         });
                     }
+                    elem = document.getElementById('forecastModal');
+                    if (elem) {
+                        elem.addEventListener('show.bs.modal', async () => {
+                            //this.lastreadings;
+                            let series = [[], []];
+                            this.forecastData.data = await apiGetForecast('salo');
+
+                            this.forecastData.chart = this.createChart('forecastgraph', 
+                                "Ennuste", series, this.createForecastGraph, this.forecastData.chart);
+
+/*                            
+                            const values = forecast.map(f => (new Date(f.localtime).getHours() == 7 || new Date(f.localtime).getHours() == 15) ? 
+                                {localtime: f.localtime, temperature: f.temperature, hour: new Date(f.localtime).getHours(), date: new Date(f.localtime)} : null).filter(a => a !== null);
+                            const combined = values.map(v => v.hour == 15 ? {date: v.date, evening: v.temperature} : null).filter(x => x !== null);
+                            values.forEach(v => {
+                                if (v.hour == 7) {
+                                    const found = combined.find(f => f.date.getDate() == v.date.getDate());
+                                    if (found) found.morning = v.temperature;
+                                }
+                            })   
+*/                                                         
+                        })
+                    }
+
                 }, 10);
 
                 },
@@ -665,9 +740,25 @@
                 savefile(params) {
                     this.saveToFile(params.data, params.filename, params.message, '')
                 },
+                addforecasts(values) {
+                    if (this.listedtemperaturereadings.values[0].forecast === true) {
+                        let i = 0;
+                        while (i < this.listedtemperaturereadings.values.length && this.listedtemperaturereadings.values[i].forecast == true) {
+                            i++;
+                        }
+                        if (i > this.listedtemperaturereadings.values.length) this.listedtemperaturereadings = [];
+                        else {
+                            this.listedtemperaturereadings.values.splice(0, i);
+                        }
+                        return;
+                    }
+                    values.data.forEach((d, i) => {
+                        this.listedtemperaturereadings.values.splice(0, 0, {date: d.date, evening: d.evening, morning: d.morning, averagefiltered: null, average: (d.morning+d.evening)/2, forecast: true});
+                    })
+                },
                 saveToFile(dataToSave, fileName, successmsg, eventname) {
                     var gameblob = new Blob([dataToSave], { type: 'text/plain' })
-                    if (this.objUrl !== null) window.URL.revokeObjectURL(this.objUrl);
+                                        if (this.objUrl !== null) window.URL.revokeObjectURL(this.objUrl);
                     this.objUrl = (window.webkitURL || window.URL).createObjectURL(gameblob);
                     var anchor = document.createElement('a');
                     anchor.download = fileName;
@@ -852,6 +943,9 @@
                                     if (series.params && series.params.legend && series.params.legend.items) {
                                         return series.params.legend.items[m];
                                     }
+                                    if (series.params && series.params.legend && series.params.legend.date) {
+                                        return `${d}.${m+1}`
+                                    }
                                     if (y < 1978) return monthnames[m];
                                     return y.toString();
                                 })
@@ -1028,27 +1122,58 @@
                     let limits = month >= 0 ? this.monthlylimits[month] : {min: -20, max: 20};
                     return {data: datavalues, params: {rangemin: limits.min, rangemax: limits.max}}
                 },
+                createForecastGraph() {
+                    const latestreadingsamount = 28;
+
+                    const forecastvalues = this.forecastData.data.map(data => ({
+                        value: [new Date(data.localtime), data.temperature], 
+                        tooltip: `Päivä: ${this.getDateTxt(new Date(data.localtime), false)} ${roundNumber(data.temperature, 1)}`
+                    }));
+
+                    let latestvalues = [];
+                    this.lastTemperatures.forEach((data => {
+                        if (data.morning) {
+                            const date = new Date(data.datetimeLocal.getFullYear(), data.datetimeLocal.getMonth(), data.datetimeLocal.getDate(), 7);
+                            latestvalues.push({value: [date,data.morning], 
+                                tooltip: `Päivä: ${this.getDateTxt(date, false)} ${roundNumber(data.morning, 1)}`})
+                        }
+                        if (data.evening) {
+                            const date = new Date(data.datetimeLocal.getFullYear(), data.datetimeLocal.getMonth(), data.datetimeLocal.getDate(), 15);
+                            latestvalues.push({value: [date, data.evening], 
+                                tooltip: `Päivä: ${this.getDateTxt(date, false)} ${roundNumber(data.evening, 1)}`})
+                        }
+                    }))
+                    if (latestvalues.length > latestreadingsamount) {
+                        latestvalues = latestvalues.splice(latestvalues.length - latestreadingsamount, latestvalues.length - latestreadingsamount)
+                    }
+                    const returndata = [
+                        {name: "Viimeiset", values: latestvalues, year: 0, location: ''},
+                        {name: 'Ennuste', values: forecastvalues, year: 0, location: ''},
+                    ]
+                    const params = {showlegend: true, legend: {date: true}}
+                    return {data: returndata, params: params}
+                },
                 getLastreadings(temperatures) {
-                    const lasttemperaturesamount = 20;
-                    let last20Temperatures = [];
+                    const lasttemperaturesamount = 50;
+                    let lastTemperatures = [];
                     if (temperatures.data.length <= 0 ) return [];
                     if (temperatures.data.length > 1 && temperatures.data[temperatures.data.length - 1].data.length < lasttemperaturesamount) {
                         let last = temperatures.data[temperatures.data.length - 2].data.length;
                         const first = last - (lasttemperaturesamount - temperatures.data[temperatures.data.length - 1].data.length)
                         for (var i = first; i < last; i++) {
-                            last20Temperatures.push(temperatures.data[temperatures.data.length - 2].data[i]);
+                            lastTemperatures.push(temperatures.data[temperatures.data.length - 2].data[i]);
                         }
                         for (var i = 0; i < temperatures.data[temperatures.data.length - 1].data.length; i++) {
-                            last20Temperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
+                            lastTemperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
                         }
                     }
                     else {
                         let first = temperatures.data[temperatures.data.length - 1].data.length - lasttemperaturesamount;
                         for (var i = first; i < temperatures.data[temperatures.data.length - 1].data.length; i++) {
-                            last20Temperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
+                            lastTemperatures.push(temperatures.data[temperatures.data.length - 1].data[i]);
                         }
                     }
-                    return last20Temperatures;
+                    return lastTemperatures;
                 },
 
                 //-end of methods-----------------------------------------------------------------------------
