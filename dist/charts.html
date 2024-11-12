@@ -470,7 +470,6 @@
                                 `${this.getDateTxt(line.date)}\t${roundNumber(line.morning, 1)}\t${roundNumber(line.evening, 1)}\t${roundNumber(line.averagefiltered, 1)}`
                             ));
                             let filename = 'readings.txt';
-                            //this.saveToFile(`Päivämäärä\tAamu\tIlta\tSuodatettu(${this.allreadings.filtersize})\n${data.join('\n')}`, filename, `Tallennettu tiedostoon ${filename}`, '');
                             this.$emit('savefile', {data: `Päivämäärä\tAamu\tIlta\tSuodatettu(${this.allreadings.filtersize})\n${data.join('\n')}`,
                                 filename: filename, message: `Tallennettu tiedostoon ${filename}`});
                         },
@@ -631,30 +630,6 @@
                             // get latest readings when modal opened
                             this.startSpinner(3);
                             const stationreadings = await apiGetLatestTemperatures();
-                            //const stationreadings = debugdata;
-                            
-                            // Debug data
-                            /*
-                            let values = [];
-                            
-                            let day = 28;
-                            for (var i = 0; i < 10; i++) {
-                                values.push({
-                                    localtime: (day > 20 ? "202412" : "202501") +   (day < 10 ? '0' : '') + day.toString() + "T070000",
-                                    name: "Kärkkä",
-                                    t2m: i,
-                                })
-                                values.push({
-                                    localtime: (day > 20 ? "202412" : "202501") +   (day < 10 ? '0' : '') + day.toString() + "T150000",
-                                    name: "Kärkkä",
-                                    t2m: i+0.5,
-                                })
-                                day++;
-                                if (day > 31) day = 1;
-                            }
-                            stationreadings.observations = stationreadings.observations.concat(values);
-                            */
-
                             this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
                             const saving = await apiGetSavingAllowed(userguid);
                             this.latestReadingsFromNet.saveenable = saving.data.access;
@@ -671,18 +646,6 @@
 
                             this.forecastData.chart = this.createChart('forecastgraph', 
                                 "Ennuste", series, this.createForecastGraph, this.forecastData.chart);
-
-/*                            
-                            const values = forecast.map(f => (new Date(f.localtime).getHours() == 7 || new Date(f.localtime).getHours() == 15) ? 
-                                {localtime: f.localtime, temperature: f.temperature, hour: new Date(f.localtime).getHours(), date: new Date(f.localtime)} : null).filter(a => a !== null);
-                            const combined = values.map(v => v.hour == 15 ? {date: v.date, evening: v.temperature} : null).filter(x => x !== null);
-                            values.forEach(v => {
-                                if (v.hour == 7) {
-                                    const found = combined.find(f => f.date.getDate() == v.date.getDate());
-                                    if (found) found.morning = v.temperature;
-                                }
-                            })   
-*/                                                         
                         })
                     }
 
@@ -1127,7 +1090,7 @@
 
                     const forecastvalues = this.forecastData.data.map(data => ({
                         value: [new Date(data.localtime), data.temperature], 
-                        tooltip: `Päivä: ${this.getDateTxt(new Date(data.localtime), false)} ${roundNumber(data.temperature, 1)}`
+                        tooltip: `Päivä: ${new Date(data.localtime).getDate()}.${new Date(data.localtime).getMonth()+1} klo ${new Date(data.localtime).getHours()} ${roundNumber(data.temperature, 1)}`
                     }));
 
                     let latestvalues = [];
@@ -1135,12 +1098,12 @@
                         if (data.morning) {
                             const date = new Date(data.datetimeLocal.getFullYear(), data.datetimeLocal.getMonth(), data.datetimeLocal.getDate(), 7);
                             latestvalues.push({value: [date,data.morning], 
-                                tooltip: `Päivä: ${this.getDateTxt(date, false)} ${roundNumber(data.morning, 1)}`})
+                                tooltip: `Päivä: ${date.getDate()}.${date.getMonth()+1} klo ${date.getHours()} ${roundNumber(data.morning, 1)}`})
                         }
                         if (data.evening) {
                             const date = new Date(data.datetimeLocal.getFullYear(), data.datetimeLocal.getMonth(), data.datetimeLocal.getDate(), 15);
                             latestvalues.push({value: [date, data.evening], 
-                                tooltip: `Päivä: ${this.getDateTxt(date, false)} ${roundNumber(data.evening, 1)}`})
+                                tooltip: `Päivä: ${date.getDate()}.${date.getMonth()+1} klo ${date.getHours()} ${roundNumber(data.evening, 1)}`})
                         }
                     }))
                     if (latestvalues.length > latestreadingsamount) {
