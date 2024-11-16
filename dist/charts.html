@@ -249,6 +249,11 @@
                                 <td><input v-model="item.obsselected" :disabled="daydisabled(item)" type="checkbox" name="select"></td>
                             </tr>
                             </table>
+                            <hr>
+                            <input type="date" id="readingdate" name="readingdate" :value="editdate" @change="changeeditdate" min="2000-01-01" max="2029-12-31" />
+                            <input type="number" name="morning" min="-35" max="35" v-model="editmorning"/>
+                            <input type="number" name="evening" min="-35" max="35" v-model="editevening"/>
+                            <button :disabled="!(!latestReadingsFromNet.saveenable || !latestReadingsFromNet.find(l => l.obsselected))" @click="savereading" type="button" class="btn btn-success">Tallenna arvo</button>
                         </div>
                         <div class="modal-footer">
                             <input type="checkbox" :disabled="!latestReadingsFromNet.saveenable" name="saveyeartemperatures">
@@ -293,6 +298,7 @@
         const StopScrolling = -2;
         let userguid = '';
         let givenyears = null;
+        let location = '';
 
         function selectFirstDay() {
             let button = document.getElementsByClassName('daybutton_0');
@@ -303,6 +309,7 @@
         (async function () {
             userguid = new URLSearchParams(document.location.search).get("userid");
             const years = new URLSearchParams(document.location.search).get("years");
+            location = new URLSearchParams(document.location.search).get("location");
             if (years === null) givenyears = null;
             else {
                 const yearlist = years.split(',')
@@ -321,6 +328,7 @@
                     givenyears: givenyears,
 
                     loading: ref(true),
+                    location: location === null || location == '' ? 'Salo' : location,
                     
                     testgraph: 'GraphLocation',
                     testgraph2: 'GraphLocation2',
@@ -359,10 +367,30 @@
                     forecastData: {data: [[],[]], chart: null},
                     selectedyearbutton: '',
                     monthlylimits: [],
+
+                    editdate: '',
+                    editmorning: NaN,
+                    editevening: NaN,
                 }
             },
             async mounted() {
-                await this.loadAll()
+                await this.loadAll();
+                const today = new Date();
+                this.editdate = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
+                let item = this.lastTemperatures.find(v => v.datetimeLocal.getFullYear() == today.getFullYear() &&
+                    v.datetimeLocal.getMonth() == today.getMonth() && v.datetimeLocal.getDate() == today.getDate());
+                if (!item) {
+                    item = this.alltemperaturereadings.values.find(v => v.date.getFullYear() == today.getFullYear() &&
+                        v.date.getMonth() == today.getMonth() && v.date.getDate() == today.getDate());
+                }
+                if (item) {
+                    this.editmorning = item.morning;
+                    this.editevening = item.evening;
+                }
+                else {
+                    this.editmorning = NaN;
+                    this.editevening = NaN;
+                }
             },
             components: {
                 readings: {
@@ -477,7 +505,7 @@
                     // reading
                     template: `
                         <p class="graphtitle">Lämpötilalukemat ja suodatettu arvo</p>
-                        <button type="button" class="btn btn-primary marginbottom5" data-bs-toggle="modal" data-bs-target="#forecastModal">Näytä ennusteet</button>
+                        <button type="button" class="btn btn-primary marginbottom5" data-bs-toggle="modal" data-bs-target="#forecastModal">Näytä ennuste</button>
 
                         <div><button type="button" class="btn btn-primary marginbottom5" @click="saveValuestoFile">Tallenna kaikki lukemat tiedostoon</button></div>
                         <div class="scrollbox">
@@ -564,10 +592,10 @@
                 async loadAll() {
                     this.startSpinner(1);
                     let years = null;
-                    if (this.givenyears === null) years = await apiGetYears(userguid, 'Salo');
+                    if (this.givenyears === null) years = await apiGetYears(userguid, this.location);
                     else years = this.givenyears;
                 //years.data = [2024]
-                let temperatures = await apiGetTemperatures(userguid, "Salo", years.data);
+                let temperatures = await apiGetTemperatures(userguid, this.location, years.data);
                 if (temperatures.error)  {
                     this.stopSpinner(1);
                     document.getElementById('Error').innerText = temperatures.error.msg;
@@ -607,7 +635,7 @@
                 this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, CFcreateAllYearsFilteredSeriedata);
                 this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, CFcreateLastYearsSeriedata);
                 this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', temperatures, CFcreateDailyDiffdata);
-                this.createChart(this.testgraph12, 'Korkeimmat ja matalimmat arvot/vuosi (kpl)', temperatures, CFcreateYearlyHighValuedata);
+                this.createChart(this.testgraph12, 'Ennätyslämpötilat/vuosi (kpl)', temperatures, CFcreateYearlyHighValuedata);
                 this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, CFcreateYearlyTrendSeriedata);
 
                 this.screenCharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, CFcreateMonthlySummerTrendSeriedata));
@@ -629,7 +657,11 @@
                         elem.addEventListener('show.bs.modal', async () => {
                             // get latest readings when modal opened
                             this.startSpinner(3);
-                            const stationreadings = await apiGetLatestTemperatures();
+                            //const stationreadings1 = await apiGetLatestTemperatures(this.location);
+                            //const stationreadings2 = await apiGetLatestTemperatures2(this.location);
+                            const stationreadings3 = await apiGetLatestTemperatures3(this.location);
+                            const stationreadings = stationreadings3;
+
                             this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
                             const saving = await apiGetSavingAllowed(userguid);
                             this.latestReadingsFromNet.saveenable = saving.data.access;
@@ -642,7 +674,9 @@
                         elem.addEventListener('show.bs.modal', async () => {
                             //this.lastreadings;
                             let series = [[], []];
-                            this.forecastData.data = await apiGetForecast('salo');
+                            let temp = await apiGetForecast('salo');
+
+                            this.forecastData.data = await apiGetForecast2('salo');
 
                             this.forecastData.chart = this.createChart('forecastgraph', 
                                 "Ennuste", series, this.createForecastGraph, this.forecastData.chart);
@@ -734,9 +768,55 @@
                     //         detail: { text: () => successmsg },
                     //     })
                     // );
-                },                
+                },      
+                changeeditdate(event) {
+                    const date = event.target.value.split('-');
+                    if (date && date.length == 3) {
+                        const year = Number(date[0]);
+                        const month = Number(date[1]);
+                        const day = Number(date[2]);
+                        let item = this.lastTemperatures.find(v => v.datetimeLocal.getFullYear() == year &&
+                            v.datetimeLocal.getMonth()+1 == month && v.datetimeLocal.getDate() == day);
+                        if (!item) {
+                            item = this.alltemperaturereadings.values.find(v => v.date.getFullYear() == year &&
+                               v.date.getMonth()+1 == month && v.date.getDate() == day);
+                        }
+                        if (item) {
+                            this.editmorning = item.morning;
+                            this.editevening = item.evening;
+                        }
+                        else {
+                            this.editmorning = NaN;
+                            this.editevening = NaN;
+                        }
+                    }
+                },       
                 createDbDate(date)  {
                     return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;
+                },
+                async savereading() {
+                    if (true) {
+                        let d = this.editdate.split('-');
+
+                        function getTemperature(temp) {
+                            if (temp && temp != '') {
+                                return Number(temp)
+                            }
+                            return NaN;
+                        }
+                        if (d && d.length == 3) {
+                            let date  = new Date(d[0], Number(d[1])-1, d[2]);
+                            let morning = getTemperature(this.editmorning);
+                            let evening = getTemperature(this.editevening);
+                            let tobesaved = {date: this.createDbDate(date), 
+                                morning: morning, 
+                                evening: evening, 
+                                morningtime: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 7), 
+                                eveningtime: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 15)};
+                            let status = await apiSaveReadings(userguid, userguid, [tobesaved]);
+                            console.log(tobesaved)
+                        }
+                    }
                 },
                 async savereadings() {
                     let tobesaved = this.latestReadingsFromNet.map(l => l.obsselected ? 
@@ -758,7 +838,6 @@
                                 }
                             }
                             else {
-
                                 alert(`Not saved, Debugging on`)
                             }
                         }

@@ -86,7 +86,7 @@ export class DbSupaClass implements DbApiClass {
 
             let dbreadings: TemperatureType[] = await this.temperatures('', curyears);
             if (dbreadings.length > curyears.length) return setFailResult("Ivalid parameter");
-
+            //console.log(`length: ${dbreadings.length}`)
             if (dbreadings.length > 0) {
                 // there is readings for current year, update record
                 let readingstobesaved: DbTemperatureDataType[] = dbreadings[0].data.map(r => {
@@ -95,8 +95,10 @@ export class DbSupaClass implements DbApiClass {
                     if (!isNaN(r.evening)) newdata.evening = r.evening;
                     return newdata;
                 });
+                //console.log(`add new readings`)
                 // add new readings
                 data.forEach(itemtoadd => {
+                    //console.log(`adding item`)
                     let index = readingstobesaved.length - 1;
                     while (index >= 0 && this.getDate(readingstobesaved[index].date) > this.getDate(itemtoadd.date)) index--;
                     if (index < 0) {
@@ -113,8 +115,21 @@ export class DbSupaClass implements DbApiClass {
                     }
 
                     if (readingstobesaved[index].date == itemtoadd.date) {
-                        if (!isNaN(itemtoadd.morning) && itemtoadd.morning !== null) readingstobesaved[index].morning = itemtoadd.morning;
-                        if (!isNaN(itemtoadd.evening) && itemtoadd.evening !== null) readingstobesaved[index].evening = itemtoadd.evening;
+                        // change date reading(s)
+                        let newreading: any = { date: readingstobesaved[index].date}
+                        if (!isNaN(itemtoadd.morning) && itemtoadd.morning !== null) newreading.morning = itemtoadd.morning;
+                        if (!isNaN(itemtoadd.evening) && itemtoadd.evening !== null) newreading.evening = itemtoadd.evening;
+                        if (newreading.evening || newreading.morning) {
+                            // replace date reading
+                            readingstobesaved[index] = newreading;
+                        }
+                        else {
+                            // remove date reading
+                            readingstobesaved.splice(index, 1);
+                        }
+                        // console.log('add new readings 3')
+                        // for (let i = index - 5; i < index + 5 && i < readingstobesaved.length; i++)
+                        //     console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)
                     }
                     else {
                         let newreading: any = { date: itemtoadd.date }

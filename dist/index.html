@@ -117,6 +117,7 @@
                             years: [],
                             yeargroups: [],
                             userid: userid,
+                            location: 'Salo',
                         }
                     },
                     async mounted() {
@@ -150,7 +151,7 @@
                         },
                         showstatistics() {
                             const yearparams = this.years.map(y => y.selected ? y.year : null).filter(y => y !== null).join(',');
-                            window.location.href = `./charts.html?${userid === null ? '' : 'userid=' + userid + '&'}years=${yearparams}`;
+                            window.location.href = `./charts.html?${userid === null ? '' : 'userid=' + userid + '&'}years=${yearparams}&location=${this.location}`;
                         },
                         selectgroup(group) {
                             if (group.selected === true) {
