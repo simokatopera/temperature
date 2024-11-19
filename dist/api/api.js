@@ -110,77 +110,56 @@ async function apiGetTemperatures(guid, location, years) {
     }
 }
 
-async function sendGetJsonAsync2(command) {
-    const response = await fetch(command, 
-        { method: "GET", headers: { "Content-Type": "application/json" } });
-    if (response.status == 200)
-        return await response.json();
-    return await response.json();
-}
+// async function sendGetJsonAsync2(command) {
+//     const response = await fetch(command, 
+//         { method: "GET", headers: { "Content-Type": "application/json" } });
+//     if (response.status == 200)
+//         return await response.json();
+//     return await response.json();
+// }
 async function sendGetXmlAsync(command) {
     const response = await fetch(command, 
         { method: "GET", headers: { "Content-Type": "text/xml" } });
     return await response.text();
 }
-async function apiGetLatestTemperatures(location) {
-    return await sendGetJsonAsync2(`https://www.ilmatieteenlaitos.fi/api/weather/observations?fmisid=100955&observations=true&radar=false&daily=false`);
-}
-
-
-
-
-async function apiGetForecast(location) {
-    const values = await sendGetJsonAsync2(`https://www.ilmatieteenlaitos.fi/api/weather/forecasts?place=${location}&area=`);
-    if (values && values.forecastValues && values.forecastValues.length > 0) {
-        return values.forecastValues.map(f => ({localtime: f.isolocaltime, temperature: f.Temperature}));
-    }
-    return null;
-}
-
-// async function apiTest(location) {
-//     const values = await sendGetXmlAsync(`https://opendata.fmi.fi/wfs/fin?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=${location}&parameters=ws_10min,t2m&`);
-//     return values;
+// async function apiGetLatestTemperatures(location) {
+//     return await sendGetJsonAsync2(`https://www.ilmatieteenlaitos.fi/api/weather/observations?fmisid=100955&observations=true&radar=false&daily=false`);
 // }
-
-
-// function roundNumber(value, num) {
-//     if (isNaN(value)) return 'NaN';
-//     if (isNumeric(value)) {
-//         if (typeof value === 'number') return value.toFixed(num);
-//         else return value;
+// async function apiGetForecast(location) {
+//     const values = await sendGetJsonAsync2(`https://www.ilmatieteenlaitos.fi/api/weather/forecasts?place=${location.toLowerCase()}&area=`);
+//     if (values && values.forecastValues && values.forecastValues.length > 0) {
+//         return values.forecastValues.map(f => ({localtime: f.isolocaltime, temperature: f.Temperature}));
 //     }
-//     return '???'
+//     return null;
 // }
-async function apiGetLatestTemperatures2(location) {
-    const etime = new Date();
-    const stime = new Date(etime.getFullYear(), etime.getMonth(), etime.getDate()-7);
+// async function apiGetLatestTemperatures2(location) {
+//     const etime = new Date();
+//     const stime = new Date(etime.getFullYear(), etime.getMonth(), etime.getDate()-7);
 
-    const starttime = formatDate(stime);
-    const endtime = formatDate(etime);
+//     const starttime = formatDate(stime);
+//     const endtime = formatDate(etime);
 
-    const response = await sendGetXmlAsync(`https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::weather::hourly::timevaluepair&place=${location}&starttime=${starttime}&endtime=${endtime}&maxlocations=1&parameters=TA_PT1H_AVG`);
-    let parser = new DOMParser();
-    let xmlDoc = parser.parseFromString(response,"text/xml");      
-    const values = xmlDoc.getElementsByTagName('wml2:MeasurementTVP');  
-    let results = [];
-    for (var i = 0; i < values.length; i++) {
-        let nodes = values[i].children;
-        let valuestr = null;
-        let timestr = null;
-        for (var j = 0; j < nodes.length; j++) {
-            if (nodes[j].nodeName == 'wml2:time') timestr = nodes[j].textContent;
-            if (nodes[j].nodeName == 'wml2:value') valuestr = nodes[j].textContent;
-        }
+//     const response = await sendGetXmlAsync(`https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::weather::hourly::timevaluepair&place=${location}&starttime=${starttime}&endtime=${endtime}&maxlocations=1&parameters=TA_PT1H_AVG`);
+//     let parser = new DOMParser();
+//     let xmlDoc = parser.parseFromString(response,"text/xml");      
+//     const values = xmlDoc.getElementsByTagName('wml2:MeasurementTVP');  
+//     let results = [];
+//     for (var i = 0; i < values.length; i++) {
+//         let nodes = values[i].children;
+//         let valuestr = null;
+//         let timestr = null;
+//         for (var j = 0; j < nodes.length; j++) {
+//             if (nodes[j].nodeName == 'wml2:time') timestr = nodes[j].textContent;
+//             if (nodes[j].nodeName == 'wml2:value') valuestr = nodes[j].textContent;
+//         }
         
-        results.push(valuestr == 'NaN' ? null : {value: valuestr, time: timestr});
-    }
+//         results.push(valuestr == 'NaN' ? null : {value: valuestr, time: timestr});
+//     }
     
-    results = results.filter(r => r !== null)
-    const returnvalues = {observations: results.map(r => ({t2m: Number(r.value), localtime: formatTime(r.time)}))}
-
-
-    return returnvalues;
-}
+//     results = results.filter(r => r !== null)
+//     const returnvalues = {observations: results.map(r => ({t2m: Number(r.value), localtime: formatTime(r.time)}))}
+//     return returnvalues;
+// }
 async function apiGetLatestTemperatures3(location) {
     let etime = new Date();
     etime = new Date(etime.getFullYear(), etime.getMonth(), etime.getDate(), etime.getHours()-localtimehouroffset, etime.getMinutes(), etime.getSeconds());
@@ -211,6 +190,9 @@ async function apiGetLatestTemperatures3(location) {
     
     results = results.filter(r => r !== null)
     const returnvalues = {observations: results.map(r => ({t2m: Number(r.value), localtime: formatTime(r.time)}))}
+    // returnvalues.observations.forEach(v => {
+    //     console.log(`${v.localtime} ${v.t2m}`);
+    // })
     return returnvalues;
 }
 
@@ -256,8 +238,8 @@ function formatTime(t) {
     //20241107T192000
     let date = t.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z$/)
     if (date) {
-        const dt = new Date(Number(date[1]), Number(date[2])-1, Number(date[3]), Number(date[4]), Number(date[5]), Number(date[6]));
-        let datestr = `${dt.getFullYear()}${pad(dt.getMonth()+1, 2)}${pad(dt.getDate(), 2)}T${pad(dt.getHours()+localtimehouroffset, 2)}${pad(dt.getMinutes(), 2)}${pad(dt.getSeconds(), 2)}`;
+        const dt = new Date(Number(date[1]), Number(date[2])-1, Number(date[3]), Number(date[4])+localtimehouroffset, Number(date[5]), Number(date[6]));
+        let datestr = `${dt.getFullYear()}${pad(dt.getMonth()+1, 2)}${pad(dt.getDate(), 2)}T${pad(dt.getHours()+0, 2)}${pad(dt.getMinutes(), 2)}${pad(dt.getSeconds(), 2)}`;
         return datestr;
     }
     return '';
@@ -267,7 +249,7 @@ function formatTime2(t) {
     //20241107T192000
     let date = t.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z$/)
     if (date) {
-        const dt = new Date(Number(date[1]), Number(date[2])-1, Number(date[3]), Number(date[4]), Number(date[5]), Number(date[6]));
+        const dt = new Date(Number(date[1]), Number(date[2])-1, Number(date[3]), Number(date[4])+0, Number(date[5]), Number(date[6]));
         return formatDate(dt);
     }
     return '';
