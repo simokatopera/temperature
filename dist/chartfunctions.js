@@ -487,7 +487,7 @@ function createValueDataValue(value, year, month, estimate = false) {
     return { value: value, year: year, month: month, estimate: estimate };
 }
 function createYearlyMinMax(year, min, max) {
-    return { year: year, low: min, high: max };
+    return { year: year, low: min, high: max, loworig: NaN, highorig: NaN };
 }
 function createTrendCalcTable(data) {
     return { data: data };
@@ -718,6 +718,9 @@ exports.CFcreateDailyDiffdata = CFcreateDailyDiffdata;
 function CFcreateYearlyHighValuedata() {
     function serietooltipcallback(seriename, value) {
         let daytxt = isNaN(value.year) ? `???` : ` vuosi ${value.year}`;
+        if (value.estimate == true) {
+            console.log(value.value);
+        }
         return `${seriename} ${daytxt} ${roundNumber(value.value, 0)} kpl`;
     }
     const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
@@ -744,19 +747,35 @@ function CFcreateYearlyHighValuedata() {
         let days = Number(roundNumber(dayno / oneday, 1));
         if (days == 0)
             days = 365;
+        yearlyminmaxvalues[yearlyminmaxvalues.length - 1].highorig = yearlyminmaxvalues[yearlyminmaxvalues.length - 1].high;
+        yearlyminmaxvalues[yearlyminmaxvalues.length - 1].loworig = yearlyminmaxvalues[yearlyminmaxvalues.length - 1].low;
         yearlyminmaxvalues[yearlyminmaxvalues.length - 1].high = 365 * curhigh / days;
         yearlyminmaxvalues[yearlyminmaxvalues.length - 1].low = 365 * curlow / days;
     }
-    const highserie = createSerie_8('Ylin', yearlyminmaxvalues, (value) => (value.high), lastyearestimate, serietooltipcallback);
+    const highseriename = 'Ylin';
+    const highserie = createSerie_8(highseriename, yearlyminmaxvalues, (value) => (value.high), lastyearestimate, serietooltipcallback);
     const lowserie = createSerie_8('Alin', yearlyminmaxvalues, (value) => (value.low), lastyearestimate, serietooltipcallback);
     const hightrendserie = createSerie_9('Ylimpien suuntaus', yearlyminmaxvalues, (v) => (v.high), serietooltipcallback);
     const lowtrendserie = createSerie_9('Alimpien suuntaus', yearlyminmaxvalues, (v) => (v.low), serietooltipcallback);
     const allseries = [lowserie, highserie, hightrendserie, lowtrendserie];
     const returnvalues = allseries.map(serie => {
-        return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-            value: createGraphItem(value.date, value.value, false),
-            tooltip: createTooltip(serie.name, value),
-        })), false, 0);
+        return createGraphSerie(serie.name, '', 0, serie.values.map(value => {
+            let origvalue = null;
+            if (value.estimate) {
+                yearlyminmaxvalues.forEach(yy => {
+                    if (yy.year == value.date.getFullYear()) {
+                        if (serie.name == highseriename)
+                            origvalue = isNaN(yy.highorig) ? NaN : `(${yy.highorig})`;
+                        else
+                            origvalue = isNaN(yy.loworig) ? NaN : `(${yy.loworig})`;
+                    }
+                });
+            }
+            return {
+                value: createGraphItem(value.date, value.value, false),
+                tooltip: `${createTooltip(serie.name, value)} ${origvalue == null ? '' : origvalue}`,
+            };
+        }), false, 0);
     });
     let estimateitems = addEstimatesToParameters(allseries);
     const params = { showlegend: true, series: estimateitems };
