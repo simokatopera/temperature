@@ -1033,9 +1033,6 @@ export function CFcreateDailyDiffdata(): GraphSerieType {
 export function CFcreateYearlyHighValuedata(): GraphSerieType {
     function serietooltipcallback(seriename: string, value: ReturnDataValue): string {
         let daytxt = isNaN(value.year) ? `???` : ` vuosi ${value.year}`;
-        if (value.estimate == true) {
-            console.log(value.value)
-        }
         return `${seriename} ${daytxt} ${roundNumber(value.value, 0)} kpl`;
     } 
 

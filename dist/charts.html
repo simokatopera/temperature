@@ -369,8 +369,8 @@
                     monthlylimits: [],
 
                     editdate: '',
-                    editmorning: NaN,
-                    editevening: NaN,
+                    editmorning: '',
+                    editevening: '',
                 }
             },
             async mounted() {
@@ -490,7 +490,7 @@
                     // reading
                     template: `
                         <p class="graphtitle">Lämpötilalukemat ja suodatettu arvo</p>
-                        <button type="button" class="btn btn-primary marginbottom5" data-bs-toggle="modal" data-bs-target="#forecastModal">Näytä ennuste</button>
+                        <button type="button" class="btn btn-primary marginbottom5" data-bs-toggle="modal" data-bs-target="#forecastModal">Ennuste</button>
 
                         <div><button type="button" class="btn btn-primary marginbottom5" @click="saveValuestoFile">Tallenna kaikki lukemat tiedostoon</button></div>
                         <div class="scrollbox">
@@ -753,7 +753,7 @@
                         const year = Number(date[0]);
                         const month = Number(date[1]);
                         const day = Number(date[2]);                       
-                        updateFieldEdit(new Date(year, month-1, day));
+                        this.updateFieldEdit(new Date(year, month-1, day));
                     }
                 },       
                 updateFieldEdit(today) {
@@ -769,8 +769,8 @@
                         this.editevening = item.evening;
                     }
                     else {
-                        this.editmorning = NaN;
-                        this.editevening = NaN;
+                        this.editmorning = '';
+                        this.editevening = '';
                     }
                 },
                 createDbDate(date)  {
@@ -783,7 +783,7 @@
                         if (temp && temp != '') {
                             return Number(temp)
                         }
-                        return NaN;
+                        return '';
                     }
                     if (d && d.length == 3) {
                         let date  = new Date(d[0], Number(d[1])-1, d[2]);
