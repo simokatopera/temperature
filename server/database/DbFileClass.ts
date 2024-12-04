@@ -6,13 +6,51 @@ import { TemperatureUpdateData, DBStatus, TemperatureType, TemperatureDataType, 
 
 let temperaturedata: TemperatureType[] = [];
 
-temperaturedata.push(require("./files/Salo_2001.json"));
+//temperaturedata.push(require("./files/Salo_1960_x.json"));
+
+//temperaturedata.push(require("./files/Salo_1972_x.json"));
+temperaturedata.push(require("./files/Salo_1973_x.json"));
+temperaturedata.push(require("./files/Salo_1974_x.json"));
+temperaturedata.push(require("./files/Salo_1975_x.json"));
+temperaturedata.push(require("./files/Salo_1976_x.json"));
+temperaturedata.push(require("./files/Salo_1977_x.json"));
+temperaturedata.push(require("./files/Salo_1978_x.json"));
+temperaturedata.push(require("./files/Salo_1979_x.json"));
+
+temperaturedata.push(require("./files/Salo_1980_x.json"));
+temperaturedata.push(require("./files/Salo_1981_x.json"));
+temperaturedata.push(require("./files/Salo_1982_x.json"));
+temperaturedata.push(require("./files/Salo_1983_x.json"));
+temperaturedata.push(require("./files/Salo_1984_x.json"));
+temperaturedata.push(require("./files/Salo_1985_x.json"));
+temperaturedata.push(require("./files/Salo_1986_x.json"));
+temperaturedata.push(require("./files/Salo_1987_x.json"));
+temperaturedata.push(require("./files/Salo_1988_x.json"));
+temperaturedata.push(require("./files/Salo_1989_x.json"));
+temperaturedata.push(require("./files/Salo_1990_x.json"));
+temperaturedata.push(require("./files/Salo_1991_x.json"));
+temperaturedata.push(require("./files/Salo_1992_x.json"));
+temperaturedata.push(require("./files/Salo_1993_x.json"));
+temperaturedata.push(require("./files/Salo_1994_x.json"));
+temperaturedata.push(require("./files/Salo_1995_x.json"));
+temperaturedata.push(require("./files/Salo_1996_x.json"));
+temperaturedata.push(require("./files/Salo_1997_x.json"));
+temperaturedata.push(require("./files/Salo_1998_x.json"));
+temperaturedata.push(require("./files/Salo_1999_x.json"));
+temperaturedata.push(require("./files/Salo_2000_x.json"));
+
+temperaturedata.push(require("./files/Salo_2001_x.json"));
+temperaturedata.push(require("./files/Salo_2006_x.json"));
+temperaturedata.push(require("./files/Salo_2007_x.json"));
+
+
+//temperaturedata.push(require("./files/Salo_2001.json"));
 temperaturedata.push(require("./files/Salo_2002.json"));
 temperaturedata.push(require("./files/Salo_2003.json"));
 temperaturedata.push(require("./files/Salo_2004.json"));
 temperaturedata.push(require("./files/Salo_2005.json"));
-temperaturedata.push(require("./files/Salo_2006.json"));
-temperaturedata.push(require("./files/Salo_2007.json"));
+//temperaturedata.push(require("./files/Salo_2006.json"));
+//temperaturedata.push(require("./files/Salo_2007.json"));
 temperaturedata.push(require("./files/Salo_2008.json"));
 temperaturedata.push(require("./files/Salo_2009.json"));
 temperaturedata.push(require("./files/Salo_2010.json"));
@@ -98,7 +136,6 @@ export class DbFileClass implements DbApiClass {
                     if (temperaturedata[dataindex].info.location == location && temperaturedata[dataindex].info.year == years[yearindex]) {
                         let dailyreadings: TemperatureDataType[] = temperaturedata[dataindex].data;
                         dailyreadings.forEach(reading => {
-                            //;console.log(reading.date)
                             reading.datetimeUtc = getDate(reading.date);
                         })
 
@@ -110,7 +147,6 @@ export class DbFileClass implements DbApiClass {
             function getDate(date: string): Date | null {
                 let parts = date.split('/');
                 if (parts && parts.length === 3) {
-                    //console.log(`${parts[0]} ${parts[1]} ${parts[2]}`)
                     return new Date(Number(parts[2]), Number(parts[0])-1, Number(parts[1]), 0, 0, 0, 0);
                  }
                 return null;

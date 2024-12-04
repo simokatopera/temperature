@@ -142,7 +142,7 @@ function createGraphItem(d, v, e) {
 }
 class Temperatures {
     constructor(filterlength, monthnames, monthnameslong) {
-        this.defaultyear = 1976;
+        this.defaultyear = 1972;
         this.filteredValues = [];
         this.filteredValuesValid = [];
         this.yearlyMonthlyAverages = createAverageYearsMonths([], []);
@@ -718,9 +718,6 @@ exports.CFcreateDailyDiffdata = CFcreateDailyDiffdata;
 function CFcreateYearlyHighValuedata() {
     function serietooltipcallback(seriename, value) {
         let daytxt = isNaN(value.year) ? `???` : ` vuosi ${value.year}`;
-        if (value.estimate == true) {
-            console.log(value.value);
-        }
         return `${seriename} ${daytxt} ${roundNumber(value.value, 0)} kpl`;
     }
     const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();

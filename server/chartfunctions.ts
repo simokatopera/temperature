@@ -292,7 +292,7 @@ interface CalculationResult {
 
 class Temperatures {
     //temperatures: TemperatureMsg;
-    defaultyear: number = 1976;
+    defaultyear: number = 1972;
     filterlength: number;
 
     filteredValues: Filtered[] = [];
