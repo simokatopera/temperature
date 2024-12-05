@@ -6,9 +6,20 @@ import { TemperatureUpdateData, DBStatus, TemperatureType, TemperatureDataType, 
 
 let temperaturedata: TemperatureType[] = [];
 
-//temperaturedata.push(require("./files/Salo_1960_x.json"));
+temperaturedata.push(require("./files/Salo_1960_x.json"));
+temperaturedata.push(require("./files/Salo_1961_x.json"));
+temperaturedata.push(require("./files/Salo_1962_x.json"));
+temperaturedata.push(require("./files/Salo_1963_x.json"));
+temperaturedata.push(require("./files/Salo_1964_x.json"));
+temperaturedata.push(require("./files/Salo_1965_x.json"));
+temperaturedata.push(require("./files/Salo_1966_x.json"));
+temperaturedata.push(require("./files/Salo_1967_x.json"));
+temperaturedata.push(require("./files/Salo_1968_x.json"));
+temperaturedata.push(require("./files/Salo_1969_x.json"));
 
-//temperaturedata.push(require("./files/Salo_1972_x.json"));
+temperaturedata.push(require("./files/Salo_1970_x.json"));
+temperaturedata.push(require("./files/Salo_1971_x.json"));
+temperaturedata.push(require("./files/Salo_1972_x.json"));
 temperaturedata.push(require("./files/Salo_1973_x.json"));
 temperaturedata.push(require("./files/Salo_1974_x.json"));
 temperaturedata.push(require("./files/Salo_1975_x.json"));

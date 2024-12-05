@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.compareReadings = exports.CFcalculateTrend = exports.CFcreateAllYearsMonthlyAverageSeriedata = exports.CFcreateAllYearsAverageSeriedata = exports.CFcreateMonthlySpringTrendSeriedata = exports.CFcreateMonthlyFallTrendSeriedata = exports.CFcreateMonthlyWinterTrendSeriedata = exports.CFcreateMonthlySummerTrendSeriedata = exports.createTrendForGivenMonths = exports.CFcreateYearlyTrendSeriedata = exports.CFcalculateMonthlyAverages = exports.CFcreateYearlyHighValuedata = exports.CFcreateDailyDiffdata = exports.CFcreateLastYearsSeriedata = exports.CFcreateYearlyFilteredSeriedata = exports.CFcreateAllYearsFilteredSeriedata = exports.CFgetAllReadings = exports.CFinitTemperature = exports.getDateTxt = exports.isNumeric = exports.roundNumber = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = void 0;
+exports.compareReadings = exports.CFcalculateTrend = exports.CFcreateAllYearsMonthlyAverageSeriedata = exports.CFcreateAllYearsAverageSeriedata = exports.CFcreateMonthlySpringTrendSeriedata = exports.CFcreateMonthlyFallTrendSeriedata = exports.CFcreateMonthlyWinterTrendSeriedata = exports.CFcreateMonthlySummerTrendSeriedata = exports.createTrendForGivenMonths = exports.CFcreateYearlyTrendSeriedata = exports.CFcalculateMonthlyAverages = exports.CFcreateYearlyHighValuedata = exports.CFcreateDailyDiffdata = exports.CFcreateLastYearsSeriedata = exports.CFcreateYearlyFilteredSeriedata = exports.CFcreateAllYearsFilteredSeriedata = exports.CFgetAllReadings = exports.CFinitTemperature = exports.defaultYear = exports.getDateTxt = exports.isNumeric = exports.roundNumber = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = void 0;
 const TempMinDefaultValue = 99999;
 const TempMaxDefaultValue = -99999;
 function getTempMinDefaultValue() { return TempMinDefaultValue; }
@@ -142,7 +142,7 @@ function createGraphItem(d, v, e) {
 }
 class Temperatures {
     constructor(filterlength, monthnames, monthnameslong) {
-        this.defaultyear = 1972;
+        this.defaultyear = 2104;
         this.filteredValues = [];
         this.filteredValuesValid = [];
         this.yearlyMonthlyAverages = createAverageYearsMonths([], []);
@@ -530,6 +530,10 @@ function addEstimatesToParameters(series) {
     });
     return estimateitems;
 }
+function defaultYear() {
+    return temperatureClass.defaultyear;
+}
+exports.defaultYear = defaultYear;
 function CFinitTemperature(temperaturevalues, filtersize, monthnames, monthnameslong) {
     temperatureClass = new Temperatures(filtersize, monthnames, monthnameslong);
     temperatureClass.calculateTemperatures(temperaturevalues);
@@ -775,7 +779,7 @@ function CFcreateYearlyHighValuedata() {
         }), false, 0);
     });
     let estimateitems = addEstimatesToParameters(allseries);
-    const params = { showlegend: true, series: estimateitems };
+    const params = { showlegend: true, series: estimateitems, xaxisname: 'Kpl/vuosi' };
     return createGraphSerieType(returnvalues, params);
 }
 exports.CFcreateYearlyHighValuedata = CFcreateYearlyHighValuedata;

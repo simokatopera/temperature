@@ -291,8 +291,7 @@ interface CalculationResult {
 }
 
 class Temperatures {
-    //temperatures: TemperatureMsg;
-    defaultyear: number = 1972;
+    defaultyear: number = 2104; // Must be divisible by 4 (1972, 1976, 19xx)
     filterlength: number;
 
     filteredValues: Filtered[] = [];
@@ -305,7 +304,6 @@ class Temperatures {
     monthnames: string[] = [];
     monthnameslong: string[] = [];
 
-    //constructor () { }
     constructor (filterlength: number, monthnames: string[], monthnameslong: string[]) { this.filterlength = filterlength; this.monthnames = monthnames; this.monthnameslong = monthnameslong}
 
     getValidFilteredValues(): Filtered[] {
@@ -803,6 +801,9 @@ function addEstimatesToParameters(series: ReturnDataType[]): GraphParams[] {
 //-------------------------------------------------------------------------------------------
 // Exported functions
 //-------------------------------------------------------------------------------------------
+export function defaultYear() {
+    return temperatureClass.defaultyear;
+}
 export function CFinitTemperature(temperaturevalues: TemperatureMsg, filtersize: number, monthnames: string[], monthnameslong: string[]) {
     temperatureClass = new Temperatures(filtersize, monthnames, monthnameslong);
     temperatureClass.calculateTemperatures(temperaturevalues);
@@ -1094,7 +1095,7 @@ export function CFcreateYearlyHighValuedata(): GraphSerieType {
         }), false, 0)
     })
     let estimateitems = addEstimatesToParameters(allseries);
-    const params = {showlegend: true, series: estimateitems};
+    const params = {showlegend: true, series: estimateitems, xaxisname: 'Kpl/vuosi'};
 
     return createGraphSerieType(returnvalues, params)
 }

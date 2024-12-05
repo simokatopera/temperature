@@ -75,7 +75,6 @@ export class DbSupaClass implements DbApiClass {
         /*
         all data given as parameter must be data for same year
         */
-        console.log('savereadings')
         if (data.length == 0) return setFailResult("Ivalid parameter");
 
         if (this.operationAllowed('post', 'savereadings')) {
@@ -86,7 +85,6 @@ export class DbSupaClass implements DbApiClass {
 
             let dbreadings: TemperatureType[] = await this.temperatures('', curyears);
             if (dbreadings.length > curyears.length) return setFailResult("Ivalid parameter");
-            //console.log(`length: ${dbreadings.length}`)
             if (dbreadings.length > 0) {
                 // there is readings for current year, update record
                 let readingstobesaved: DbTemperatureDataType[] = dbreadings[0].data.map(r => {
@@ -95,10 +93,8 @@ export class DbSupaClass implements DbApiClass {
                     if (!isNaN(r.evening)) newdata.evening = r.evening;
                     return newdata;
                 });
-                //console.log(`add new readings`)
                 // add new readings
                 data.forEach(itemtoadd => {
-                    //console.log(`adding item`)
                     let index = readingstobesaved.length - 1;
                     while (index >= 0 && this.getDate(readingstobesaved[index].date) > this.getDate(itemtoadd.date)) index--;
                     if (index < 0) {

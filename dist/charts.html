@@ -322,7 +322,6 @@
         const vueapp = createApp({
             data() {
                 return {
-                    defaultyear: 1972,
                     monthnames: months1,
                     monthnamesLong: months2,
                     givenyears: givenyears,
@@ -889,17 +888,29 @@
                 checkData(temperatures) {
                     temperatures.data.forEach(t => {
                         const year = t.info.year;
-                        let prevdate = 0;
+                        let prevdate = Number.MIN_VALUE;;
                         t.data.forEach(d => {
                             if (d.datetimeLocal.getFullYear() !== year) {
                                 alert(`Invalid year ${d.date.getFullYear()}`);
                             }
-                            if (prevdate >= d.datetimeLocal) {
-                                alert(`Invalid date ${d.datetimeLocal.getDate(0)}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()}`);
+                            if (prevdate >= d.datetimeLocal + 1) {
+                                console.log(`Invalid date ${d.datetimeLocal.getDate(0)}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()}`);
+                                //alert(`Invalid date ${d.datetimeLocal.getDate(0)}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()}`);
                             }
                             prevdate = d.datetimeLocal;
                         })
                     })
+                    /*
+                    temperatures.data.forEach(t => {
+                        let prevdate = 0;
+                        t.data.forEach(d => {
+                            if (prevdate > 0 && (d.datetimeLocal-prevdate < 86400000-3600000 || d.datetimeLocal-prevdate > 86400000+3600000)) {
+                                alert(`Missing date: ${d.datetimeLocal.getDate()}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()}`)
+                            }
+                            prevdate = d.datetimeLocal;
+                        })
+                    })
+                    */
                 },
                 //------------------------------------------------------------------------------
                 createChart(element, title, data, funct, thischart) {
@@ -969,7 +980,7 @@
                                     if (series.params && series.params.legend && series.params.legend.date) {
                                         return `${d}.${m+1}`
                                     }
-                                    if (y < 1978) return monthnames[m];
+                                    if (y == defaultYear()) return monthnames[m];
                                     return y.toString();
                                 })
                             },
@@ -985,6 +996,9 @@
                         },
                     };
                     if (series.params) {
+                        if (series.params.xaxisname) {
+                            chartoptions.yAxis.name = series.params.xaxisname;
+                        }
                         if (series.params.rangeoffset != null) {
                             let minmax = this.getMinMaxValue(series);
                             let offset = Number(series.params.rangeoffset);
