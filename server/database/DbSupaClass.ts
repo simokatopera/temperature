@@ -49,6 +49,7 @@ export class DbSupaClass implements DbApiClass {
         return yearnums;
     }
     private getFileData() {
+        /*
         this.filetemperaturedata.push(require("./files/Salo_1960_x.json"));
         this.filetemperaturedata.push(require("./files/Salo_1961_x.json"));
         this.filetemperaturedata.push(require("./files/Salo_1962_x.json"));
@@ -91,6 +92,7 @@ export class DbSupaClass implements DbApiClass {
         this.filetemperaturedata.push(require("./files/Salo_1997_x.json"));
         this.filetemperaturedata.push(require("./files/Salo_1998_x.json"));
         this.filetemperaturedata.push(require("./files/Salo_1999_x.json"));
+        */
         this.filetemperaturedata.push(require("./files/Salo_2000_x.json"));
 
         this.filetemperaturedata.push(require("./files/Salo_2001.json"));
@@ -347,15 +349,13 @@ export class DbSupaClass implements DbApiClass {
     async temperatures(location: string, years: number[]): Promise<TemperatureType[]> {
         console.log('temperatures')
         if (this.operationAllowed('get', 'temperatures')) {
-            //let temperatures: TemperatureType[] = [];
             let temperatures = await this.getFileTemperatures(location, years);
             try {               
                 const dbdata: DbTemperatureResp = await supabase
                     .from(this.DbTemperatureTable)
                     .select('year, readings')
                     .in('year', years)
-                if (dbdata.error || dbdata.data.length == 0) return [];
-
+                if (dbdata.error || dbdata.data.length == 0) return temperatures;
                 for (let yearindex = 0; yearindex < dbdata.data.length; yearindex++) {
                     const readings = dbdata.data[yearindex].readings;
                     if (readings !== null) {
@@ -371,8 +371,6 @@ export class DbSupaClass implements DbApiClass {
             catch(err) {
                 console.log(`Error: ${err}`)
             }
-            console.log(`Years: ${temperatures.length}`)
-
             return temperatures;
         }
         return [];
