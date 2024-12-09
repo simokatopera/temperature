@@ -888,29 +888,49 @@
                 checkData(temperatures) {
                     temperatures.data.forEach(t => {
                         const year = t.info.year;
-                        let prevdate = Number.MIN_VALUE;;
+                        let prevdate = Number.MIN_VALUE;
                         t.data.forEach(d => {
                             if (d.datetimeLocal.getFullYear() !== year) {
                                 alert(`Invalid year ${d.date.getFullYear()}`);
                             }
                             if (prevdate >= d.datetimeLocal + 1) {
                                 console.log(`Invalid date ${d.datetimeLocal.getDate(0)}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()}`);
-                                //alert(`Invalid date ${d.datetimeLocal.getDate(0)}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()}`);
+                                alert(`Invalid date ${d.datetimeLocal.getDate(0)}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()}`);
                             }
                             prevdate = d.datetimeLocal;
                         })
                     })
-                    /*
+                    
+                    let prevdate = Number.MIN_VALUE;
                     temperatures.data.forEach(t => {
-                        let prevdate = 0;
                         t.data.forEach(d => {
+                            if (d.datetimeLocal.getDate() == 14 && d.datetimeLocal.getMonth() == 1) {
+                                prevdate=prevdate;
+                            }
+                            if (prevdate > Number.MIN_VALUE+100) {
                             if (prevdate > 0 && (d.datetimeLocal-prevdate < 86400000-3600000 || d.datetimeLocal-prevdate > 86400000+3600000)) {
-                                alert(`Missing date: ${d.datetimeLocal.getDate()}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()}`)
+                                const diffTime = Math.abs(d.datetimeLocal - prevdate);
+                                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))-1; 
+                                const txt = `Missing date(s) between: ${prevdate.getDate()}.${prevdate.getMonth()+1}.${prevdate.getFullYear()} and ${d.datetimeLocal.getDate()}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()} (${diffDays})`;
+                                //alert(txt)
+                                console.log(txt)
+                            }
+                            else
+                                if (typeof(d.morning) == 'undefined' || typeof(d.evening) == "undefined") {
+                                    if (d.datetimeLocal.getFullYear() == 2024 && d.datetimeLocal.getMonth() == 1) {
+                                        prevdate=prevdate;
+                                    }
+                                    let value = typeof(d.morning) == 'undefined' ? "morning" : "evening";
+                                    let txt = `Missing ${value} value at: ${d.datetimeLocal.getDate()}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()}`;
+                                    //alert(txt)
+                                    console.log(txt)
+                            
+                                }
                             }
                             prevdate = d.datetimeLocal;
                         })
                     })
-                    */
+                    
                 },
                 //------------------------------------------------------------------------------
                 createChart(element, title, data, funct, thischart) {
