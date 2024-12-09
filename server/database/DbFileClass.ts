@@ -50,11 +50,6 @@ temperaturedata.push(require("./files/Salo_1998_x.json"));
 temperaturedata.push(require("./files/Salo_1999_x.json"));
 temperaturedata.push(require("./files/Salo_2000_x.json"));
 
-//temperaturedata.push(require("./files/Salo_2001_x.json"));
-//temperaturedata.push(require("./files/Salo_2006_x.json"));
-//temperaturedata.push(require("./files/Salo_2007_x.json"));
-
-
 temperaturedata.push(require("./files/Salo_2001.json"));
 temperaturedata.push(require("./files/Salo_2002.json"));
 temperaturedata.push(require("./files/Salo_2003.json"));
