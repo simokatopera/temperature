@@ -343,6 +343,10 @@
 	,{ "date": "12/6/2024", "morning": 1.8, "evening": 0.6}
 	,{ "date": "12/7/2024", "morning": -0.4, "evening": -0.5}
 	,{ "date": "12/8/2024", "morning": 0.4, "evening": 0.0}
+	,{ "date": "12/9/2024", "morning": -1.2, "evening": 0.0}
+	,{ "date": "12/10/2024", "morning": -0.2, "evening": 0.7}
+	,{ "date": "12/11/2024", "morning": 2.5, "evening": 2.2}
+	,{ "date": "12/12/2024", "morning": 2.1, "evening": -2.3}
 ]}
 
 
