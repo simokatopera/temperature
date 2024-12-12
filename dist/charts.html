@@ -648,7 +648,7 @@
     
                                 this.stopSpinner(3);
                                 this.updateFieldEdit(new Date());
-                            });
+                            });                     
                         }
                         elem = document.getElementById('forecastModal');
                         if (elem) {
@@ -660,6 +660,11 @@
                                     "Ennuste", series, this.createForecastGraph, this.forecastData.chart);
                             })
                         }
+                        document.addEventListener('hide.bs.modal', function (event) {
+                            if (document.activeElement) {
+                                document.activeElement.blur();
+                            }
+                        });
                     }, 10);
                     setTimeout(() => { selectFirstDay(); }, 50);
                 },
