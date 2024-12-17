@@ -125,7 +125,7 @@ export class DbSupaClass implements DbApiClass {
             let temperatures: TemperatureType[] = [];
             for (yearindex = 0; yearindex < years.length; yearindex++) {
                 for (dataindex = 0; dataindex < this.filetemperaturedata.length; dataindex++) {
-                    if (this.filetemperaturedata[dataindex].info.location == location && this.filetemperaturedata[dataindex].info.year == years[yearindex]) {
+                    if (this.filetemperaturedata[dataindex].info.location.toUpperCase() == location.toUpperCase() && this.filetemperaturedata[dataindex].info.year == years[yearindex]) {
                         let dailyreadings: TemperatureDataType[] = this.filetemperaturedata[dataindex].data;
                         dailyreadings.forEach(reading => {
                             reading.datetimeUtc = getDate(reading.date);

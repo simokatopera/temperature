@@ -182,10 +182,10 @@
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
-                <button class="backbutton" onclick="history.back()">&laquo;Takaisin</button>
+                <button class="backbutton" @click="gotofrontpage">&laquo;Etusivu</button>
                 <div id="hiddenbutton"></div>
             </div>
-
+            <div class="hiddenstart hidden">Viimeisin havainto: {{ latestReading.localtime ? latestReading.localtime : '-' }}   {{ isNaN(latestReading.t2m) ? '-' : roundNumber(latestReading.t2m, 1) + '/°C'}}</div>
             <div id="loader1" class="loader hidden"></div>            
             <hr>
             <div id="Error"></div>
@@ -288,7 +288,9 @@
 <!-- Forecast modal end----------------------------------------------------------- -->
         </div>
     </div>
+
     <script type="module">
+
 
         import { createApp, ref } from 'vue'
 
@@ -318,6 +320,8 @@
 
 //            setTimeout(() => { selectFirstDay(); }, 50);
         })();
+
+
         
         const vueapp = createApp({
             data() {
@@ -360,6 +364,7 @@
                     listedtemperaturereadings: { values: [], years: [], filtersize: 7 }, // contains values listed in table
                     lastTemperatures: [],
                     latestReadingsFromNet: [],
+                    latestReading: {localtime:'', t2m: NaN},
                     dailycharttitle: '',
 
                     screenCharts: [],
@@ -573,6 +578,18 @@
                 }
             },
             methods: {
+                gotofrontpage() {
+                    window.location.href = `/?${userguid === null ? '' : 'userid=' + userguid + '&'}location=${this.location}`;
+                },
+                formatTime(t) {
+                    return `${t.getDate()}.${t.getMonth()+1}.${t.getFullYear()} klo: ${t.getHours()}.${t.getMinutes() < 10 ? '0':''}${t.getMinutes()}`
+                },
+                updateLatestReading(observations) {
+                    if (observations && observations.observations.length) {
+                        this.latestReading = observations.observations[observations.observations.length-1];
+                        this.latestReading.localtime = this.formatTime(getStationTime(this.latestReading.localtime));
+                    }
+                },
                 async loadAll() {
                     this.startSpinner(1);
                     let years = null;
@@ -633,6 +650,8 @@
                     let itemlist = document.querySelectorAll(".hiddenstart.hidden");
                     if (itemlist && itemlist.length) itemlist.forEach(i => i.classList.remove("hidden"))
     
+                    this.updateLatestReading(await apiGetLatestTemperatures3(this.location, 2));
+
                     this.stopSpinner(1);
                     
                     setTimeout(() => {
@@ -641,11 +660,11 @@
                             elem.addEventListener('show.bs.modal', async () => {
                                 // get latest readings when modal opened
                                 this.startSpinner(3);
-                                const stationreadings = await apiGetLatestTemperatures3(this.location);
+                                const stationreadings = await apiGetLatestTemperatures3(this.location, 7);
                                 this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
                                 const saving = await apiGetSavingAllowed(userguid);
                                 this.latestReadingsFromNet.saveenable = saving.data.access;
-    
+                                this.updateLatestReading(stationreadings);
                                 this.stopSpinner(3);
                                 this.updateFieldEdit(new Date());
                             });                     

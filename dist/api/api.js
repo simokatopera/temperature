@@ -160,10 +160,10 @@ async function sendGetXmlAsync(command) {
 //     const returnvalues = {observations: results.map(r => ({t2m: Number(r.value), localtime: formatTime(r.time)}))}
 //     return returnvalues;
 // }
-async function apiGetLatestTemperatures3(location) {
+async function apiGetLatestTemperatures3(location, days) {
     let etime = new Date();
     etime = new Date(etime.getFullYear(), etime.getMonth(), etime.getDate(), etime.getHours()-localtimehouroffset, etime.getMinutes(), etime.getSeconds());
-    const stime = new Date(etime.getFullYear(), etime.getMonth(), etime.getDate()-7, etime.getHours(), etime.getMinutes()+10, etime.getMinutes(), etime.getSeconds());
+    const stime = new Date(etime.getFullYear(), etime.getMonth(), etime.getDate()-days, etime.getHours(), etime.getMinutes()+10, etime.getMinutes(), etime.getSeconds());
 
     const starttime = formatDate(stime);
     const endtime = formatDate(etime);

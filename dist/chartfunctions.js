@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.compareReadings = exports.CFcalculateTrend = exports.CFcreateAllYearsMonthlyAverageSeriedata = exports.CFcreateAllYearsAverageSeriedata = exports.CFcreateMonthlySpringTrendSeriedata = exports.CFcreateMonthlyFallTrendSeriedata = exports.CFcreateMonthlyWinterTrendSeriedata = exports.CFcreateMonthlySummerTrendSeriedata = exports.createTrendForGivenMonths = exports.CFcreateYearlyTrendSeriedata = exports.CFcalculateMonthlyAverages = exports.CFcreateYearlyHighValuedata = exports.CFcreateDailyDiffdata = exports.CFcreateLastYearsSeriedata = exports.CFcreateYearlyFilteredSeriedata = exports.CFcreateAllYearsFilteredSeriedata = exports.CFgetAllReadings = exports.CFinitTemperature = exports.defaultYear = exports.getDateTxt = exports.isNumeric = exports.roundNumber = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = void 0;
+exports.compareReadings = exports.getStationTime = exports.CFcalculateTrend = exports.CFcreateAllYearsMonthlyAverageSeriedata = exports.CFcreateAllYearsAverageSeriedata = exports.CFcreateMonthlySpringTrendSeriedata = exports.CFcreateMonthlyFallTrendSeriedata = exports.CFcreateMonthlyWinterTrendSeriedata = exports.CFcreateMonthlySummerTrendSeriedata = exports.createTrendForGivenMonths = exports.CFcreateYearlyTrendSeriedata = exports.CFcalculateMonthlyAverages = exports.CFcreateYearlyHighValuedata = exports.CFcreateDailyDiffdata = exports.CFcreateLastYearsSeriedata = exports.CFcreateYearlyFilteredSeriedata = exports.CFcreateAllYearsFilteredSeriedata = exports.CFgetAllReadings = exports.CFinitTemperature = exports.defaultYear = exports.getDateTxt = exports.isNumeric = exports.roundNumber = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = void 0;
 const TempMinDefaultValue = 99999;
 const TempMaxDefaultValue = -99999;
 function getTempMinDefaultValue() { return TempMinDefaultValue; }
@@ -1100,6 +1100,7 @@ function createLatestReadingsEmpty() {
 function getStationTime(ltime) {
     return new Date(`${ltime.substring(0, 4)}-${ltime.substring(4, 6)}-${ltime.substring(6, 11)}:${ltime.substring(11, 13)}:${ltime.substring(13, 15)}`);
 }
+exports.getStationTime = getStationTime;
 const MorningTime = 7;
 const EveningTime = 15;
 function compareReadings(temperatures, stationreadings) {

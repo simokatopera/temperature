@@ -1498,7 +1498,7 @@ function createLatestReadingsEmpty(): LatestReadings {
     return createLatestReadings(NaN, new Date(0), NaN, new Date(0));
 }
 
-function getStationTime(ltime: string): Date {
+export function getStationTime(ltime: string): Date {
     return new Date(`${ltime.substring(0, 4)}-${ltime.substring(4, 6)}-${ltime.substring(6, 11)}:${ltime.substring(11, 13)}:${ltime.substring(13, 15)}`);
 }
 
