@@ -185,7 +185,7 @@
                 <button class="backbutton" @click="gotofrontpage">&laquo;Etusivu</button>
                 <div id="hiddenbutton"></div>
             </div>
-            <div class="hiddenstart hidden">Viimeisin havainto: {{ latestReading.localtime ? latestReading.localtime : '-' }}   {{ isNaN(latestReading.t2m) ? '-' : roundNumber(latestReading.t2m, 1) + '/°C'}}</div>
+            <div class="hiddenstart hidden">Viimeisin havainto: {{ latestReading.localtime ? latestReading.localtime : '-' }}   {{ isNaN(latestReading.t2m) ? '-' : roundNumber(latestReading.t2m, 1) + '°C'}}</div>
             <div id="loader1" class="loader hidden"></div>            
             <hr>
             <div id="Error"></div>

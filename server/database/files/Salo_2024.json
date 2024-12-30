@@ -352,6 +352,18 @@
 	,{ "date": "12/15/2024", "morning": -4.0, "evening": -7.3}
 	,{ "date": "12/16/2024", "morning": 2.5, "evening": 2.9}
 	,{ "date": "12/17/2024", "morning": 2.3, "evening": 1.3}
+	,{ "date": "12/18/2024", "morning": -9.1, "evening": -1.9}
+	,{ "date": "12/19/2024", "morning": 3.7, "evening": 5.0}
+	,{ "date": "12/20/2024", "morning": 3.0, "evening": -0.4}
+	,{ "date": "12/21/2024", "morning": -0.8, "evening": -1.0}
+	,{ "date": "12/22/2024", "morning": 3.4, "evening": 4.0}
+	,{ "date": "12/23/2024", "morning": 2.8, "evening": 1.3}
+	,{ "date": "12/24/2024", "morning": 0.7, "evening": 1.1}
+	,{ "date": "12/25/2024", "morning": 3.8, "evening": 4.7}
+	,{ "date": "12/26/2024", "morning": 5.4, "evening": 6.9}
+	,{ "date": "12/27/2024", "morning": 0.5, "evening": 2.0}
+	,{ "date": "12/28/2024", "morning": -0.2, "evening": 2.8}
+	,{ "date": "12/29/2024", "morning": 4.5, "evening": 4.4}
 ]}
 
 
