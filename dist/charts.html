@@ -598,11 +598,11 @@
 
                     //years.data = [2024]
 
-                    const statistics = await apiGetStatistics(userguid, this.location, years.data, this.alltemperaturereadings.filtersize, months1, months2);
-                    CF2SetStatisticsdata({data: statistics.data.statistics})
-                    let temperatures = {data: statistics.data.readings};
+                    //const statistics = await apiGetStatistics(userguid, this.location, years.data, this.alltemperaturereadings.filtersize, months1, months2);
+                    //CF2SetStatisticsdata({data: statistics.data.statistics})
+                    //let temperatures = {data: statistics.data.readings};
 
-                    //let temperatures = await apiGetTemperatures(userguid, this.location, years.data);
+                    let temperatures = await apiGetTemperatures(userguid, this.location, years.data);
 
                     if (temperatures.error)  {
                         this.stopSpinner(1);
