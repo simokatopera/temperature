@@ -51,6 +51,10 @@ class TemperatureApi  {
         const path = `temperatures?location=${location}&years=${years}`;
         return await this.sendGetJsonAsync(path);
     }    
+    async getStatistics(location, years, filtersize, m1, m2) {
+        const path = `grphics?location=${location}&years=${years}&filtersize=${filtersize}&months=${m1}&monthslong=${m2}`;
+        return await this.sendGetJsonAsync(path);
+    }    
     async getSavingAllowedStatus() {
         const path = `admin/savingallowed`;
         return await this.sendGetJsonAsync(path);
@@ -89,6 +93,16 @@ async function apiAdminButton1(guid) {
 async function apiSaveReadings(guid, pwd, data) {
     return await new TemperatureApi(guid).saveReadings(pwd, data);
 }
+async function apiGetStatistics(guid, location, years, filtersize, m1, m2) {
+    const values = await new TemperatureApi(guid).getStatistics(location, years, filtersize, m1, m2);
+    values.data.readings.forEach(yearserie => {
+        yearserie.data.forEach(dayvalue => {
+            dayvalue.datetimeLocal = getDate(dayvalue.date);
+            dayvalue.datetimeUtc = new Date(dayvalue.datetimeUtc);
+        })
+    });    
+    return values;
+}
 async function apiGetTemperatures(guid, location, years) {
     const values = await new TemperatureApi(guid).getTemperatures(location, years);
     if (values && values.data) {
@@ -100,16 +114,15 @@ async function apiGetTemperatures(guid, location, years) {
         });
     }
     return values;
-
-    function getDate(date) {
-        let parts = date.split('/');
-        if (parts && parts.length === 3) {
-            return new Date(parts[2], Number(parts[0]) - 1, parts[1]);
-        }
-        return NaN;
-    }
 }
 
+function getDate(date) {
+    let parts = date.split('/');
+    if (parts && parts.length === 3) {
+        return new Date(parts[2], Number(parts[0]) - 1, parts[1]);
+    }
+    return NaN;
+}
 // async function sendGetJsonAsync2(command) {
 //     const response = await fetch(command, 
 //         { method: "GET", headers: { "Content-Type": "application/json" } });

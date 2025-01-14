@@ -595,8 +595,15 @@
                     let years = null;
                     if (this.givenyears === null) years = await apiGetYears(userguid, this.location);
                     else years = this.givenyears;
+
                     //years.data = [2024]
-                    let temperatures = await apiGetTemperatures(userguid, this.location, years.data);
+
+                    const statistics = await apiGetStatistics(userguid, this.location, years.data, this.alltemperaturereadings.filtersize, months1, months2);
+                    CF2SetStatisticsdata({data: statistics.data.statistics})
+                    let temperatures = {data: statistics.data.readings};
+
+                    //let temperatures = await apiGetTemperatures(userguid, this.location, years.data);
+
                     if (temperatures.error)  {
                         this.stopSpinner(1);
                         document.getElementById('Error').innerText = temperatures.error.msg;
@@ -629,24 +636,25 @@
                     this.calculated.values = CFcalculateMonthlyAverages();
                     this.monthlylimits = this.calculated.values.monthlystatvalues;
     
+                    this.createChart(this.testgraph10, 'Suodatetut lämpötilat', CFcreateYearlyFilteredSeriedata);
+                    this.createChart(this.testgraph2, 'Päivittäiset keskiarvot', CFcreateAllYearsAverageSeriedata);
+                    this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', CFcreateAllYearsMonthlyAverageSeriedata);
+                    this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', CFcreateAllYearsFilteredSeriedata);
+                    this.createChart(this.testgraph4, 'Viimeinen vuosi', CFcreateLastYearsSeriedata);
+                    this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', CFcreateDailyDiffdata);
+                    this.createChart(this.testgraph12, 'Ennätyslämpötilat/vuosi (kpl)', CFcreateYearlyHighValuedata);
+                    this.createChart(this.testgraph11, 'Vuosittainen suuntaus', CFcreateYearlyTrendSeriedata);
     
-                    this.createChart(this.testgraph10, 'Suodatetut lämpötilat', temperatures, CFcreateYearlyFilteredSeriedata);
-                    this.createChart(this.testgraph2, 'Päivittäiset keskiarvot', temperatures, CFcreateAllYearsAverageSeriedata);
-                    this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', temperatures, CFcreateAllYearsMonthlyAverageSeriedata);
-                    this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', temperatures, CFcreateAllYearsFilteredSeriedata);
-                    this.createChart(this.testgraph4, 'Viimeinen vuosi', temperatures, CFcreateLastYearsSeriedata);
-                    this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', temperatures, CFcreateDailyDiffdata);
-                    this.createChart(this.testgraph12, 'Ennätyslämpötilat/vuosi (kpl)', temperatures, CFcreateYearlyHighValuedata);
-                    this.createChart(this.testgraph11, 'Vuosittainen suuntaus', temperatures, CFcreateYearlyTrendSeriedata);
-    
-                    this.screenCharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', temperatures, CFcreateMonthlySummerTrendSeriedata));
+                    this.screenCharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', CFcreateMonthlySummerTrendSeriedata));
                     this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                    this.screenCharts.push(this.createChart(this.testgraph6, 'Talven suuntaus', temperatures, CFcreateMonthlyWinterTrendSeriedata));
+                    this.screenCharts.push(this.createChart(this.testgraph6, 'Talven suuntaus', CFcreateMonthlyWinterTrendSeriedata));
                     this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                    this.screenCharts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', temperatures, CFcreateMonthlyFallTrendSeriedata));
+                    this.screenCharts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', CFcreateMonthlyFallTrendSeriedata));
                     this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                    this.screenCharts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', temperatures, CFcreateMonthlySpringTrendSeriedata));
+                    this.screenCharts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', CFcreateMonthlySpringTrendSeriedata));
                     this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                    //CF2setOperationMode(0);
+
                     let itemlist = document.querySelectorAll(".hiddenstart.hidden");
                     if (itemlist && itemlist.length) itemlist.forEach(i => i.classList.remove("hidden"))
     
@@ -676,7 +684,7 @@
                                 let series = [[], []];
                                 this.forecastData.data = await apiGetForecast2(this.location);
                                 this.forecastData.chart = this.createChart('forecastgraph', 
-                                    "Ennuste", series, this.createForecastGraph, this.forecastData.chart);
+                                    "Ennuste", this.createForecastGraph, this.forecastData.chart);
                             })
                         }
                         document.addEventListener('hide.bs.modal', function (event) {
@@ -957,11 +965,11 @@
                     
                 },
                 //------------------------------------------------------------------------------
-                createChart(element, title, data, funct, thischart) {
+                createChart(element, title, funct, thischart) {
                     this.testgraphtitles[element] = title;
                     let trendChart = (thischart ? thischart.trendChart : this.initSerie(element));
                     if (trendChart === null) return;
-                    const buildValues = funct(data);
+                    const buildValues = funct();
                     const params = buildValues.params;
                     let serieOptions = this.buildChartOptions(title, buildValues);
 
@@ -1090,7 +1098,7 @@
                     this.dailycharttitle = `Päivän ${values.data.length ? values.data[0].date.getDate() : ''}.${values.data.length ? values.data[0].date.getMonth()+1 : ''} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`;
 
                     this.selecteddayData.chart = this.createChart('daygraph', 
-                        this.dailycharttitle, series, this.createDayGraph, this.selecteddayData.chart);
+                        this.dailycharttitle, this.createDayGraph, this.selecteddayData.chart);
                 },
                 rundays() {
                     if (this.scrollday.scroll == false) {

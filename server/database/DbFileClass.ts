@@ -74,6 +74,7 @@ temperaturedata.push(require("./files/Salo_2021.json"));
 temperaturedata.push(require("./files/Salo_2022.json"));
 temperaturedata.push(require("./files/Salo_2023.json"));
 temperaturedata.push(require("./files/Salo_2024.json"));
+temperaturedata.push(require("./files/Salo_2025.json"));
 
 
 export class DbFileClass implements DbApiClass {

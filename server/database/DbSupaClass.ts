@@ -118,6 +118,7 @@ export class DbSupaClass implements DbApiClass {
         this.filetemperaturedata.push(require("./files/Salo_2021.json"));        
         this.filetemperaturedata.push(require("./files/Salo_2022.json"));        
         this.filetemperaturedata.push(require("./files/Salo_2023.json"));        
+        this.filetemperaturedata.push(require("./files/Salo_2024.json"));
     }
     async getFileTemperatures(location: string, years: number[]): Promise<TemperatureType[]> {
         if (this.operationAllowed('get', 'temperatures')) {
@@ -349,12 +350,26 @@ export class DbSupaClass implements DbApiClass {
     async temperatures(location: string, years: number[]): Promise<TemperatureType[]> {
         console.log('temperatures')
         if (this.operationAllowed('get', 'temperatures')) {
+            if (years.length == 0) return [];
+
             let temperatures = await this.getFileTemperatures(location, years);
-            try {               
+            try {           
+                let newyears: number[] = [];
+                if (temperatures.length > 0) {
+                    for (let i = 0; i < years.length; i++) {
+                        if (!temperatures.find(temp => temp.info.year === years[i])) {
+                            newyears.push(years[i]);
+                        }
+                    }
+                }
+                else {
+                    newyears = years;
+                }
                 const dbdata: DbTemperatureResp = await supabase
                     .from(this.DbTemperatureTable)
                     .select('year, readings')
-                    .in('year', years)
+                    .in('year', newyears);
+
                 if (dbdata.error || dbdata.data.length == 0) return temperatures;
                 for (let yearindex = 0; yearindex < dbdata.data.length; yearindex++) {
                     const readings = dbdata.data[yearindex].readings;
