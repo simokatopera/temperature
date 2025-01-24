@@ -796,6 +796,9 @@ function CFcreateYearlyHighValuedata() {
     const hightrendserie = createSerie_9('Ylimpien suuntaus', yearlyminmaxvalues, (v) => (v.high), serietooltipcallback);
     const lowtrendserie = createSerie_9('Alimpien suuntaus', yearlyminmaxvalues, (v) => (v.low), serietooltipcallback);
     const allseries = [lowserie, highserie, hightrendserie, lowtrendserie];
+    allseries.forEach(ser => {
+        ser.values = ser.values.filter(s => true);
+    });
     const returnvalues = allseries.map(serie => {
         return createGraphSerie(serie.name, '', 0, serie.values.filter(f => true).map(value => {
             let origvalue = null;
@@ -815,6 +818,7 @@ function CFcreateYearlyHighValuedata() {
             };
         }), false, 0);
     });
+    debugger;
     let estimateitems = addEstimatesToParameters(allseries);
     const params = { showlegend: true, series: estimateitems, xaxisname: 'Kpl/vuosi' };
     return createGraphSerieType(returnvalues, params);
