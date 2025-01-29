@@ -181,7 +181,7 @@
     <div class="container-fluid">
         <div class="page-title">
             <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
-            <h2>24.1.2025</h2>
+            <h2>29.1.2025</h2>
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
@@ -189,6 +189,8 @@
                 <div id="hiddenbutton"></div>
             </div>
             <div class="hiddenstart hidden">Viimeisin havainto: {{ latestReading.localtime ? latestReading.localtime : '-' }}   {{ isNaN(latestReading.t2m) ? '-' : roundNumber(latestReading.t2m, 1) + '°C'}}</div>
+            <div class="hiddenstart hidden">Aamun korkein: {{ dailyrecord.morninghigh.value }}°C vuonna {{ dailyrecord.morninghigh.year }}  Aamun matalin: {{ dailyrecord.morninglow.value }}°C vuonna {{ dailyrecord.morninglow.year }}</div>
+            <div class="hiddenstart hidden">Illan korkein: {{ dailyrecord.eveninghigh.value }}°C vuonna {{ dailyrecord.eveninghigh.year }}  Illan matalin: {{ dailyrecord.eveninglow.value }}°C vuonna {{ dailyrecord.eveninglow.year }}</div>
             <div id="loader1" class="loader hidden"></div>            
             <hr>
             <div id="Error"></div>
@@ -378,6 +380,10 @@
                     editdate: '',
                     editmorning: '',
                     editevening: '',
+
+                    dailyrecord: { morninghigh: {value: '-', year: '-'},  morninglow: {value: '-', year: '-'},
+                                   eveninghigh: {value: '-', year: '-'},  eveninglow: {value: '-', year: '-'}
+                                }
                 }
             },
             async mounted() {
@@ -624,9 +630,28 @@
                         const elem = document.getElementById('hiddenbutton');
                         if (elem) elem.innerHTML = data.data.html;
                     }
+
                     // initialize temperature readings
                     CFinitTemperature(temperatures, this.alltemperaturereadings.filtersize, this.monthnames, this.monthnamesLong);
+                    const currentdate = new Date();
+                    const currentday = currentdate.getDate();
+                    const currentmonth = currentdate.getMonth();
+                    this.dailyrecord.morninghigh.value = -9999;
+                    this.dailyrecord.morninglow.value = 9999;
+                    this.dailyrecord.eveninghigh.value = -9999;
+                    this.dailyrecord.eveninglow.value = 9999;
 
+                    const currentdayreadings = [];
+                    temperatures.data.forEach( yeardata => yeardata.data.forEach(day => {
+                        if (day.datetimeLocal.getDate() == currentday && day.datetimeLocal.getMonth() == currentmonth)  currentdayreadings.push(day);
+                        }
+                    ))
+                    currentdayreadings.forEach(day => {
+                        if (day.morning > this.dailyrecord.morninghigh.value ) {this.dailyrecord.morninghigh.value = day.morning;this.dailyrecord.morninghigh.year = day.datetimeLocal.getFullYear();}
+                        if (day.morning < this.dailyrecord.morninglow.value) {this.dailyrecord.morninglow.value = day.morning;this.dailyrecord.morninglow.year = day.datetimeLocal.getFullYear();}
+                        if (day.evening > this.dailyrecord.eveninghigh.value) {this.dailyrecord.eveninghigh.value = day.evening;this.dailyrecord.eveninghigh.year = day.datetimeLocal.getFullYear();}
+                        if (day.evening < this.dailyrecord.eveninglow.value) {this.dailyrecord.eveninglow.value= day.everning;this.dailyrecord.eveninglow.year = day.datetimeLocal.getFullYear();}
+                    })
                     this.alltemperaturereadings = CFgetAllReadings();
                     this.listedtemperaturereadings.filtersize = this.alltemperaturereadings.filtersize;
                     this.listedtemperaturereadings.values = [];

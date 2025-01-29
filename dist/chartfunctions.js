@@ -818,7 +818,6 @@ function CFcreateYearlyHighValuedata() {
             };
         }), false, 0);
     });
-    debugger;
     let estimateitems = addEstimatesToParameters(allseries);
     const params = { showlegend: true, series: estimateitems, xaxisname: 'Kpl/vuosi' };
     return createGraphSerieType(returnvalues, params);
