@@ -47,6 +47,10 @@
             border: 1px solid;
             text-align: center;
         }
+        #daystat {
+            border: 1px solid;
+            text-align: center;
+        }
         .forecast {
             background-color: lightgray;
             color: black;
@@ -110,6 +114,11 @@
             display: inline-block;
             width: 400px;
             height: 380px;
+        }
+        #currentdaygraph {
+            display: inline-block;
+            width: 380px;
+            height: 200px;
         }
         #forecastgraph {
             display: inline-block;
@@ -181,16 +190,24 @@
     <div class="container-fluid">
         <div class="page-title">
             <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
-            <h2>29.1.2025</h2>
+            <h2>31.1.2025</h2>
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
                 <button class="backbutton" @click="gotofrontpage">&laquo;Etusivu</button>
                 <div id="hiddenbutton"></div>
             </div>
+            <hr>
             <div class="hiddenstart hidden">Viimeisin havainto: {{ latestReading.localtime ? latestReading.localtime : '-' }}   {{ isNaN(latestReading.t2m) ? '-' : roundNumber(latestReading.t2m, 1) + '°C'}}</div>
-            <div class="hiddenstart hidden">Aamun korkein: {{ dailyrecord.morninghigh.value }}°C vuonna {{ dailyrecord.morninghigh.year }}  Aamun matalin: {{ dailyrecord.morninglow.value }}°C vuonna {{ dailyrecord.morninglow.year }}</div>
-            <div class="hiddenstart hidden">Illan korkein: {{ dailyrecord.eveninghigh.value }}°C vuonna {{ dailyrecord.eveninghigh.year }}  Illan matalin: {{ dailyrecord.eveninglow.value }}°C vuonna {{ dailyrecord.eveninglow.year }}</div>
+            <table id="daystat">
+                <tr><th v-for="title in dailyrecord.title">{{ title }}</th></tr>
+                <tr v-for="row in dailyrecord.values">
+                    <td v-for="value in row">{{ value }}</td>
+                </tr>
+            </table>
+            <p class="graphtitle">{{ daycharttitle }}</p>
+            <div id="currentdaygraph"></div>
+
             <div id="loader1" class="loader hidden"></div>            
             <hr>
             <div id="Error"></div>
@@ -360,6 +377,8 @@
                     },
                     selectedday: 0, // not used
                     selecteddayData: {data: [[],[]], chart: null},
+                    daycharttitle: '',
+                    currentdayData: {data: [[],[]], chart: null},
 
                     calculated : {
                         values: {yearlyvalues: [], monthlyvalues: []},
@@ -381,9 +400,8 @@
                     editmorning: '',
                     editevening: '',
 
-                    dailyrecord: { morninghigh: {value: '-', year: '-'},  morninglow: {value: '-', year: '-'},
-                                   eveninghigh: {value: '-', year: '-'},  eveninglow: {value: '-', year: '-'}
-                                }
+                    dailyrecord:  {title: [], values: []},
+                    latestdayvalues: [],
                 }
             },
             async mounted() {
@@ -597,6 +615,26 @@
                     if (observations && observations.observations.length) {
                         this.latestReading = observations.observations[observations.observations.length-1];
                         this.latestReading.localtime = this.formatTime(getStationTime(this.latestReading.localtime));
+
+                        const curtime = new Date();
+                        const lasttime = curtime.setDate(curtime.getDate()-1);
+                        let dt;
+                        let index = observations.observations.length-1;
+                        this.latestdayvalues = [];
+                        do {
+                            index--;
+                            dt = getStationTime( observations.observations[index].localtime);
+                            if (dt >= lasttime) {
+                                this.latestdayvalues.push({datetime: dt, value: observations.observations[index].t2m})
+                            }
+                        } while (index > 0 && dt > lasttime);
+                        
+                        this.currentdayData.data = this.latestdayvalues;
+                        this.daycharttitle = 'Viimeiset lukemat';
+
+                        this.currentdayData.chart = this.createChart('currentdaygraph', 
+                        this.daycharttitle, this.createCurrentDayGraph, this.selecteddayData.chart);
+
                     }
                 },
                 async loadAll() {
@@ -636,22 +674,29 @@
                     const currentdate = new Date();
                     const currentday = currentdate.getDate();
                     const currentmonth = currentdate.getMonth();
-                    this.dailyrecord.morninghigh.value = -9999;
-                    this.dailyrecord.morninglow.value = 9999;
-                    this.dailyrecord.eveninghigh.value = -9999;
-                    this.dailyrecord.eveninglow.value = 9999;
-
+                    let dailyvalues = { morninghigh: {value: -9999, year: 0},  morninglow: {value: 9999, year: 0},
+                                   eveninghigh: {value: -9999, year: 0},  eveninglow: {value: 9999, year: 0}
+                                }
                     const currentdayreadings = [];
                     temperatures.data.forEach( yeardata => yeardata.data.forEach(day => {
                         if (day.datetimeLocal.getDate() == currentday && day.datetimeLocal.getMonth() == currentmonth)  currentdayreadings.push(day);
                         }
                     ))
+                    const morningsum = currentdayreadings.reduce((partialSum, a) => partialSum + a.morning, 0);
+                    const eveningsum = currentdayreadings.reduce((partialSum, a) => partialSum + a.evening, 0);
                     currentdayreadings.forEach(day => {
-                        if (day.morning > this.dailyrecord.morninghigh.value ) {this.dailyrecord.morninghigh.value = day.morning;this.dailyrecord.morninghigh.year = day.datetimeLocal.getFullYear();}
-                        if (day.morning < this.dailyrecord.morninglow.value) {this.dailyrecord.morninglow.value = day.morning;this.dailyrecord.morninglow.year = day.datetimeLocal.getFullYear();}
-                        if (day.evening > this.dailyrecord.eveninghigh.value) {this.dailyrecord.eveninghigh.value = day.evening;this.dailyrecord.eveninghigh.year = day.datetimeLocal.getFullYear();}
-                        if (day.evening < this.dailyrecord.eveninglow.value) {this.dailyrecord.eveninglow.value= day.everning;this.dailyrecord.eveninglow.year = day.datetimeLocal.getFullYear();}
+                        if (day.morning > dailyvalues.morninghigh.value ) {dailyvalues.morninghigh.value = day.morning; dailyvalues.morninghigh.year = day.datetimeLocal.getFullYear();}
+                        if (day.morning < dailyvalues.morninglow.value) {dailyvalues.morninglow.value = day.morning; dailyvalues.morninglow.year = day.datetimeLocal.getFullYear();}
+                        if (day.evening > dailyvalues.eveninghigh.value) {dailyvalues.eveninghigh.value = day.evening; dailyvalues.eveninghigh.year = day.datetimeLocal.getFullYear();}
+                        if (day.evening < dailyvalues.eveninglow.value) {dailyvalues.eveninglow.value= day.evening; dailyvalues.eveninglow.year = day.datetimeLocal.getFullYear();}
                     })
+                    this.dailyrecord.title = [`${currentday}.${currentmonth+1}`, 'Aamu', 'Ilta'];
+
+                    this.dailyrecord.values.push(['keskiarvo', roundNumber(morningsum/(currentdayreadings.length-1), 1), roundNumber(eveningsum/(currentdayreadings.length-1), 1)]);
+                    this.dailyrecord.values.push(['ylin', dailyvalues.morninghigh.value + "°C /" + dailyvalues.morninghigh.year, dailyvalues.eveninghigh.value + "°C /" + dailyvalues.eveninghigh.year]);
+                    this.dailyrecord.values.push(['alin', dailyvalues.morninglow.value + "°C /" + dailyvalues.morninglow.year, dailyvalues.eveninglow.value + "°C /" + dailyvalues.eveninglow.year]);
+
+
                     this.alltemperaturereadings = CFgetAllReadings();
                     this.listedtemperaturereadings.filtersize = this.alltemperaturereadings.filtersize;
                     this.listedtemperaturereadings.values = [];
@@ -1061,6 +1106,9 @@
                                         return `${d}.${m+1}`
                                     }
                                     if (y == defaultYear()) return monthnames[m];
+                                    if (series.params.axistime && series.params.axistime === true) {
+                                        return `${v.getHours()}.${v.getMinutes()<10?v.getMinutes():''}${v.getMinutes()}`
+                                    }
                                     return y.toString();
                                 })
                             },
@@ -1097,6 +1145,9 @@
                         if (series.params.selection) {
                             chartoptions.legend.selected = this.getSelection(series, series.params.selection);
                         }
+                        if (series.params.axistime && series.params.axistime === true) {
+                            // no operation here
+                        }
                     }
 
                     return chartoptions;
@@ -1124,7 +1175,6 @@
                     let series = [data.values, trend];
                     this.selecteddayData.data = series;
                     this.dailycharttitle = `Päivän ${values.data.length ? values.data[0].date.getDate() : ''}.${values.data.length ? values.data[0].date.getMonth()+1 : ''} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`;
-
                     this.selecteddayData.chart = this.createChart('daygraph', 
                         this.dailycharttitle, this.createDayGraph, this.selecteddayData.chart);
                 },
@@ -1226,6 +1276,16 @@
                         }
                     }
                     return chartdata;
+                },
+                createCurrentDayGraph() {
+                    let datavalues = [];
+                    let readings = [];
+                    this.latestdayvalues.forEach(reading => { 
+                        readings.push({value: [reading.datetime, reading.value], 
+                            tooltip: `Klo ${reading.datetime.getHours()}:${reading.datetime.getMinutes()<10?'0':''}${reading.datetime.getMinutes()} ${roundNumber(reading.value, 1)}`});
+                    })
+                    datavalues.push({values: readings, location: '', year: -1});
+                    return {data: datavalues, params: {axistime: true}};
                 },
                 createDayGraph() {
                     let datavalues = [];
