@@ -190,7 +190,7 @@
     <div class="container-fluid">
         <div class="page-title">
             <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
-            <h2>31.1.2025</h2>
+            <h2>1.2.2025</h2>
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
@@ -199,7 +199,7 @@
             </div>
             <hr>
             <div class="hiddenstart hidden">Viimeisin havainto: {{ latestReading.localtime ? latestReading.localtime : '-' }}   {{ isNaN(latestReading.t2m) ? '-' : roundNumber(latestReading.t2m, 1) + '°C'}}</div>
-            <table id="daystat">
+            <table class="hiddenstart hidden" id="daystat">
                 <tr><th v-for="title in dailyrecord.title">{{ title }}</th></tr>
                 <tr v-for="row in dailyrecord.values">
                     <td v-for="value in row">{{ value }}</td>
