@@ -190,7 +190,7 @@
     <div class="container-fluid">
         <div class="page-title">
             <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
-            <h2>1.2.2025</h2>
+            <h2>6.2.2025</h2>
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
@@ -691,7 +691,7 @@
                         if (day.evening < dailyvalues.eveninglow.value) {dailyvalues.eveninglow.value= day.evening; dailyvalues.eveninglow.year = day.datetimeLocal.getFullYear();}
                     })
                     this.dailyrecord.title = [`${currentday}.${currentmonth+1}`, 'Aamu', 'Ilta'];
-
+                    this.dailyrecord.values = [];
                     this.dailyrecord.values.push(['keskiarvo', roundNumber(morningsum/(currentdayreadings.length-1), 1), roundNumber(eveningsum/(currentdayreadings.length-1), 1)]);
                     this.dailyrecord.values.push(['ylin', dailyvalues.morninghigh.value + "°C /" + dailyvalues.morninghigh.year, dailyvalues.eveninghigh.value + "°C /" + dailyvalues.eveninghigh.year]);
                     this.dailyrecord.values.push(['alin', dailyvalues.morninglow.value + "°C /" + dailyvalues.morninglow.year, dailyvalues.eveninglow.value + "°C /" + dailyvalues.eveninglow.year]);
