@@ -190,7 +190,7 @@
     <div class="container-fluid">
         <div class="page-title">
             <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
-            <h2>27.3.2025</h2>
+            <h2>27.3.2025b</h2>
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
@@ -759,11 +759,26 @@
                             elem.addEventListener('show.bs.modal', async () => {
                                 // get latest readings when modal opened
                                 this.startSpinner(3);
-                                const stationreadings = await apiGetLatestTemperatures3(this.location, 7);
-                                this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
+
                                 const saving = await apiGetSavingAllowed(userguid);
                                 this.latestReadingsFromNet.saveenable = saving.data.access;
-                                this.updateLatestReading(stationreadings);
+                                apiGetLatestTemperatures3(this.location, 7).then(stationreadings => {
+                                    this.updateLatestReading(stationreadings);
+
+                                    let temp = this.latestReadingsFromNet.saveenable;
+                                    this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
+                                     this.latestReadingsFromNet.saveenable - temp;
+                                })
+                                .catch(error => {
+                                    console.log(error)
+                                });
+
+                                //const stationreadings = await apiGetLatestTemperatures3(this.location, 7);
+                                //this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
+                                //const saving = await apiGetSavingAllowed(userguid);
+                                //this.latestReadingsFromNet.saveenable = saving.data.access;
+                                //this.updateLatestReading(stationreadings);
+
                                 this.stopSpinner(3);
                                 this.updateFieldEdit(new Date());
                             });                     
