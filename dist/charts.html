@@ -190,7 +190,7 @@
     <div class="container-fluid">
         <div class="page-title">
             <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
-            <h2>27.3.2025b</h2>
+            <h2>27.3.2025c</h2>
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
@@ -760,27 +760,27 @@
                                 // get latest readings when modal opened
                                 this.startSpinner(3);
 
+                            //     const saving = await apiGetSavingAllowed(userguid);
+                            //     this.latestReadingsFromNet.saveenable = saving.data.access;
+                            //     apiGetLatestTemperatures3(this.location, 7).then(stationreadings => {
+                            //         this.updateLatestReading(stationreadings);
+
+                            //         let temp = this.latestReadingsFromNet.saveenable;
+                            //         this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
+                            //          this.latestReadingsFromNet.saveenable - temp;
+                            //     })
+                            //     .catch(error => {
+                            //         console.log(error)
+                            //     });
+
+                                const stationreadings = await apiGetLatestTemperatures3(this.location, 7);
+                                this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
                                 const saving = await apiGetSavingAllowed(userguid);
                                 this.latestReadingsFromNet.saveenable = saving.data.access;
-                                apiGetLatestTemperatures3(this.location, 7).then(stationreadings => {
-                                    this.updateLatestReading(stationreadings);
-
-                                    let temp = this.latestReadingsFromNet.saveenable;
-                                    this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
-                                     this.latestReadingsFromNet.saveenable - temp;
-                                })
-                                .catch(error => {
-                                    console.log(error)
-                                });
-
-                                //const stationreadings = await apiGetLatestTemperatures3(this.location, 7);
-                                //this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
-                                //const saving = await apiGetSavingAllowed(userguid);
-                                //this.latestReadingsFromNet.saveenable = saving.data.access;
-                                //this.updateLatestReading(stationreadings);
+                                this.updateLatestReading(stationreadings);
+                                this.updateFieldEdit(new Date());
 
                                 this.stopSpinner(3);
-                                this.updateFieldEdit(new Date());
                             });                     
                         }
                         elem = document.getElementById('forecastModal');
@@ -788,9 +788,20 @@
                             elem.addEventListener('show.bs.modal', async () => {
                                 //this.lastreadings;
                                 let series = [[], []];
-                                this.forecastData.data = await apiGetForecast2(this.location);
+                                apiGetForecast2(this.location). then(resp => {
+                                    this.forecastData.data = resp; 
+                                    setTimeout(() => {
+                                        this.forecastData.chart = this.createChart('forecastgraph', 
+                                        "Ennuste", this.createForecastGraph, this.forecastData.chart);                                       
+                                    }, 200);
+                                })
                                 this.forecastData.chart = this.createChart('forecastgraph', 
                                     "Ennuste", this.createForecastGraph, this.forecastData.chart);
+
+                                // this.forecastData.data = await apiGetForecast2(this.location);
+                                // this.forecastData.chart = this.createChart('forecastgraph', 
+                                //     "Ennuste", this.createForecastGraph, this.forecastData.chart);
+
                             })
                         }
                         document.addEventListener('hide.bs.modal', function (event) {
@@ -894,7 +905,7 @@
                     }
                 },       
                 updateFieldEdit(today) {
-                    this.editdate = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
+                    this.editdate = `${today.getFullYear()}-${today.getMonth()<9?'0':''}${today.getMonth()+1}-${today.getDate()<10?'0':''}${today.getDate()}`;
                     let item = this.lastTemperatures.find(v => v.datetimeLocal.getFullYear() == today.getFullYear() &&
                         v.datetimeLocal.getMonth() == today.getMonth() && v.datetimeLocal.getDate() == today.getDate());
                     if (!item) {
