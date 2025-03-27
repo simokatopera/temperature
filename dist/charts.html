@@ -190,7 +190,7 @@
     <div class="container-fluid">
         <div class="page-title">
             <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
-            <h2>26.3.2025</h2>
+            <h2>27.3.2025</h2>
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
@@ -611,6 +611,11 @@
                 formatTime(t) {
                     return `${t.getDate()}.${t.getMonth()+1}.${t.getFullYear()} klo: ${t.getHours()}.${t.getMinutes() < 10 ? '0':''}${t.getMinutes()}`
                 },
+                createLatestReadinsChart(title) {
+                    this.daycharttitle = title;
+                    this.currentdayData.chart = this.createChart('currentdaygraph', 
+                        this.daycharttitle, this.createCurrentDayGraph, this.selecteddayData.chart);
+                },
                 updateLatestReading(observations) {
                     if (observations && observations.observations.length) {
                         this.latestReading = observations.observations[observations.observations.length-1];
@@ -633,7 +638,8 @@
                         this.daycharttitle = 'Viimeiset lukemat';
 
                         this.currentdayData.chart = this.createChart('currentdaygraph', 
-                        this.daycharttitle, this.createCurrentDayGraph, this.selecteddayData.chart);
+                            //this.daycharttitle, this.createCurrentDayGraph, this.selecteddayData.chart);
+                            this.daycharttitle, this.createCurrentDayGraph, this.currentdayData.chart);
 
                     }
                 },
@@ -730,8 +736,20 @@
 
                     let itemlist = document.querySelectorAll(".hiddenstart.hidden");
                     if (itemlist && itemlist.length) itemlist.forEach(i => i.classList.remove("hidden"))
-    
-                    this.updateLatestReading(await apiGetLatestTemperatures3(this.location, 2));
+
+                    this.createLatestReadinsChart('Viimeiset lukemat');
+
+                    const funct = this.updateLatestReading;
+                    apiGetLatestTemperatures3(this.location, 2)
+                        .then(res => {
+                            funct(res); 
+                         }
+                        )
+                        .catch(error => {
+                            console.log(error)
+                        });
+
+                    // this.updateLatestReading(await apiGetLatestTemperatures3(this.location, 2));
 
                     this.stopSpinner(1);
                     

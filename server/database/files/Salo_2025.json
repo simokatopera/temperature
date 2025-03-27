@@ -84,5 +84,7 @@
 	,{ "date": "3/23/2025", "morning": -7.5, "evening": 9.2 }
 	,{ "date": "3/24/2025", "morning": -2.4, "evening": 5.2 }
 	,{ "date": "3/25/2025", "morning": 4.4, "evening": 7.3 }
+	,{ "date": "3/26/2025", "morning": 2.5, "evening": 8.0 }
+	,{ "date": "3/27/2025", "morning": -3.0, "evening": 6.1 }
 ]}
 
