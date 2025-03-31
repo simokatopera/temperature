@@ -175,11 +175,12 @@ async function sendGetXmlAsync(command) {
 // }
 async function apiGetLatestTemperatures3(location, days) {
     let etime = new Date();
-    etime = new Date(etime.getFullYear(), etime.getMonth(), etime.getDate(), etime.getHours()-localtimehouroffset, etime.getMinutes(), etime.getSeconds());
+    etime = new Date(etime.getFullYear(), etime.getMonth(), etime.getDate(), etime.getHours()-localtimehouroffset(etime), etime.getMinutes(), etime.getSeconds());
     const stime = new Date(etime.getFullYear(), etime.getMonth(), etime.getDate()-days, etime.getHours(), etime.getMinutes()+10, etime.getMinutes(), etime.getSeconds());
 
     const starttime = formatDate(stime);
     const endtime = formatDate(etime);
+
 
     const response = await sendGetXmlAsync(`https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::weather::simple&place=${location}&starttime=${starttime}&endtime=${endtime}&timestep=10&maxlocations=1&parameters=t2m`);
     let parser = new DOMParser();
@@ -211,7 +212,7 @@ async function apiGetLatestTemperatures3(location, days) {
 
 async function apiGetForecast2(location) {
     let stime = new Date();
-    stime = new Date(stime.getFullYear(), stime.getMonth(), stime.getDate(), stime.getHours()-localtimehouroffset, stime.getMinutes(), stime.getSeconds());
+    stime = new Date(stime.getFullYear(), stime.getMonth(), stime.getDate(), stime.getHours()-localtimehouroffset(stime), stime.getMinutes(), stime.getSeconds());
     const etime = new Date(stime.getFullYear(), stime.getMonth(), stime.getDate() + 14);
     const starttime = formatDate(stime);
     const endtime = formatDate(etime);
@@ -238,7 +239,18 @@ async function apiGetForecast2(location) {
     return returnvalues;
 }
 
-const localtimehouroffset = 2;
+//const localtimehouroffset = 2;
+
+function localtimehouroffset(dt) {
+debugger
+    // Get current timezone offset in minutes
+    let timezoneOffset = dt.getTimezoneOffset();
+ 
+    // Convert it to hours and minutes
+    let offsetHours = Math.floor(timezoneOffset / 60);
+    //let offsetMinutes = timezoneOffset % 60;
+    return -offsetHours;
+}
 
 function pad(value, count) {
     return value.toString().padStart(count, '0')
@@ -251,7 +263,8 @@ function formatTime(t) {
     //20241107T192000
     let date = t.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z$/)
     if (date) {
-        const dt = new Date(Number(date[1]), Number(date[2])-1, Number(date[3]), Number(date[4])+localtimehouroffset, Number(date[5]), Number(date[6]));
+        const temp = new Date(Number(date[1]), Number(date[2])-1, Number(date[3]));
+        const dt = new Date(Number(date[1]), Number(date[2])-1, Number(date[3]), Number(date[4])+localtimehouroffset(temp), Number(date[5]), Number(date[6]));
         let datestr = `${dt.getFullYear()}${pad(dt.getMonth()+1, 2)}${pad(dt.getDate(), 2)}T${pad(dt.getHours()+0, 2)}${pad(dt.getMinutes(), 2)}${pad(dt.getSeconds(), 2)}`;
         return datestr;
     }
