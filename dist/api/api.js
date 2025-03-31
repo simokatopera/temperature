@@ -198,7 +198,7 @@ async function apiGetLatestTemperatures3(location, days) {
                 default: break; // t2m
             }
         }
-        results.push(valuestr === null ? null : {value: valuestr, time: timestr});
+        results.push(valuestr === null || valuestr == 'NaN' ? null : {value: valuestr, time: timestr});
     }
     
     results = results.filter(r => r !== null)
