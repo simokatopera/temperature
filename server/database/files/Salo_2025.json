@@ -98,5 +98,13 @@
 	,{ "date": "4/6/2025", "morning": -7.8, "evening": 3.2 }
 	,{ "date": "4/7/2025", "morning": 0.7, "evening": 8.5 }
 	,{ "date": "4/8/2025", "morning": -7.6, "evening": 7.1 }
+	,{ "date": "4/9/2025", "morning": 3.3, "evening": 3.0 }
+	,{ "date": "4/10/2025", "morning": -3.0, "evening": 3.1 }
+	,{ "date": "4/11/2025", "morning": 0.5, "evening": 2.9 }
+	,{ "date": "4/12/2025", "morning": 0.1, "evening": 10.5 }
+	,{ "date": "4/13/2025", "morning": -4.5, "evening": 13.7 }
+	,{ "date": "4/14/2025", "morning": 7.4, "evening": 14.9 }
+	,{ "date": "4/15/2025", "morning": -0.7, "evening": 16.4 }
+	,{ "date": "4/16/2025", "morning": 8.4, "evening": 20.9 }
 ]}
 
