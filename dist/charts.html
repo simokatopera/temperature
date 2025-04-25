@@ -191,7 +191,7 @@
     <div class="container-fluid">
         <div class="page-title">
             <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
-            <h2>17.4.2025</h2>
+            <h2>25.4.2025</h2>
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
@@ -386,7 +386,7 @@
                     },
 
                     alltemperaturereadings: { values: [], years: [], filtersize: 7 },    // all temperature values
-                    listedtemperaturereadings: { values: [], years: [], filtersize: 7 }, // contains values listed in table
+                    listedtemperaturereadings: { values: [], years: [], filtersize: 7}, // contains values listed in table
                     lastTemperatures: [],
                     latestReadingsFromNet: [],
                     latestReading: {localtime:'', t2m: NaN},
@@ -411,7 +411,7 @@
             },
             components: {
                 readings: {
-                    props: ['temperatures', 'selectedday', 'allreadings', 'lastreadings'],
+                    props: ['temperatures', 'selectedday', 'allreadings', 'lastreadings', 'yearlyaverages'],
                     emits: ['dayselected', 'savefile', 'forecastvalues'],
                     data: function () {
                         return {
@@ -527,7 +527,7 @@
                         <div><button type="button" class="btn btn-primary marginbottom5" @click="saveValuestoFile">Tallenna kaikki lukemat tiedostoon</button></div>
                         <div class="scrollbox">
                         <table class="datatable">
-                            <thead><tr><td></td><td>Aamu</td><td>Ilta</td><td>Suod({{temperatures.filtersize}})</td><td class="hideifnarrow">Keskiarvo</td></tr></thead>
+                            <thead><tr><td></td><td>Aamu</td><td>Ilta</td><td>Keskiarvo</td><td class="hideifnarrow">Ero</td></tr></thead>
                             <tbody>
                                 <tr v-for="(item, index) in temperatures.values">
                                     <td :class="markIfPressed(item)" align="center"> 
@@ -537,8 +537,8 @@
                                     </td>
                                     <td class="xxx" :class="markIfSelected(item, 1)"> {{ roundNumber(item.morning, 1) }}{{ item.morninghighest ? this.arrowup : "" }}{{ item.morninglowest ? this.arrowdn : "" }}</td>
                                     <td class="xxx" :class="markIfSelected(item, 2)"> {{ roundNumber(item.evening, 1) }}{{ item.eveninghighest ? this.arrowup : "" }}{{ item.eveninglowest ? this.arrowdn : "" }} </td>
-                                    <td :class="markIfPressed(item)"> {{ roundNumber(item.averagefiltered, 1) }} </td>
-                                    <td class="xxx hideifnarrow" :class="markIfSelected(item, 3)"> {{ roundNumber(item.average, 1) }} </td>
+                                    <td :class="markIfPressed(item)"> {{ roundNumber(item.yearlyaverage, 1) }} </td>
+                                    <td class="xxx hideifnarrow" :class="markIfSelected(item, 3)"> {{ roundNumber(item.average-item.yearlyaverage, 1) }} </td>
                                 </tr>                                
                             </tbody>
                         </table>            
@@ -724,7 +724,15 @@
                     this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', CFcreateDailyDiffdata);
                     this.createChart(this.testgraph12, 'Ennätyslämpötilat/vuosi (kpl)', CFcreateYearlyHighValuedata);
                     this.createChart(this.testgraph11, 'Vuosittainen suuntaus', CFcreateYearlyTrendSeriedata);
-    
+
+                    let yearlyAverages = getYearlyAverageSerie();
+                    this.listedtemperaturereadings.values.forEach(item => {
+                        let founddate = yearlyAverages.values.find(v => v.date.getMonth() == item.date.getMonth() && v.date.getDate() == item.date.getDate())
+                        if (founddate) {
+                            item.yearlyaverage = founddate.value;
+                        }
+                    })
+
                     this.screenCharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', CFcreateMonthlySummerTrendSeriedata));
                     this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
                     this.screenCharts.push(this.createChart(this.testgraph6, 'Talven suuntaus', CFcreateMonthlyWinterTrendSeriedata));

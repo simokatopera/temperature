@@ -242,7 +242,6 @@ async function apiGetForecast2(location) {
 //const localtimehouroffset = 2;
 
 function localtimehouroffset(dt) {
-debugger
     // Get current timezone offset in minutes
     let timezoneOffset = dt.getTimezoneOffset();
  

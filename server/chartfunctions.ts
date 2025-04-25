@@ -25,7 +25,8 @@ export function getDateTxt(date, short: boolean = false): string {
     return (date) ? `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}` : `-`;
 }
 
-
+let savedaverageserie = null;
+export function getYearlyAverageSerie() {return savedaverageserie;};
 // --------------------------------------------------------------
 // MinMax and HighLow datatypes and functions
 // --------------------------------------------------------------
@@ -1429,7 +1430,7 @@ export function CFcreateAllYearsAverageSeriedata(): GraphSerieType {
         (day) => (day.average), 
         (day) => (NaN),
         serietooltipcallback);
-    
+    savedaverageserie = averageserie;
     const curyear = createReturnDataType(`Vuosi ${curyearno}`,yearlyarrangeddata[yearlyarrangeddata.length-1].values.map(day => {
         return createReturnDataValue(new Date(temperatureClass.defaultyear, day.date.getMonth(), day.date.getDate()),
             day.average, NaN, false, /* estimate */ serietooltipcallback) 

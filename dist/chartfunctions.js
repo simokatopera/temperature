@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CF2SetStatisticsdata = exports.CF2setOperationMode = exports.compareReadings = exports.getStationTime = exports.CFcalculateTrend = exports.CFcreateAllYearsMonthlyAverageSeriedata = exports.CFcreateAllYearsAverageSeriedata = exports.CFcreateMonthlySpringTrendSeriedata = exports.CFcreateMonthlyFallTrendSeriedata = exports.CFcreateMonthlyWinterTrendSeriedata = exports.CFcreateMonthlySummerTrendSeriedata = exports.createTrendForGivenMonths = exports.CFcreateYearlyTrendSeriedata = exports.CFcalculateMonthlyAverages = exports.CFcreateYearlyHighValuedata = exports.CFcreateDailyDiffdata = exports.CFcreateLastYearsSeriedata = exports.CFcreateYearlyFilteredSeriedata = exports.CFcreateAllYearsFilteredSeriedata = exports.CFgetAllReadings = exports.CFinitTemperature = exports.defaultYear = exports.getDateTxt = exports.isNumeric = exports.roundNumber = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = void 0;
+exports.CF2SetStatisticsdata = exports.CF2setOperationMode = exports.compareReadings = exports.getStationTime = exports.CFcalculateTrend = exports.CFcreateAllYearsMonthlyAverageSeriedata = exports.CFcreateAllYearsAverageSeriedata = exports.CFcreateMonthlySpringTrendSeriedata = exports.CFcreateMonthlyFallTrendSeriedata = exports.CFcreateMonthlyWinterTrendSeriedata = exports.CFcreateMonthlySummerTrendSeriedata = exports.createTrendForGivenMonths = exports.CFcreateYearlyTrendSeriedata = exports.CFcalculateMonthlyAverages = exports.CFcreateYearlyHighValuedata = exports.CFcreateDailyDiffdata = exports.CFcreateLastYearsSeriedata = exports.CFcreateYearlyFilteredSeriedata = exports.CFcreateAllYearsFilteredSeriedata = exports.CFgetAllReadings = exports.CFinitTemperature = exports.defaultYear = exports.getYearlyAverageSerie = exports.getDateTxt = exports.isNumeric = exports.roundNumber = exports.getTempMaxDefaultValue = exports.getTempMinDefaultValue = void 0;
 const TempMinDefaultValue = 99999;
 const TempMaxDefaultValue = -99999;
 function getTempMinDefaultValue() { return TempMinDefaultValue; }
@@ -32,6 +32,10 @@ function getDateTxt(date, short = false) {
     return (date) ? `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}` : `-`;
 }
 exports.getDateTxt = getDateTxt;
+let savedaverageserie = null;
+function getYearlyAverageSerie() { return savedaverageserie; }
+exports.getYearlyAverageSerie = getYearlyAverageSerie;
+;
 function createMinMaxAverageCount(count, sum, min, max) {
     return { count: count, sum: sum, average: count > 0 ? sum / count : NaN, min: min, max: max };
 }
@@ -1077,6 +1081,7 @@ function CFcreateAllYearsAverageSeriedata() {
     const minserie = createSerie_10(`Matalin`, days, (day) => (day.min.value < getTempMinDefaultValue() ? day.min.value : NaN), (day) => (day.min.value < getTempMinDefaultValue() ? day.min.date.getFullYear() : ''), serietooltipcallback);
     const maxserie = createSerie_10(`Korkein`, days, (day) => (day.max.value > getTempMaxDefaultValue() ? day.max.value : NaN), (day) => (day.max.value > getTempMaxDefaultValue() ? day.max.date.getFullYear() : ''), serietooltipcallback);
     const averageserie = createSerie_10(`Keskiarvo`, days, (day) => (day.average), (day) => (NaN), serietooltipcallback);
+    savedaverageserie = averageserie;
     const curyear = createReturnDataType(`Vuosi ${curyearno}`, yearlyarrangeddata[yearlyarrangeddata.length - 1].values.map(day => {
         return createReturnDataValue(new Date(temperatureClass.defaultyear, day.date.getMonth(), day.date.getDate()), day.average, NaN, false, serietooltipcallback);
     }));
