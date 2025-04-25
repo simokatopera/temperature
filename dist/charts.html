@@ -177,7 +177,7 @@
             .hideifnarrow {display:none}
             .scrollbox {
                 height: 400px;
-                width: 280px;
+                width: 290px;
                 overflow: scroll;
             }        
         }        
@@ -527,7 +527,7 @@
                         <div><button type="button" class="btn btn-primary marginbottom5" @click="saveValuestoFile">Tallenna kaikki lukemat tiedostoon</button></div>
                         <div class="scrollbox">
                         <table class="datatable">
-                            <thead><tr><td></td><td>Aamu</td><td>Ilta</td><td>Keskiarvo</td><td class="hideifnarrow">Ero</td></tr></thead>
+                            <thead><tr><td></td><td>Aamu</td><td>Ilta</td><td>Karvo</td><td class="hideifnarrow">Ero</td></tr></thead>
                             <tbody>
                                 <tr v-for="(item, index) in temperatures.values">
                                     <td :class="markIfPressed(item)" align="center"> 
