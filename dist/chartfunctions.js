@@ -575,7 +575,7 @@ function CFgetAllReadings() {
                 returnvalues[i].eveninghighest = true;
             if (returnvalues[i].morning == dayshighlowvalues[minmaxindex].morning.min.value)
                 returnvalues[i].morninglowest = true;
-            if (returnvalues[i].evening == dayshighlowvalues[minmaxindex].morning.min.value)
+            if (returnvalues[i].evening == dayshighlowvalues[minmaxindex].evening.min.value)
                 returnvalues[i].eveninglowest = true;
         }
     }

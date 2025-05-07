@@ -839,7 +839,7 @@ export function CFgetAllReadings(): FilteredResponse {
             if (returnvalues[i].morning == dayshighlowvalues[minmaxindex].morning.max.value) returnvalues[i].morninghighest = true;
             if (returnvalues[i].evening == dayshighlowvalues[minmaxindex].evening.max.value) returnvalues[i].eveninghighest = true;
             if (returnvalues[i].morning == dayshighlowvalues[minmaxindex].morning.min.value) returnvalues[i].morninglowest = true;
-            if (returnvalues[i].evening == dayshighlowvalues[minmaxindex].morning.min.value) returnvalues[i].eveninglowest = true;
+            if (returnvalues[i].evening == dayshighlowvalues[minmaxindex].evening.min.value) returnvalues[i].eveninglowest = true;
         }
     }
     return {values: returnvalues, filtersize: temperatureClass.filterlength}
