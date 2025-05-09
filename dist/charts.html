@@ -191,7 +191,7 @@
     <div class="container-fluid">
         <div class="page-title">
             <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
-            <h2>7.5.2025</h2>
+            <h2>9.5.2025</h2>
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
@@ -686,7 +686,7 @@
                                 }
                     const currentdayreadings = [];
                     temperatures.data.forEach( yeardata => yeardata.data.forEach(day => {
-                        if (day.datetimeLocal.getDate() == currentday && day.datetimeLocal.getMonth() == currentmonth)  currentdayreadings.push(day);
+                            if (day.datetimeLocal.getDate() == currentday && day.datetimeLocal.getMonth() == currentmonth && day.morning && day.evening)  currentdayreadings.push(day);
                         }
                     ))
                     const morningsum = currentdayreadings.reduce((partialSum, a) => partialSum + a.morning, 0);
