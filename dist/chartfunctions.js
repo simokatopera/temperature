@@ -854,9 +854,14 @@ function CFcalculateMonthlyAverages() {
     const allvalues = CFgetAllReadings();
     for (var month = 0; month < 12; month++) {
         let arr = allvalues.values.map(val => (val.date.getMonth() == month ? val.average : null)).filter(v => v !== null);
-        let average = arr.reduce((acc, val) => (acc + val)) / (arr.length > 0 ? arr.length : 1);
-        let min = Math.min(...arr);
-        let max = Math.max(...arr);
+        let min = 50;
+        let max = -50;
+        let average = 0;
+        if (arr.length > 0) {
+            average = arr.reduce((acc, val) => (acc + val)) / (arr.length > 0 ? arr.length : 1);
+            min = Math.min(...arr);
+            max = Math.max(...arr);
+        }
         stdevarray.push({ stdev: standardDeviation(arr, true), min: min, max: max, average: average });
     }
     const monthlyvalues = createTempDiffTable(tempaverages, diffaverages);
