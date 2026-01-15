@@ -119,6 +119,7 @@ export class DbSupaClass implements DbApiClass {
         this.filetemperaturedata.push(require("./files/Salo_2022.json"));        
         this.filetemperaturedata.push(require("./files/Salo_2023.json"));        
         this.filetemperaturedata.push(require("./files/Salo_2024.json"));
+        this.filetemperaturedata.push(require("./files/Salo_2025.json"));
     }
     async getFileTemperatures(location: string, years: number[]): Promise<TemperatureType[]> {
         if (this.operationAllowed('get', 'temperatures')) {
@@ -341,9 +342,9 @@ export class DbSupaClass implements DbApiClass {
                 .from(this.DbTemperatureTable)
                 .select('year')
             if (dbdata.error || dbdata.data.length == 0) return [];
-            let years = dbdata.data.map(d => Number(d.year));
+            let years = dbdata.data.map((d: any) => Number(d.year));
             years = years.concat(this.getFileYears());
-            return years.filter(this.onlyUnique).sort((a, b) => Number(a) - Number(b));
+            return years.filter(this.onlyUnique).sort((a: any, b: any) => Number(a) - Number(b));
         }
         return [];
     }
