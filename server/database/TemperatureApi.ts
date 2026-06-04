@@ -19,9 +19,9 @@ export class TemperatureApi {
         if (this.db === null) return false;
         return await this.db.admin();
     }
-    async savereadings(pwd: string, data: TemperatureUpdateData[]): Promise<DBStatus>{
+    async savereadings(pwd: string, location: string, data: TemperatureUpdateData[]): Promise<DBStatus>{
         if (this.db === null || data == null) return setFailResult("Not implemented");
-        return await this.db.savereadings(pwd, data);
+        return await this.db.savereadings(pwd, location, data);
     }
     async locations(): Promise<string[]> {
         if (this.db === null) return [];

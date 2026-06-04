@@ -13,7 +13,7 @@ export abstract class DbApiClass {
     async admin(): Promise<boolean>{
         return false;
     }
-    async savereadings(pwd: string, data: TemperatureUpdateData[]): Promise<DBStatus>{
+    async savereadings(pwd: string, location: string, data: TemperatureUpdateData[]): Promise<DBStatus>{
         return setFailResult("Not implemented");
     }
     async locations(): Promise<string[]> {

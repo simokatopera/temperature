@@ -67,8 +67,8 @@ class TemperatureApi  {
         const path = 'admin/button1';
         return await this.sendGetJsonAsync(path);
     }
-    async saveReadings(pwd, data) {
-        const path = `admin/save?userid=${this.guid}&pwd=${pwd}`;
+    async saveReadings(pwd, location, data) {
+        const path = `admin/save?userid=${this.guid}&pwd=${pwd}&location=${location}`;
         const ret = await this.sendPostJsonAsync(path, data);
         return ret;
     }
@@ -90,8 +90,8 @@ async function apiAdminStatus(guid) {
 async function apiAdminButton1(guid) {
     return await new TemperatureApi(guid).getAdminButton1();
 }
-async function apiSaveReadings(guid, pwd, data) {
-    return await new TemperatureApi(guid).saveReadings(pwd, data);
+async function apiSaveReadings(guid, pwd, location, data) {
+    return await new TemperatureApi(guid).saveReadings(pwd, location, data);
 }
 async function apiGetStatistics(guid, location, years, filtersize, m1, m2) {
     const values = await new TemperatureApi(guid).getStatistics(location, years, filtersize, m1, m2);

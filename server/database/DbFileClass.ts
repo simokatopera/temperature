@@ -75,6 +75,7 @@ temperaturedata.push(require("./files/Salo_2022.json"));
 temperaturedata.push(require("./files/Salo_2023.json"));
 temperaturedata.push(require("./files/Salo_2024.json"));
 temperaturedata.push(require("./files/Salo_2025.json"));
+temperaturedata.push(require("./files/Salo_2026.json"));
 
 
 export class DbFileClass implements DbApiClass {
@@ -102,7 +103,7 @@ export class DbFileClass implements DbApiClass {
     async admin(): Promise<boolean>{
         return false;
     }    
-    async savereadings(pwd: string, data: TemperatureUpdateData[]): Promise<DBStatus>{
+    async savereadings(pwd: string, location: string, data: TemperatureUpdateData[]): Promise<DBStatus>{
         return setFailResult("Not implemented")
     }    
     async locations(): Promise<string[]> {

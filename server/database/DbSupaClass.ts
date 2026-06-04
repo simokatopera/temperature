@@ -186,7 +186,7 @@ export class DbSupaClass implements DbApiClass {
         if (parts && parts.length === 3) return Number(parts[2]);
         return 0;
     }
-    async savereadings(pwd: string, data: TemperatureUpdateData[]): Promise<DBStatus> {
+    async savereadings(pwd: string, location: string, data: TemperatureUpdateData[]): Promise<DBStatus> {
         /*
         all data given as parameter must be data for same year
         */
@@ -198,7 +198,7 @@ export class DbSupaClass implements DbApiClass {
             const curyears = data.map(d => this.getYear(d.date)).filter(this.onlyUnique);
             if (curyears.length > 1) return setFailResult("Ivalid parameter");
 
-            let dbreadings: TemperatureType[] = await this.temperatures('', curyears);
+            let dbreadings: TemperatureType[] = await this.temperatures(location, curyears);
             if (dbreadings.length > curyears.length) return setFailResult("Ivalid parameter");
             if (dbreadings.length > 0) {
                 // there is readings for current year, update record
@@ -263,9 +263,10 @@ export class DbSupaClass implements DbApiClass {
                 // save record
                 const result = await supabase
                     .from(this.DbTemperatureTable)
-                    .update({ year: curyears[0], readings: { info: dbreadings[0].info, data: readingstobesaved } })
+                    .update({ year: curyears[0], location: location, readings: { info: dbreadings[0].info, data: readingstobesaved } })
                     .select('id')
                     .eq('year', curyears[0])
+                    .eq('location', location)
                 if (result.error) {
                     return setFailResult("Ivalid parameter");
                 }
@@ -340,7 +341,8 @@ export class DbSupaClass implements DbApiClass {
         if (this.operationAllowed('get', 'years')) {
             let dbdata = await supabase
                 .from(this.DbTemperatureTable)
-                .select('year')
+                .select('year, location')
+                .eq('location', location)
             if (dbdata.error || dbdata.data.length == 0) return [];
             let years = dbdata.data.map((d: any) => Number(d.year));
             years = years.concat(this.getFileYears());
@@ -368,8 +370,9 @@ export class DbSupaClass implements DbApiClass {
                 }
                 const dbdata: DbTemperatureResp = await supabase
                     .from(this.DbTemperatureTable)
-                    .select('year, readings')
-                    .in('year', newyears);
+                    .select('year, readings, location')
+                    .in('year', newyears)
+                    .eq('location', location)
 
                 if (dbdata.error || dbdata.data.length == 0) return temperatures;
                 for (let yearindex = 0; yearindex < dbdata.data.length; yearindex++) {

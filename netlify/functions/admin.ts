@@ -30,7 +30,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
   	}
   	if (event.httpMethod == "POST") {
         if (event.path.indexOf('/save') > 0) {
-            if (!event.queryStringParameters || !event.queryStringParameters.pwd) {
+            if (!event.queryStringParameters || !event.queryStringParameters.pwd || !event.queryStringParameters.location) {
                 return createJsonErrorResponse( 404, "Missing parameter");
             }
             const savingallowed = await api.savingallowed();
@@ -38,7 +38,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                 if (event.body) {
                     // save new values
                     const values = JSON.parse(event.body);
-                    const status = await api.savereadings(event.queryStringParameters.pwd, values);
+                    const status = await api.savereadings(event.queryStringParameters.pwd, event.queryStringParameters.location, values);
                    if (status.errormsg === null) {
                         return  createHttpJsonOkResponse(status.errormsg, {status: true, msg: status.status});
                     }

@@ -191,7 +191,7 @@
     <div class="container-fluid">
         <div class="page-title">
             <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
-            <h2>24.5.2026-2</h2>
+            <h2>4.6.2026-1</h2>
         </div>
         <div id="app" class="page-content">
             <div class="hiddenstart hidden">
@@ -323,7 +323,7 @@
         const StopScrolling = -2;
         let userguid = '';
         let givenyears = null;
-        let location = '';
+        let location = 'Salo';
 
         function selectFirstDay() {
             let button = document.getElementsByClassName('daybutton_0');
@@ -951,7 +951,7 @@
                             evening: evening, 
                             morningtime: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 7), 
                             eveningtime: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 15)};
-                        let status = await apiSaveReadings(userguid, userguid, [tobesaved]);
+                        let status = await apiSaveReadings(userguid, userguid, location, [tobesaved]);
                     }
                 },
                 async savereadings() {
@@ -961,7 +961,7 @@
 
                     if (tobesaved.length && this.latestReadingsFromNet.saveenable) {
                         // save selected readings
-                        let status = await apiSaveReadings(userguid, userguid, tobesaved);
+                        let status = await apiSaveReadings(userguid, userguid, location, tobesaved);
                         if (status.statusCode == 200) {
                             if (status.data.msg.saved == true) {
                                 let button = document.getElementsByClassName('daybutton_0');

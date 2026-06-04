@@ -125,7 +125,7 @@
                     },
                     async mounted() {
                         this.locations = await apiGetLocations(userid);
-                        const years = await apiGetYears(userid, this.locations);
+                        const years = await apiGetYears(userid, this.location);
                         this.years = years.data.map(y => ({selected: true, year: y}));
                         if (years.data && years.data.length > 1) {
                             let count = years.data.length;
