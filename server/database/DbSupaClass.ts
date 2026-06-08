@@ -120,6 +120,36 @@ export class DbSupaClass implements DbApiClass {
         this.filetemperaturedata.push(require("./files/Salo_2023.json"));        
         this.filetemperaturedata.push(require("./files/Salo_2024.json"));
         this.filetemperaturedata.push(require("./files/Salo_2025.json"));
+
+        // let temp = require("./files/Turku_2011.json");
+        // temp.data.forEach((t: any) => {
+        //     const parts = t.date.split('.');
+        //     //console.log(`${parts[1]}/${parts[0]}/${parts[2]} ${t.date}`);
+        //     let newdate = `${parts[1]}/${parts[0]}/${parts[2]}`;
+        //     t.date = newdate;
+        // })
+        // console.log(JSON.stringify(temp));
+
+        // this.filetemperaturedata.push(require("./files/Turku_2007.json"));
+        // this.filetemperaturedata.push(require("./files/Turku_2008.json"));
+        // this.filetemperaturedata.push(require("./files/Turku_2009.json"));
+        // this.filetemperaturedata.push(require("./files/Turku_2010.json"));
+        // this.filetemperaturedata.push(require("./files/Turku_2011.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2012.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2013.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2014.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2015.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2016.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2017.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2018.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2019.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2020.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2021.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2022.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2023.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2024.json"));
+        this.filetemperaturedata.push(require("./files/Turku_2025.json"));
+        // this.filetemperaturedata.push(require("./files/Turku_2026.json"));
     }
     async getFileTemperatures(location: string, years: number[]): Promise<TemperatureType[]> {
         if (this.operationAllowed('get', 'temperatures')) {
@@ -373,17 +403,19 @@ export class DbSupaClass implements DbApiClass {
                     .select('year, readings, location')
                     .in('year', newyears)
                     .eq('location', location)
-
                 if (dbdata.error || dbdata.data.length == 0) return temperatures;
                 for (let yearindex = 0; yearindex < dbdata.data.length; yearindex++) {
                     const readings = dbdata.data[yearindex].readings;
                     if (readings !== null) {
-                        if (!temperatures.find(t => t.info.year === readings.info.year)) {
+                        if (!temperatures.find(t => t.info.year === dbdata.data[yearindex].year)) {
                             const tempvalues =  readings.data.map(d => {
                                 return createTemperatureDataType(d.date, d.morning, d.evening, this.getDate(d.date), null)
                             })
-                            temperatures.push(createTemperatureType(readings.info.year, readings.info.location, tempvalues));
+                            temperatures.push(createTemperatureType(dbdata.data[yearindex].year, dbdata.data[yearindex].location, tempvalues));
                         }
+                    }
+                    else {
+                        return temperatures;
                     }
                 }
             }
@@ -401,6 +433,7 @@ interface DbTemperatureResp {
 }
 interface DbTemperature {
     year: number;
+    location: string;
     readings: TemperatureType | null;
 }   
 // interface TemperatureUpdateData {

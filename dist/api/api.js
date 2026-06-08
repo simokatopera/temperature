@@ -181,7 +181,6 @@ async function apiGetLatestTemperatures3(location, days) {
     const starttime = formatDate(stime);
     const endtime = formatDate(etime);
 
-
     const response = await sendGetXmlAsync(`https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::weather::simple&place=${location}&starttime=${starttime}&endtime=${endtime}&timestep=10&maxlocations=1&parameters=t2m`);
     let parser = new DOMParser();
     let xmlDoc = parser.parseFromString(response,"text/xml");      

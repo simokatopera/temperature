@@ -188,12 +188,12 @@
 </head>
 
 <body>
-    <div class="container-fluid">
+    <div id="app" class="container-fluid">
         <div class="page-title">
-            <h1 id="ID_PageTitle">Lämpötilaseuranta</h1>
-            <h2>4.6.2026-1</h2>
+            <h1 id="ID_PageTitle">Lämpötilaseuranta ({{ location}})</h1>
+            <h2>8.6.2026-1</h2>
         </div>
-        <div id="app" class="page-content">
+        <div class="page-content">
             <div class="hiddenstart hidden">
                 <button class="backbutton" @click="gotofrontpage">&laquo;Etusivu</button>
                 <div id="hiddenbutton"></div>
@@ -323,7 +323,7 @@
         const StopScrolling = -2;
         let userguid = '';
         let givenyears = null;
-        let location = 'Salo';
+        let location = '';
 
         function selectFirstDay() {
             let button = document.getElementsByClassName('daybutton_0');
@@ -335,6 +335,10 @@
             userguid = new URLSearchParams(document.location.search).get("userid");
             const years = new URLSearchParams(document.location.search).get("years");
             location = new URLSearchParams(document.location.search).get("location");
+            if (location == "" || location == null || location == undefined) {
+                alert('Location missing');
+                location = "Salo";
+            }
             if (years === null) givenyears = null;
             else {
                 const yearlist = years.split(',')
@@ -644,6 +648,15 @@
 
                     }
                 },
+                updateYearlyAverages() {
+                    let yearlyAverages = getYearlyAverageSerie();
+                    this.listedtemperaturereadings.values.forEach(item => {
+                        let founddate = yearlyAverages.values.find(v => v.date.getMonth() == item.date.getMonth() && v.date.getDate() == item.date.getDate())
+                        if (founddate) {
+                            item.yearlyaverage = founddate.value;
+                        }
+                    })
+                },
                 async loadAll() {
                     this.startSpinner(1);
                     let years = null;
@@ -725,13 +738,7 @@
                     this.createChart(this.testgraph12, 'Ennätyslämpötilat/vuosi (kpl)', CFcreateYearlyHighValuedata);
                     this.createChart(this.testgraph11, 'Vuosittainen suuntaus', CFcreateYearlyTrendSeriedata);
 
-                    let yearlyAverages = getYearlyAverageSerie();
-                    this.listedtemperaturereadings.values.forEach(item => {
-                        let founddate = yearlyAverages.values.find(v => v.date.getMonth() == item.date.getMonth() && v.date.getDate() == item.date.getDate())
-                        if (founddate) {
-                            item.yearlyaverage = founddate.value;
-                        }
-                    })
+                    this.updateYearlyAverages();
 
                     this.screenCharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', CFcreateMonthlySummerTrendSeriedata));
                     this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
@@ -986,7 +993,11 @@
                     this.dayselected({selected: NoSelection, values: []});
                     this.startSpinner(2);
                     this.listedtemperaturereadings.values = [];
-                    setTimeout( () => {this.fillTemperaturereadingtable(item.index, this.listedtemperaturereadings.values, this.alltemperaturereadings.values[item.index].date.getFullYear(), this.stopSpinner)}, 10);
+                    
+                    setTimeout( () => {
+                        this.fillTemperaturereadingtable(item.index, this.listedtemperaturereadings.values, this.alltemperaturereadings.values[item.index].date.getFullYear(), this.stopSpinner)
+                        this.updateYearlyAverages();
+                    }, 10);
                 },
                 fillTemperaturereadingtable(index, desttable, year, stopFunc) {
                     const maxyears = 2;
@@ -1048,6 +1059,8 @@
                         const year = t.info.year;
                         let prevdate = Number.MIN_VALUE;
                         t.data.forEach(d => {
+                            //if (isNaN(d.datetimeLocal))
+                            //debugger
                             if (d.datetimeLocal.getFullYear() !== year) {
                                 alert(`Invalid year ${d.date}`);
                             }
