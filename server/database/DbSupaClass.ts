@@ -25,6 +25,7 @@ export class DbSupaClass implements DbApiClass {
     readonly adminpwd = '1eb8859e-21d9-49cd-8fa5-b09ff5d32adc'; 
 
     readonly DbTemperatureTable = 'temperatures';
+    //readonly DbTemperatureTable = 'temperaturetable';
     guid: string | null = null;
     filetemperaturedata: TemperatureType[] = [];
     
@@ -222,14 +223,17 @@ export class DbSupaClass implements DbApiClass {
         */
         if (data.length == 0) return setFailResult("Ivalid parameter");
 
+                console.log('0')
         if (this.operationAllowed('post', 'savereadings')) {
             if (pwd !== this.adminpwd && pwd !== this.adminpwd_debugnosave) return setFailResult("Not allowed");
+                console.log('1')
 
             const curyears = data.map(d => this.getYear(d.date)).filter(this.onlyUnique);
             if (curyears.length > 1) return setFailResult("Ivalid parameter");
 
             let dbreadings: TemperatureType[] = await this.temperatures(location, curyears);
             if (dbreadings.length > curyears.length) return setFailResult("Ivalid parameter");
+                console.log('2')
             if (dbreadings.length > 0) {
                 // there is readings for current year, update record
                 let readingstobesaved: DbTemperatureDataType[] = dbreadings[0].data.map(r => {
@@ -239,6 +243,7 @@ export class DbSupaClass implements DbApiClass {
                     return newdata;
                 });
                 // add new readings
+                console.log('3')
                 data.forEach(itemtoadd => {
                     let index = readingstobesaved.length - 1;
                     while (index >= 0 && this.getDate(readingstobesaved[index].date) > this.getDate(itemtoadd.date)) index--;
@@ -255,6 +260,7 @@ export class DbSupaClass implements DbApiClass {
                         //     console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)
                     }
 
+                console.log('4')
                     if (readingstobesaved[index].date == itemtoadd.date) {
                         // change date reading(s)
                         let newreading: any = { date: readingstobesaved[index].date}
@@ -285,11 +291,18 @@ export class DbSupaClass implements DbApiClass {
                         //     console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)
                     }
                 })
+                console.log('5')
                 if (pwd == this.adminpwd_debugnosave) {
                     const record = await getUpdatedData(this.DbTemperatureTable, curyears[0]);
                     return setOkResult({ record: record, saved: false }, -1);
                 }
 
+                console.log('6')
+                console.log(curyears[0]);
+                console.log(location);
+                console.log(`info: ${JSON.stringify(dbreadings[0].info)}`);
+                console.log(`readingstobesaved ${readingstobesaved.length}`);
+                console.log(readingstobesaved[readingstobesaved.length-1])
                 // save record
                 const result = await supabase
                     .from(this.DbTemperatureTable)
@@ -297,9 +310,12 @@ export class DbSupaClass implements DbApiClass {
                     .select('id')
                     .eq('year', curyears[0])
                     .eq('location', location)
+                console.log('7')
                 if (result.error) {
+                console.log('error')
                     return setFailResult("Ivalid parameter");
                 }
+                console.log(result.data)
                 if (result.data.length) {
                     const record = await getUpdatedData(this.DbTemperatureTable, curyears[0]);
                     return setOkResult({ record: record, saved: true }, Number(result.data[0].id));
@@ -369,10 +385,12 @@ export class DbSupaClass implements DbApiClass {
     async years(location: string): Promise<number[]> {
         console.log('years')
         if (this.operationAllowed('get', 'years')) {
-            let dbdata = await supabase
+            const dbdata = await supabase
                 .from(this.DbTemperatureTable)
-                .select('year, location')
-                .eq('location', location)
+                .select('year, readings, location')
+                //.eq('location', location)
+
+            console.log(dbdata)
             if (dbdata.error || dbdata.data.length == 0) return [];
             let years = dbdata.data.map((d: any) => Number(d.year));
             years = years.concat(this.getFileYears());

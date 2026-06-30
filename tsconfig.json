@@ -8,6 +8,7 @@
       "noImplicitAny": false,
       "removeComments": true,
       "preserveConstEnums": true,
+      "rootDir": "./server",
       "outDir": "./dist"
     },
     "files": [ 
