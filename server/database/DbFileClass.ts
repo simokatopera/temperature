@@ -1,3 +1,4 @@
+declare var require:any;
 
 import {DbApiClass} from "./DbApiClass.js";
 import { guidValid } from "../utils.js";
@@ -5,6 +6,7 @@ import { TemperatureUpdateData, DBStatus, TemperatureType, TemperatureDataType, 
 
 
 let temperaturedata: TemperatureType[] = [];
+
 
 temperaturedata.push(require("./files/Salo_1960_x.json"));
 temperaturedata.push(require("./files/Salo_1961_x.json"));

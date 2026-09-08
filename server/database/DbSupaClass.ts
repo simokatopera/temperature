@@ -1,3 +1,4 @@
+declare var require:any;
 
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient("https://stehwqimpfcpzydxovha.supabase.co",
@@ -151,6 +152,13 @@ export class DbSupaClass implements DbApiClass {
         this.filetemperaturedata.push(require("./files/Turku_2024.json"));
         this.filetemperaturedata.push(require("./files/Turku_2025.json"));
         // this.filetemperaturedata.push(require("./files/Turku_2026.json"));
+
+        this.filetemperaturedata.push(require("./files/Harjunpaa_1984.json"));
+        this.filetemperaturedata.push(require("./files/Harjunpaa_1987.json"));
+        this.filetemperaturedata.push(require("./files/Harjunpaa_1988.json"));
+        this.filetemperaturedata.push(require("./files/Harjunpaa_1989.json"));
+        this.filetemperaturedata.push(require("./files/Harjunpaa_1990.json"));
+
     }
     async getFileTemperatures(location: string, years: number[]): Promise<TemperatureType[]> {
         if (this.operationAllowed('get', 'temperatures')) {

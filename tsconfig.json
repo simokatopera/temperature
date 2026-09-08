@@ -4,6 +4,7 @@
       "target": "ES2021",
       "noEmit": false,
       "module": "CommonJS",
+      "types" : ["node"],
       "allowSyntheticDefaultImports": true,
       "noImplicitAny": false,
       "removeComments": true,
