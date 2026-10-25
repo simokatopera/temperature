@@ -858,16 +858,14 @@ function createYearlyTrendSeriedata() {
     const yeartemperatureserie = createChartClassSerie('Lämpötila', temperatureClass.yearlyMonthlyAverages.yearlydata.map(val => ({ value: [val.year, val.yearlyaverage], symbol: val.estimate ? EstimateSymbol : undefined, symbolsize: val.estimate ? EstimateSymbolsize : undefined })), ChartDefaultSymbolSize);
     const yeardiffserie = createChartClassSerie('Illan ja aamun ero', temperatureClass.yearlyMonthlyAverages.yearlydata.map((val) => ({ value: [val.year, val.yearlyaveragediff], symbol: val.estimate ? EstimateSymbol : undefined, symbolsize: val.estimate ? EstimateSymbolsize : undefined })), ChartDefaultSymbolSize);
     function createTrendSerie(seriename, tempserie) {
-        let trenddata = createTrendCalcTable(tempserie.data.map(v => (createTrendCalcData(v[0], v[1]))));
+        let trenddata = createTrendCalcTable(tempserie.data.map(v => (createTrendCalcData(v.value[0], v.value[1]))));
         const trend = CFcalculateTrend([trenddata]);
         if (isNaN(trend.k))
             return createChartClassSerie(seriename, [], 0);
-        return createChartClassSerie(seriename, tempserie.data.map(value => [new Date(value[0], 0, 1), value[0] * trend.k + trend.b]), ChartDefaultSymbolSize);
+        return createChartClassSerie(seriename, tempserie.data.map(val => ({ value: [new Date(val.value[0], 0, 1).getFullYear(), val.value[0] * trend.k + trend.b] })), ChartDefaultSymbolSize);
     }
     let trendserie = createTrendSerie('Suuntaus', yeartemperatureserie);
     let difftrendserie = createTrendSerie('Erosuuntaus', yeardiffserie);
-    yeartemperatureserie.data.forEach(v => v[0] = new Date(v[0], 0, 1));
-    yeardiffserie.data.forEach(v => v[0] = new Date(v[0], 0, 1));
     const returnvalue = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpötila/℃');
     returnvalue.series.push(yeartemperatureserie);
     returnvalue.series.push(yeardiffserie);

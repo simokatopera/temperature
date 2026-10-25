@@ -261,7 +261,7 @@ function formatTime(t) {
     //20241107T192000
     let date = t.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z$/)
     if (date) {
-        const temp = new Date(Number(date[1]), Number(date[2])-1, Number(date[3]));
+        const temp = new Date(Number(date[1]), Number(date[2])-1, Number(date[3]), Number(date[4]), Number(date[5]));
         const dt = new Date(Number(date[1]), Number(date[2])-1, Number(date[3]), Number(date[4])+localtimehouroffset(temp), Number(date[5]), Number(date[6]));
         let datestr = `${dt.getFullYear()}${pad(dt.getMonth()+1, 2)}${pad(dt.getDate(), 2)}T${pad(dt.getHours()+0, 2)}${pad(dt.getMinutes(), 2)}${pad(dt.getSeconds(), 2)}`;
         return datestr;
