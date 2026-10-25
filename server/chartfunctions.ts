@@ -1,5 +1,9 @@
 
 
+
+const ChartDefaultSymbolSize = 3;
+const EstimateSymbol = 'circle';
+const EstimateSymbolsize = 14;
 const TempMinDefaultValue = 99999;
 const TempMaxDefaultValue = -99999;
 
@@ -25,7 +29,7 @@ export function getDateTxt(date, short: boolean = false): string {
     return (date) ? `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}` : `-`;
 }
 
-let savedaverageserie = null;
+let savedaverageserie: any = {values: null};
 export function getYearlyAverageSerie() {return savedaverageserie;};
 // --------------------------------------------------------------
 // MinMax and HighLow datatypes and functions
@@ -255,13 +259,6 @@ function createMonthAverageData(monthno: number, monthlytemperature: number, mon
 }
 // --------------------------------------------------------
 
-export interface GraphSerieType {
-    data: GraphSerie[];
-    params: any;
-}
-function createGraphSerieType(data: GraphSerie[], params: any): GraphSerieType {
-    return {data: data, params: params}
-}
 interface GraphSerie {
     name: string;
     location: string;
@@ -272,6 +269,13 @@ interface GraphSerie {
 }
 function createGraphSerie(name: string, location: string, year: number, values: GraphItem[], trend: boolean, index: number): GraphSerie {
     return {name: name, location: location, year: year, values: values, trend: trend, index: index}
+}
+export interface GraphSerieType {
+    data: GraphSerie[];
+    params: any;
+}
+function createGraphSerieType(data: GraphSerie[], params: any): GraphSerieType {
+    return {data: data, params: params}
 }
 interface GraphItem {
     value: [Date, number,boolean];
@@ -301,7 +305,7 @@ class Temperatures {
     yearlyMonthlyAverages: AverageYearsMonths = createAverageYearsMonths([],[]);
     dailyValues: AverageCalculated[] = [];
 
-    allFilteredDataYearlyArranged = [];
+    allFilteredDataYearlyArranged: any = [];
     monthnames: string[] = [];
     monthnameslong: string[] = [];
 
@@ -588,7 +592,7 @@ class Temperatures {
             yearlydata[year].push(val);
         })
         return yearlydata.map(yeardata => {
-            return createNameValues(`Vuosi ${yeardata[0].date.getFullYear()}`, yeardata[0].date, yeardata.map(v => 
+            return createNameValues(`${yeardata[0].date.getFullYear()}`, yeardata[0].date, yeardata.map(v => 
                 createFiltered(v.date,v.morning,v.evening,v.average,v.difference,v.morningfiltered,v.eveningfiltered,
                     v.averagefiltered,v.differencefiltered,v.firstdayfilter,v.lastdayfilter)))
         });
@@ -631,30 +635,8 @@ let temperatureClass: Temperatures;
 // Data interfaces
 //-------------------------------------------------------------------------------------------
 
-interface ReturnDataType {
-    name: string;
-    values: ReturnDataValue[];
-}
 type tooltipcallback = (seriename: string, value: any) => string;
 type datafunction = (value: any) => number;
-type yearfunction = (value: any) => number;
-type datefunction = (value: any) => Date;
-
-interface ReturnDataValue {
-    date: Date;
-    value: number;
-    year: number;
-    tooltipfunction: tooltipcallback;
-    tooltipformat: any;
-    estimate: boolean;
-}
-
-function createReturnDataValue(date: Date, value: number, year: number, estimate: boolean, tooltipfunction: tooltipcallback = null, tooltipformat: any = null): ReturnDataValue {
-    return {date: date, value: value, year: year, estimate: estimate, tooltipfunction: tooltipfunction, tooltipformat: tooltipformat}
-}
-function createReturnDataType(name: string, values: ReturnDataValue[]): ReturnDataType {
-    return {name: name, values: values}
-}
 
 interface NameValues {
     name: string;
@@ -751,10 +733,6 @@ interface GraphParams {
 function createGraphParams(name: string, symbol: string, symbolsize: number, symbolindex: number): GraphParams {
     return {name: name, symbol: symbol, symbolindex: symbolindex, symbolsize: symbolsize};
 }
-interface GraphSerieParams {
-    values: GraphSerie[];
-    series: GraphParams[];
-}
 interface HiLoValue {
     date: Date;
     average: number;
@@ -767,37 +745,9 @@ function createHiLoValue(date: Date, average: number, minvalue: number, mindate:
 //-------------------------------------------------------------------------------------------
 // Local functions
 //-------------------------------------------------------------------------------------------
-
 function getReadingsBetween(startdate: Date, enddate: Date, readings: Filtered[]): Filtered[] {
     let retvalues = readings.map(val => val.date >= startdate && val.date <= enddate ? val : null).filter(v => v !== null);
     return retvalues;
-}
-function createTooltip(seriename: string, value: ReturnDataValue): string {
-    if (value.tooltipfunction === null) return '';
-    return  value.tooltipfunction(seriename, value);
-}
-// function createEstimate() {
-//     return createGraphParams();
-// }
-function addEstimatesToParameters(series: ReturnDataType[]): GraphParams[] {
-    let estimateitems: GraphParams[] = [];
-    let currentyear = new Date().getFullYear();
-    let currentmonth = new Date().getMonth();
-    series.forEach(serie => {
-        if (serie.values && serie.values.length) {
-            serie.values.forEach((month, monthindex) => {
-                if (month.estimate) {
-                    if (month.year < currentyear || (month.year == currentyear && month.date.getMonth() <= currentmonth)) {
-                        estimateitems.push(createGraphParams(serie.name, 'circle', 14, monthindex))
-                    }
-                    else {
-                        month.value = NaN;
-                    }
-                }
-            })
-        }
-    });
-    return estimateitems;
 }
 //-------------------------------------------------------------------------------------------
 // Exported functions
@@ -845,83 +795,105 @@ export function CFgetAllReadings(): FilteredResponse {
     return {values: returnvalues, filtersize: temperatureClass.filterlength}
     
 }
-export function CFcreateAllYearsFilteredSeriedata(): GraphSerieType {
-
-    if (operationMode != 0) {
-        return statisticsdata.allyearsfilteredseriedata;
-    }
+export function createAllYearsFilteredSeriedata(): ChartClassOptions {
+    // New function   
+    const charttitle = 'Päivittäinen keskilämpötila';
     const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
+    const tempseries: ChartClassSerie[] = yearlyarrangeddata.map(yeardata => (
+        createChartClassSerie(yeardata.name,  yeardata.values.map(value => ([value.date, value.average])), 1)
+    ))
+    const series: ChartClassSerie[] = [];
+    tempseries.forEach(a => series.push(a));
+    
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpötila/℃');
+    returnvalue.series = series;
+    returnvalue.legend.show = false;
 
-    let returnvalues: GraphSerie[] = yearlyarrangeddata.map(yeardata => {
-        const item = yeardata.values.map(value => ({
-            value: createGraphItem(value.date, value.average, false), 
-            tooltip: `${getDateTxt(value.date)} ${roundNumber(value.average, 1)}°C`,
-            estimate: false,   
-        }))
-        return createGraphSerie(yeardata.name, '',0, item, false, 0)
-    })
-    return createGraphSerieType(returnvalues.filter(f => true), { series: [{ name: '', markersize: 1 }] });
+    return returnvalue;
 }
-export function CFcreateYearlyFilteredSeriedata(): GraphSerieType {
-    if (operationMode != 0) {
-        return statisticsdata.yearlyfilteredseriedata;
+
+interface ChartClassXAxis {
+    name: string;
+    type: string;
+    formatter:  (value: any) => string;
+}
+function createChartClassXAxis(name: string): ChartClassXAxis {
+    return {name: name, type: undefined, formatter: null};
+}
+interface ChartClassYAxis {
+    name: string;
+    formatter: (value: any) => string;
+}
+function createChartClassYAxis(name: string): ChartClassYAxis {
+    return {name: name, formatter: null};
+}
+interface ChartClassSerie {
+    name: string;
+    data: any;
+    type: string | undefined;
+    symbol: object | undefined;
+    trend: boolean | undefined;
+    num: number;
+}
+function createChartClassSerie(name: string, data: any, symbolsize: number | undefined): ChartClassSerie {
+    return {name: name, data: data, type: undefined, symbol: {size: symbolsize}, trend: false, num: -1};
+}
+interface ChartClassLegend {
+    show: boolean;
+    tooltipformatter: (par: any) => string;
+    selected: string[] | undefined;
+}
+function createChartClassLegend(): ChartClassLegend {
+    return {show: true, tooltipformatter: null, selected: undefined}
+}
+interface ChartClassOptions {
+    title1: string;
+    title2: string | undefined;
+    xaxis: ChartClassXAxis;
+    yaxis: ChartClassYAxis[];
+    series: ChartClassSerie[];
+    legend: ChartClassLegend;
+    animation: boolean;
+}
+function createChartClassOptions(title1: string, title2: string | undefined, xaxistitle: string, yaxistitle: string): ChartClassOptions {
+    return {
+        title1: title1, 
+        title2: title2, 
+        xaxis: createChartClassXAxis(xaxistitle),
+        yaxis: [createChartClassYAxis(yaxistitle)], 
+        series: [], 
+        legend: createChartClassLegend(),
+        animation: false,
     }
-    let dddata = localCreateYearlyFilteredSeriedata();
-    return dddata;
 }
-function localCreateYearlyFilteredSeriedata(): GraphSerieType {
-    function serietooltipcallback(seriename: string, value: ReturnDataValue): string {
-        return `${seriename} ${getDateTxt(new Date(value.year, value.date.getMonth(), value.date.getDate()))} ${roundNumber(value.value, 1)}°C`;
-    }   
+export function createYearlyFilteredSeriedata(): ChartClassOptions {
+    // New function
+    const charttitle = 'Suodatetut lämpötilat';
     const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
     let lastyear = yearlyarrangeddata.length > 0 ? yearlyarrangeddata[yearlyarrangeddata.length-1].date.getFullYear(): 0;
- 
-     let yearlydata: ReturnDataType[] = [];
-    // add high and low curves to graphics
     const dailyminmaxtable = temperatureClass.getDailyMinMaxValues(yearlyarrangeddata);
+    const tempseries: ChartClassSerie[] = yearlyarrangeddata.map(yeardata => (
+        createChartClassSerie( ''+yeardata.date.getFullYear(), 
+            yeardata.values.map(value => 
+                ([new Date(temperatureClass.defaultyear, value.date.getMonth(), value.date.getDate()), value.averagefiltered])), 
+                ChartDefaultSymbolSize)
+        ))
+    const series: ChartClassSerie[] = [];
+    tempseries.forEach(a => series.push(a));
+    series.push(createChartClassSerie( 'Korkein',  
+        dailyminmaxtable.map(day => [day.date, day.totalfiltered.max.value > getTempMaxDefaultValue() ? day.totalfiltered.max.value : NaN]), ChartDefaultSymbolSize));
+    series.push( createChartClassSerie( 'Matalin', 
+        dailyminmaxtable.map(day => [day.date, day.totalfiltered.min.value < getTempMinDefaultValue() ? day.totalfiltered.min.value : NaN]), ChartDefaultSymbolSize));
 
-    yearlydata.push(createSerie_7('Korkein', dailyminmaxtable, 
-        (minmax) => (new Date(temperatureClass.defaultyear, minmax.monthno-1, minmax.totalfiltered.max.value > getTempMaxDefaultValue() ? minmax.total.max.date.getDate():  minmax.date.getDate())),
-        (minmax) => (minmax.totalfiltered.max.value > getTempMaxDefaultValue() ? minmax.totalfiltered.max.value : NaN), 
-        (minmax) => (minmax.totalfiltered.max.value > getTempMaxDefaultValue() ? minmax.totalfiltered.max.date.getFullYear(): NaN),
-        serietooltipcallback));
-    yearlydata.push(createSerie_7('Matalin', dailyminmaxtable, 
-        (minmax) => (new Date(temperatureClass.defaultyear, minmax.monthno-1, minmax.totalfiltered.min.value < getTempMinDefaultValue() ? minmax.total.min.date.getDate():minmax.date.getDate())),
-        (minmax) => (minmax.totalfiltered.min.value < getTempMinDefaultValue() ? minmax.totalfiltered.min.value : NaN), 
-        (minmax) => (minmax.totalfiltered.min.value < getTempMinDefaultValue() ? minmax.totalfiltered.min.date.getFullYear() : NaN),
-        serietooltipcallback));
-    
-    // add yearly graphs
-    let seriedata = yearlyarrangeddata.map(yeardata => {
-        return createReturnDataType(`Vuosi ${yeardata.date.getFullYear()}`,
-            yeardata.values.map(value => {
-                return createReturnDataValue(new Date(temperatureClass.defaultyear, value.date.getMonth(), value.date.getDate()), 
-                    value.averagefiltered, value.date.getFullYear(), false, /* estimate */ serietooltipcallback);
-            }))
-    })
-    seriedata.forEach(s => {
-        yearlydata = yearlydata.concat(s);
-    })
-    //yearlydata = yearlydata.concat(seriedata);
-    //console.log(yearlydata.length)
-
-    const returnvalues: GraphSerie[] = yearlydata.map(dd => {
-        return createGraphSerie(dd.name, '',0, dd.values.map(value => ({
-                value: createGraphItem(value.date, value.value, false), 
-                tooltip: createTooltip(dd.name, value)
-        })), false, 0)
-    })
-    return createGraphSerieType(returnvalues, { showlegend: true, 
-        selection: [`Vuosi ${lastyear}`, 'Korkein', 'Matalin'], series: [{ name: 'Matalin', color: '#777777' }, { 'name': 'Korkein', color: '#777777' }] });
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpötila/℃');
+    returnvalue.series = series;
+    returnvalue.legend.selected = [`${lastyear}`, 'Korkein', 'Matalin'];
+    return returnvalue;
 }
-export function CFcreateLastYearsSeriedata(): GraphSerieType {
-    function serietooltipcallback(seriename: string, value: ReturnDataValue): string {
-        return `${seriename} ${getDateTxt(new Date(value.year, value.date.getMonth(), value.date.getDate()))} ${roundNumber(value.value, 1)}°C`;
-    } 
+export function createLastYearsSeriedata(): ChartClassOptions {
+    // New function
+    const charttitle = 'Viimeinen vuosi';
 
-    if (operationMode != 0) {
-        return statisticsdata.lastyersseriedata;
-    }
     const allvalues = temperatureClass.getAllFilteredDataYearlyArranged();
     const dailyminmaxtable: AverageCalculated[] = temperatureClass.getDailyMinMaxValues(allvalues);
 
@@ -953,21 +925,21 @@ export function CFcreateLastYearsSeriedata(): GraphSerieType {
         curdate = new Date( curdate.getFullYear(), curdate.getMonth(), curdate.getDate()+1);
     }
 
-    const morningserie = createSerie_4('Aamu', fillledlastyearreadings, (reading) => (reading.morning), null, serietooltipcallback);
-    const eveningserie = createSerie_4('Ilta', fillledlastyearreadings, (reading) => (reading.evening), null, serietooltipcallback);
-    let estimateparams = [];//addEstimatesToParameters(allyears);
+    const morningserie: ChartClassSerie = createChartClassSerie('Aamu', fillledlastyearreadings.map(reading => [reading.date, reading.morning]), ChartDefaultSymbolSize);
+    const eveningserie: ChartClassSerie = createChartClassSerie('Ilta', fillledlastyearreadings.map(reading => [reading.date, reading.evening]), ChartDefaultSymbolSize);
+    let estimateparams: any = [];//addEstimatesToParameters(allyears);
     let today = new Date();
     today = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (today.getHours() > 16 ? 1 : 0));
-    morningserie.values.forEach((day, dayindex) => {
+    morningserie.data.forEach((day, dayindex) => {
         if (day.date > today) estimateparams.push(createGraphParams(morningserie.name, 'circle', 8, dayindex))
     })
-    eveningserie.values.forEach((day, dayindex) => {
+    eveningserie.data.forEach((day, dayindex) => {
         if (day.date > today) estimateparams.push(createGraphParams(eveningserie.name, 'circle', 8, dayindex))
     })
     // get minmax filler data for previous year values
     const startyear = firstdate.getFullYear();
-    let maxdataarray: ReturnDataValue[] = [];
-    let mindataarray: ReturnDataValue[] = [];
+    let maxdataarray: any = [];
+    let mindataarray: any = [];
     let dateindex = dailyminmaxtable.findIndex(item => item.day == firstdate.getDate() && item.monthno-1 == firstdate.getMonth());
     if (dateindex >= 0) {
         while (dateindex < dailyminmaxtable.length) {
@@ -983,98 +955,71 @@ export function CFcreateLastYearsSeriedata(): GraphSerieType {
                 lowdate = minmax.evening.min.value<minmax.morning.min.value?minmax.evening.min.date.getFullYear():minmax.morning.min.date.getFullYear();
             }
 
-            const newitemmax = createReturnDataValue(new Date(startyear, minmax.monthno-1, minmax.day), 
-                highvalue, highdate, false, /* estimate */ serietooltipcallback);
+            const newitemmax = [new Date(startyear, minmax.monthno-1, minmax.day), highvalue];
             maxdataarray.push(newitemmax);
-            const newitemmin = createReturnDataValue(new Date(startyear, minmax.monthno-1, minmax.day), 
-                lowvalue, lowdate, false, /* estimate */ serietooltipcallback);
+            const newitemmin = [new Date(startyear, minmax.monthno-1, minmax.day), lowvalue];
             mindataarray.push(newitemmin);
 
             dateindex++;
         }
     }
+    const maxserie = createChartClassSerie('Korkein', maxdataarray.concat(dailyminmaxtable.map(value => 
+        [ (value.evening.max.value > getTempMaxDefaultValue()) ? new Date(startyear+1, value.monthno - 1, value.day) : NaN,
+          (value.evening.max.value > getTempMaxDefaultValue()) ? value.evening.max.value>value.morning.max.value?value.evening.max.value:value.morning.max.value : NaN])), ChartDefaultSymbolSize);
 
-    const maxserie = createReturnDataType('Korkein', maxdataarray.concat(createSerie_3(dailyminmaxtable, startyear + 1,
-        (value) => (value.evening.max.value>value.morning.max.value?value.evening.max.value:value.morning.max.value),
-        (value) => (value.evening.max.value>value.morning.max.value?value.evening.max.date.getFullYear():value.morning.max.date.getFullYear()),
-        serietooltipcallback)));
-
-    const minserie = createReturnDataType('Matalin', mindataarray.concat(createSerie_3(dailyminmaxtable, startyear + 1,
-        (value) => (value.evening.min.value < value.morning.min.value ? value.evening.min.value : value.morning.min.value),
-        (value) => (value.evening.min.value < value.morning.min.value ? value.evening.min.date.getFullYear() : value.morning.min.date.getFullYear()),
-        serietooltipcallback)));
+    const minserie = createChartClassSerie('Matalin', mindataarray.concat(dailyminmaxtable.map(value => 
+        [ (value.evening.max.value > getTempMaxDefaultValue()) ? new Date(startyear+1, value.monthno - 1, value.day) : NaN,
+         (value.evening.max.value > getTempMaxDefaultValue()) ? value.evening.min.value < value.morning.min.value ? value.evening.min.value : value.morning.min.value : NaN])), ChartDefaultSymbolSize);
 
     const allseries = [morningserie, eveningserie, maxserie, minserie];
-    const returnvalues: GraphSerie[] = allseries.map(serie => {
-        return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-                value: createGraphItem(value.date, value.value, false), 
-                tooltip: createTooltip(serie.name, value),
-        })), false, 0)
-    })
-    // series: estimateparams
-    return createGraphSerieType(returnvalues, { showlegend: true, 
-        selection: [`Aamu`, 'Ilta', 'Korkein', 'Matalin'], 
-        series: [{ name: 'Matalin', color: '#777777' }, { 'name': 'Korkein', color: '#777777' }].concat(estimateparams),
-        legend: {items: temperatureClass.monthnames} 
-    });
-}
-export function CFcreateDailyDiffdata(): GraphSerieType {
-    function serietooltipcallback(seriename: string, value: ReturnDataValue): string {
-        let daytxt = isNaN(value.year) ? 
-            `${value.date.getDate()}.${value.date.getMonth()+1}` : 
-            getDateTxt(new Date(value.year, value.date.getMonth(), value.date.getDate()));
-        return `${seriename} ${daytxt} ${roundNumber(value.value, 1)}°C`;
-    } 
 
-    if (operationMode != 0) {
-        return statisticsdata.dailydiffdata;
-    }
-    
+
+    const series: ChartClassSerie[] = [];
+    series.push(morningserie);
+    series.push(eveningserie);
+
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpötila/℃');
+    returnvalue.series = allseries;
+
+    return returnvalue;
+
+}
+export function createDailyDiffdata(): ChartClassOptions {
+    // New function
+    const charttitle = 'Aamun ja illan ero (suodatettu)';
     const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
     const dailyminmaxtable = temperatureClass.getDailyMinMaxValues(yearlyarrangeddata);
 
-    const averageserie = createSerie_4('Keskiarvo', dailyminmaxtable, (value) => (value.differencefiltered.average), (value) => (NaN), serietooltipcallback);
-    const maxserie = createSerie_4('Maksimi', dailyminmaxtable, (value) => (value.differencefiltered.max.value > getTempMaxDefaultValue() ? value.differencefiltered.max.value : NaN), 
-        (value) => (value.differencefiltered.max.value > getTempMaxDefaultValue() ? value.differencefiltered.max.date.getFullYear() : NaN), serietooltipcallback);
-    const minserie = createSerie_4('Minimi',dailyminmaxtable, (value) => (value.differencefiltered.min.value < getTempMinDefaultValue() ? value.differencefiltered.min.value : NaN), 
-        (value) => (value.differencefiltered.min.value < getTempMinDefaultValue() ? value.differencefiltered.min.date.getFullYear(): NaN),serietooltipcallback);
+    const averageserie: ChartClassSerie = createChartClassSerie('Keskiarvo', dailyminmaxtable.map( value => [value.date, value.differencefiltered.average]), ChartDefaultSymbolSize);
+    const maxserie:     ChartClassSerie = createChartClassSerie('Maksimi',   dailyminmaxtable.map( value => [
+        value.differencefiltered.max.value > getTempMaxDefaultValue() ? new Date(temperatureClass.defaultyear, value.date.getMonth(), value.date.getDate()) : NaN, 
+        value.differencefiltered.max.value > getTempMaxDefaultValue() ? value.differencefiltered.max.value : NaN]), ChartDefaultSymbolSize); 
+    const minserie:     ChartClassSerie = createChartClassSerie('Minimi',   dailyminmaxtable.map( value => [
+        value.differencefiltered.min.value < getTempMinDefaultValue() ? new Date(temperatureClass.defaultyear, value.date.getMonth(), value.date.getDate()) : NaN, 
+        value.differencefiltered.min.value < getTempMinDefaultValue() ? value.differencefiltered.min.value : NaN]), ChartDefaultSymbolSize); 
 
     let lastyear = '';
-    const yearseries = yearlyarrangeddata.map(year => {
-        lastyear = year.name;
-        return createReturnDataType(year.name, year.values.map(reading => {
-            return createReturnDataValue(new Date(temperatureClass.defaultyear, reading.date.getMonth(), reading.date.getDate()), 
-                reading.differencefiltered, reading.date.getFullYear(), 
-                false, // estimate
-                serietooltipcallback);
-        }));
+    const tempseries = yearlyarrangeddata.map(year => {
+       lastyear = year.name;
+       return createChartClassSerie(year.name, year.values.map(reading => 
+           [new Date(temperatureClass.defaultyear, reading.date.getMonth(), reading.date.getDate()), reading.differencefiltered]), ChartDefaultSymbolSize);
     })
-    
-    let allseries = [averageserie, maxserie, minserie];
-    allseries = allseries.concat(yearseries);
-    
-    const returnvalues: GraphSerie[] = allseries.map(serie => {
-        return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-                value: createGraphItem(value.date, value.value, false), 
-                tooltip: createTooltip(serie.name, value),
-        })), false, 0)
-    })
-    const selection = [lastyear, 'Keskiarvo', 'Maksimi', 'Minimi']
-    const seriedata = {
-        data: returnvalues.filter(f => true),
-        params: { showlegend: true, series: [{ name: 'Minimi', color: '#777777' }, { name: 'Maksimi', color: '#777777' }], selection: selection }
-    };
-    return seriedata;
-}
-export function CFcreateYearlyHighValuedata(): GraphSerieType {
-    function serietooltipcallback(seriename: string, value: ReturnDataValue): string {
-        let daytxt = isNaN(value.year) ? `???` : ` vuosi ${value.year}`;
-        return `${seriename} ${daytxt} ${roundNumber(value.value, 0)} kpl`;
-    } 
+    const series: ChartClassSerie[] = [];
+    tempseries.forEach(a => series.push(a));
+    series.push(averageserie);
+    series.push(maxserie);
+    series.push(minserie);
 
-    if (operationMode != 0) {
-        return statisticsdata.yearlyhighvaluedata;        
-    }
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpöero/℃');
+    returnvalue.series = series;
+    returnvalue.xaxis.formatter = (value)=>`${temperatureClass.monthnames[new Date(value).getMonth()]}`
+    returnvalue.legend.selected = [lastyear, 'Keskiarvo', 'Maksimi', 'Minimi']
+    return returnvalue;
+}
+export function createYearlyHighValuedata(): ChartClassOptions {
+    // New function
+    const charttitle = 'Ennätyslämpötilat/vuosi (kpl)';
+
     const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
     const dailyminmaxtable = temperatureClass.getDailyMinMaxValues(yearlyarrangeddata);
 
@@ -1110,38 +1055,55 @@ export function CFcreateYearlyHighValuedata(): GraphSerieType {
         else yearlyminmaxvalues[yearlyminmaxvalues.length-1].low = NaN;
     }
     //---------------
-    const highseriename = 'Ylin';
-    const highserie = createSerie_8(highseriename, yearlyminmaxvalues, (value) => (value.high), lastyearestimate, serietooltipcallback);
-    const lowserie = createSerie_8('Alin', yearlyminmaxvalues, (value) => (value.low), lastyearestimate, serietooltipcallback);
-    const hightrendserie = createSerie_9('Ylimpien suuntaus', yearlyminmaxvalues, (v) => (v.high), serietooltipcallback)
-    const lowtrendserie = createSerie_9('Alimpien suuntaus', yearlyminmaxvalues, (v) => (v.low), serietooltipcallback)
-    //---------------
-    const allseries = [lowserie, highserie, hightrendserie, lowtrendserie];
-    allseries.forEach(ser => {
-        ser.values = ser.values.filter(s => true)
-    })
-    const returnvalues: GraphSerie[] = allseries.map(serie => {
-        return createGraphSerie(serie.name, '', 0, serie.values.filter(f => true).map(value => {
-            let origvalue = null;
-            if (value.estimate) {
-                yearlyminmaxvalues.forEach(yy => {
-                    if (yy.year == value.date.getFullYear()) {
-                        if (serie.name == highseriename) origvalue = isNaN(yy.highorig) ? NaN : `(${yy.highorig})`;
-                        else  origvalue = isNaN(yy.loworig) ? NaN :`(${yy.loworig})`;
-                    }
-                })
-            }
-            return {
-                value: createGraphItem(value.date, value.value, false), 
-                tooltip: `${createTooltip(serie.name, value)} ${origvalue == null ? '' : origvalue}`,
-            }
-        }), false, 0)
-    })
-    let estimateitems = addEstimatesToParameters(allseries);
-    const params = {showlegend: true, series: estimateitems, xaxisname: 'Kpl/vuosi'};
 
-    return createGraphSerieType(returnvalues, params)
+    const highseriename = 'Ylin';
+    const highserie: ChartClassSerie = createChartClassSerie(highseriename, yearlyminmaxvalues.map( val =>  ({value: [new Date(val.year, 0, 1), val.high], year: val.year })), ChartDefaultSymbolSize);
+    const lowserie: ChartClassSerie = createChartClassSerie('Alin', yearlyminmaxvalues.map( val => ({value: [new Date(val.year, 0, 1), val.low ], year: val.year })), ChartDefaultSymbolSize);
+    const temp1: any = [];
+    highserie.data = highserie.data.forEach(a => temp1.push(a));
+    highserie.data = temp1;
+    const temp2:any = [];
+    lowserie.data = lowserie.data.forEach(a => temp2.push(a));
+    lowserie.data = temp2;
+
+    if (lastyearestimate) {
+        highserie.data[highserie.data.length-1].estimate = true;
+        highserie.data[highserie.data.length-1].symbol = EstimateSymbol;
+        highserie.data[highserie.data.length-1].symbolsize = EstimateSymbolsize;
+        lowserie.data[lowserie.data.length-1].estimate = true;
+        lowserie.data[lowserie.data.length-1].symbol = EstimateSymbol;
+        lowserie.data[lowserie.data.length-1].symbolsize = EstimateSymbolsize;
+    }
+
+    function createTrendSerie(seriename: string, yearlyminmaxvalues: YearlyMinMax[], dataFunc: datafunction): ChartClassSerie {
+        let trendserie: ChartClassSerie = createChartClassSerie(seriename, [], ChartDefaultSymbolSize);
+        const trenddata = createTrendCalcTable(yearlyminmaxvalues.map(v => (createTrendCalcData(v.year, dataFunc(v)))));
+        const trend = CFcalculateTrend([trenddata]);
+        if (!isNaN(trend.k) && !isNaN(trend.b)) {
+            trendserie = createChartClassSerie(trendserie.name, yearlyminmaxvalues.map(val => ({value: [new Date(val.year, 0, 1), trend.k * val.year + trend.b], year: 0})), ChartDefaultSymbolSize);
+        }
+        return trendserie;
+    }
+    const temphightrendserie = createTrendSerie('Ylimpien suuntaus', yearlyminmaxvalues, (v) => (v.high));
+    const hightrendserie: ChartClassSerie = createChartClassSerie('Ylimpien suuntaus', [], ChartDefaultSymbolSize);
+    temphightrendserie.data.map(t => hightrendserie.data.push(t));
+
+    const templowtrendserie = createTrendSerie('Alimpien suuntaus', yearlyminmaxvalues, (v) => (v.low));
+    const lowtrendserie: ChartClassSerie = createChartClassSerie('Alimpien suuntaus', [], ChartDefaultSymbolSize);
+    templowtrendserie.data.map(t => lowtrendserie.data.push(t));
+
+    //---------------
+
+    const series: ChartClassSerie[] = [];
+
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Kpl/vuosi');
+    returnvalue.series.push(highserie);
+    returnvalue.series.push(lowserie);
+    returnvalue.series.push(hightrendserie);
+    returnvalue.series.push(lowtrendserie);
+    return returnvalue;
 }
+
 export function CFcalculateMonthlyAverages(): YearlyAveragesEstimates {
     if (operationMode != 0) {
         return statisticsdata.monthlyaverages;
@@ -1169,7 +1131,7 @@ export function CFcalculateMonthlyAverages(): YearlyAveragesEstimates {
         );
     };
 
-    let stdevarray = [];
+    let stdevarray: any = [];
     const allvalues = CFgetAllReadings();
     for (var month = 0; month < 12; month++) {
         let arr = allvalues.values.map(val => (
@@ -1216,46 +1178,48 @@ interface MonthlyStats {
     high: number;
     low: number;
 }
-export function CFcreateYearlyTrendSeriedata(): GraphSerieType {
-    function serietooltipcallback(seriename: string, value: ReturnDataValue): string {
-        return `${seriename} ${value.year} ${roundNumber(value.value, 1)}°C`;
-    } 
+export function createYearlyTrendSeriedata(): ChartClassOptions {
+    // New function
+    const charttitle = 'Vuosittainen suuntaus';
 
-    if (operationMode != 0) {
-        return statisticsdata.yearlytrendseriedata;
-    }
-
-    const yeartemperatureserie = createSerie_5('Lämpötila', temperatureClass.yearlyMonthlyAverages.yearlydata, (value) => (value.yearlyaverage), serietooltipcallback);
-    const yeardiffserie = createSerie_5('Illan ja aamun ero', temperatureClass.yearlyMonthlyAverages.yearlydata, (value) => (value.yearlyaveragediff), serietooltipcallback);
+    const yeartemperatureserie = createChartClassSerie('Lämpötila', temperatureClass.yearlyMonthlyAverages.yearlydata.map(val => ({value: [val.year, val.yearlyaverage], symbol: val.estimate ? EstimateSymbol : undefined, symbolsize: val.estimate ? EstimateSymbolsize : undefined})), ChartDefaultSymbolSize);
+    const yeardiffserie = createChartClassSerie('Illan ja aamun ero', temperatureClass.yearlyMonthlyAverages.yearlydata.map( (val) => ({value: [val.year, val.yearlyaveragediff], symbol: val.estimate ? EstimateSymbol : undefined, symbolsize: val.estimate ? EstimateSymbolsize : undefined})), ChartDefaultSymbolSize);   
 
     // --------------------------
+
+    function createTrendSerie(seriename: string, tempserie: ChartClassSerie): ChartClassSerie {
+        let trenddata = createTrendCalcTable(tempserie.data.map(v => (createTrendCalcData(v[0], v[1]))));
+        const trend = CFcalculateTrend([trenddata]);
+        if (isNaN(trend.k)) return createChartClassSerie(seriename, [], 0);
+
+        return createChartClassSerie(seriename, tempserie.data.map(value => 
+            [ new Date(value[0], 0, 1), value[0] * trend.k + trend.b]), ChartDefaultSymbolSize);
+    }
     // calculate temperature trend
-    let trendserie = createSerie_1('Suuntaus', yeartemperatureserie, serietooltipcallback);
+    let trendserie = createTrendSerie('Suuntaus', yeartemperatureserie);
     // calculate difference trend
-    let difftrendserie = createSerie_1('Erosuuntaus', yeardiffserie, serietooltipcallback);
+    let difftrendserie = createTrendSerie('Erosuuntaus', yeardiffserie);
 
-    const allseries = [yeartemperatureserie, yeardiffserie];
-    allseries.push(trendserie);
-    allseries.push(difftrendserie);
-    
-    const returnvalues: GraphSerie[] = allseries.map(serie => {
-        return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-            value: createGraphItem(value.date, value.value, false), 
-            tooltip: createTooltip(serie.name, value),
-        })), false, 0)
-    })
-    let estimateseries = addEstimatesToParameters(allseries);
-    let params = { rangeoffset: 1, showlegend: true, series: estimateseries };
-    return createGraphSerieType(returnvalues, params)
+    yeartemperatureserie.data.forEach(v => v[0] = new Date(v[0],0, 1));
+    yeardiffserie.data.forEach(v => v[0] = new Date(v[0],0, 1));
 
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpötila/℃');
+    returnvalue.series.push(yeartemperatureserie);
+    returnvalue.series.push(yeardiffserie);
+    returnvalue.series.push(trendserie);
+    returnvalue.series.push(difftrendserie);
+
+    return returnvalue;
+  
 }
-export function createTrendForGivenMonths(monthnumbers: number[], monthnames: string[]): GraphSerieParams {
-    let datavalues: GraphSerie[] = [];
+
+export function createTrendForGivenMonths(monthnumbers: number[], monthnames: string[]): ChartClassSerie[] {
+    let datavalues: ChartClassSerie[] = [];
     const years = temperatureClass.yearlyMonthlyAverages.yearlydata;
     const curyear = new Date().getFullYear();
     const curmonth = new Date().getMonth();
-    let toofewvalues = [];
-    let ogiginaldestimates = [];
+    let toofewvalues: any = [];
+    let ogiginaldestimates: any = [];
     const monthlydata = monthnumbers.map((monthnumber) => {
         let estimates = false;
         const data =  years.map(y => {
@@ -1272,6 +1236,7 @@ export function createTrendForGivenMonths(monthnumbers: number[], monthnames: st
                         }
                         else {
                             y.months[monthnumber-1].estimate = false;
+                            y.months[monthnumber-1].estimate = false;
                             ogiginaldestimates.push({year: y.year, monthno: monthnumber, estimate: true});
                         }
                     }
@@ -1287,213 +1252,137 @@ export function createTrendForGivenMonths(monthnumbers: number[], monthnames: st
     monthlydata.forEach(month => {
         let found = monthnumbers.indexOf(month.month+1);
         if (found >= 0) {
-            let values = month.data.map(value => ({
-                value: createGraphItem(new Date(value.year, 0, 1), value.value, value.estimate), 
-                tooltip: `${value.year} ${monthnames[found]} ${roundNumber(value.value, 1)}`,
-            }));
-            datavalues.push( createGraphSerie( monthnames[datavalues.length], 'location', 0, values, false, monthnumbers[found]));
+            let values = month.data.map(val => ({value: [new Date(val.year, 0, 1), val.value], symbol: val.estimate ? EstimateSymbol : undefined, symbolsize: val.estimate ?EstimateSymbolsize : undefined})); 
+            datavalues.push( createChartClassSerie( monthnames[datavalues.length], values, ChartDefaultSymbolSize));
+            datavalues[datavalues.length-1].num = month.month + 1;
         }
     });
     // calculate and create trend line
     let calctable: TrendCalcTable[] = monthlydata.map(month => (
         createTrendCalcTable(month.data.map(data => ( createTrendCalcData(data.year, data.value))))));
     // ----------------
-    // find estimates
-    const tempseries = datavalues.map(dvalue => {
-        return createReturnDataType( dvalue.name, dvalue.values.map(day => {
-            return createReturnDataValue(new Date(temperatureClass.defaultyear, day.value[0].getMonth(), day.value[0].getDate()),
-                day.value[1], day.value[0].getFullYear(), 
-                day.value[2], // estimate
-            ) 
-        }))
-    })
-    let estimateparameters = addEstimatesToParameters(tempseries);
-    toofewvalues.forEach(par => {
-        estimateparameters.push(createGraphParams(temperatureClass.monthnames[par.monthindex], 'triangle', 24, par.monthindex));
-    })
-    ogiginaldestimates.forEach(est => {
-        let searchyear = years.find(y => y.year == est.year);
-        if (searchyear) {
-            searchyear.months[est.monthno].estimate = est.estimate;
-        }
-    })
-    // ----------------
     let trend = CFcalculateTrend(calctable);
-    let newvalues = years.map((yearserie) => ({ 
-        value: createGraphItem(new Date(yearserie.year, 0, 1), isNaN(trend.k) ? NaN : yearserie.year * trend.k + trend.b, false), 
-        tooltip: `${yearserie.year} Suuntaus ${isNaN(trend.k) ? '???' : roundNumber(yearserie.year * trend.k + trend.b, 1)}`
-    }))
-    if (isNaN(trend.k)) datavalues.push( createGraphSerie( `Trendi --- °C/10v`, 'location', 0, newvalues, true, -1));
-    else datavalues.push( createGraphSerie( `Trendi ${trend.k > 0 ? '+' : ''}${roundNumber(trend.k * 10, 1)}°C/10v`, 'location', 0, newvalues, true, -1));
+    let newvalues = years.map((yearserie) => [new Date(yearserie.year, 0, 1), isNaN(trend.k) ? NaN : yearserie.year * trend.k + trend.b]);
 
-    return {values: datavalues, series: estimateparameters};
-}
-function replaceNulls(data) {
-    data.data.forEach(serie => {
-        serie.values.forEach(val => {
-            val.value[0] = new Date(val.value[0])
-            if (val.value[1] == null) {
-                val.value[1] = NaN;
-            }
-        })
-    })
-    return data;
-}
-function compareSeriedata(title: string, d1: GraphSerieType, d2: any) {
-        let yearindex = 0;
-        console.log(title);
-        if (d1.data.length != d2.data.length) {
-            console.log(`${d1.data.length} <> ${d2.data.length} different length of data`)
-        }
-        while (yearindex < d1.data.length) {
-            if (d1.data[yearindex].name != d2.data[yearindex].name || 
-                d1.data[yearindex].location != d2.data[yearindex].location ||
-                d1.data[yearindex].index != d2.data[yearindex].index ||
-                d1.data[yearindex].trend != d2.data[yearindex].trend ||
-                d1.data[yearindex].year != d2.data[yearindex].year
-            ) {
-                console.log(d1.data[yearindex]);
-            }
-            if (d1.data[yearindex].values.length != d2.data[yearindex].values.length) {
-                console.log(`${d1.data[yearindex].name} different length of values`)
-            }
-            for (let dayindex = 0; dayindex < d1.data[yearindex].values.length; dayindex++) {
-                let t1: Date = new Date(d1.data[yearindex].values[dayindex].value[0]);
-                let t2: Date = new Date(d2.data[yearindex].values[dayindex].value[0]);
-                let t3 = t2.getTime();
-                let t4 = t1.getTime();
-                let val1 = d1.data[yearindex].values[dayindex].value[1];
-                let val2 = d2.data[yearindex].values[dayindex].value[1];
-                if (isNaN(val1))  val1 = null;
-                if (isNaN(val2))  val2 = null;
-                if (d1.data[yearindex].values[dayindex].tooltip != d2.data[yearindex].values[dayindex].tooltip) console.log(`${d1.data[yearindex].name} ${d1.data[yearindex].values[dayindex].tooltip } <> ${d2.data[yearindex].values[dayindex].tooltip }`)
-                if (t3 != t4) console.log(`${d1.data[yearindex].name} ${t1} <> ${t2}`)
-                if (val1 != val2) console.log(`${d1.data[yearindex].name} <> ${d2.data[yearindex].values[dayindex].value[1] }`)
-            }
-            yearindex++;
-        }
-        console.log('check done')
-}
-export function CFcreateMonthlySummerTrendSeriedata(): GraphSerieType {
-    if (operationMode != 0) {
-        return replaceNulls(statisticsdata.monthlysummertrendseriedata);;
+    if (isNaN(trend.k)) datavalues.push( createChartClassSerie( `Trendi --- °C/10v`, newvalues, ChartDefaultSymbolSize));
+    else {
+        const trendserie = createChartClassSerie( `Trendi ${trend.k > 0 ? '+' : ''}${roundNumber(trend.k * 10, 1)}°C/10v`, newvalues, ChartDefaultSymbolSize);
+        trendserie.trend = true;
+
+        datavalues.push(trendserie);
     }
-    const returnvalues = createTrendForGivenMonths([6, 7, 8], ['Kesäkuu', 'Heinäkuu', 'Elokuu'])
-    let data = createGraphSerieType(returnvalues.values, { rangeoffset: 1, showlegend: true, series: returnvalues.series })  
-    if (statisticsdata != null) compareSeriedata('CFcreateMonthlySummerTrendSeriedata', data, statisticsdata.monthlysummertrendseriedata);  
-    return data;
+
+    return datavalues;
 }
-export function CFcreateMonthlyWinterTrendSeriedata(): GraphSerieType {
-    if (operationMode != 0) {
-        return replaceNulls(statisticsdata.monthlywintertrendseriedata);;
-    }
-    const returnvalues = createTrendForGivenMonths([1, 2, 12], ['Tammikuu', 'Helmikuu', 'Joulukuu'])
-    let data = createGraphSerieType(returnvalues.values, { rangeoffset: 1, showlegend: true, series: returnvalues.series  })    
-    if (statisticsdata != null) compareSeriedata('CFcreateMonthlyWinterTrendSeriedata', data, statisticsdata.monthlywintertrendseriedata);  
-    return data;
-}
-export function CFcreateMonthlyFallTrendSeriedata(): GraphSerieType {
-    if (operationMode != 0) {
-        return replaceNulls(statisticsdata.monthlyfalltrendseriedata);;
-    }
-    const returnvalues = createTrendForGivenMonths([9, 10, 11], ['Syyskuu', 'Lokakuu', 'Marraskuu'])
-    return createGraphSerieType(returnvalues.values, { rangeoffset: 1, showlegend: true, series: returnvalues.series  })    
-}
-export function CFcreateMonthlySpringTrendSeriedata(): GraphSerieType {
-    if (operationMode != 0) {
-        return replaceNulls(statisticsdata.monthlyspringtrendseriedata);;
-    }
-    const returnvalues = createTrendForGivenMonths([3, 4, 5], ['Maaliskuu', 'Huhtikuu', 'Toukokuu'])
-    return createGraphSerieType(returnvalues.values, { rangeoffset: 1, showlegend: true, series: returnvalues.series  })    
-}
-export function CFcreateAllYearsAverageSeriedata(): GraphSerieType {
-    function serietooltipcallback(seriename: string, value: ReturnDataValue): string {
-        let daytxt = isNaN(value.year) ? 
-            `${value.date.getDate()}.${value.date.getMonth()+1}` : 
-            getDateTxt(new Date(value.year, value.date.getMonth(), value.date.getDate()));
-        return `${seriename} ${daytxt} ${roundNumber(value.value, 1)}°C`;
-    } 
-    if (operationMode != 0) {
-        return statisticsdata.allyearsaverageseriedata;
-    }
+
+export function createMonthlySummerTrendSeriedata(): ChartClassOptions {
+    // New function
+    const charttitle = 'Kesän suuntaus';
+
+    const series: ChartClassSerie[] = [];
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpötila/℃');
+    returnvalue.series = series;
+
+    returnvalue.series = createTrendForGivenMonths([6, 7, 8], ['Kesäkuu', 'Heinäkuu', 'Elokuu'])
+    returnvalue.animation = true;
+    return returnvalue;
+}    
+export function createMonthlyWinterTrendSeriedata(): ChartClassOptions {
+    // New function
+    const charttitle = 'Talven suuntaus';
+
+    const series: ChartClassSerie[] = [];
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpötila/℃');
+    returnvalue.series = series;
+
+    returnvalue.series = createTrendForGivenMonths([1, 2, 12], ['Tammikuu', 'Helmikuu', 'Joulukuu']);
+
+    return returnvalue;
+}    
+export function createMonthlyFallTrendSeriedata(): ChartClassOptions {
+    // New function
+    const charttitle = 'Syksyn suuntaus';
+
+    const series: ChartClassSerie[] = [];
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpötila/℃');
+    returnvalue.series = series;
+
+    returnvalue.series = createTrendForGivenMonths([9, 10, 11], ['Syyskuu', 'Lokakuu', 'Marraskuu']);
+
+    return returnvalue;
+}    
+export function createMonthlySpringTrendSeriedata(): ChartClassOptions {
+    // New function
+    const charttitle = 'Kevään suuntaus';
+
+    const series: ChartClassSerie[] = [];
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpötila/℃');
+    returnvalue.series = series;
+
+    returnvalue.series = createTrendForGivenMonths([3, 4, 5], ['Maaliskuu', 'Huhtikuu', 'Toukokuu']);
+
+    return returnvalue;
+}    
+export function createAllYearsAverageSeriedata(): ChartClassOptions {
+    // New function
+    const charttitle = 'Päivittäiset keskiarvot';
     const days = temperatureClass.dailyValues.map(day => (
         createHiLoValue(day.date, day.total.average, day.total.min.value, day.total.min.date, day.total.max.value, day.total.max.date)
     ));
     const yearlyarrangeddata = temperatureClass.getAllFilteredDataYearlyArranged();
     const curyearno = yearlyarrangeddata[yearlyarrangeddata.length-1].date.getFullYear();
+    const series: ChartClassSerie[] = [];
 
-    const minserie = createSerie_10(`Matalin`, days, 
-        (day) => (day.min.value < getTempMinDefaultValue() ? day.min.value : NaN), 
-        (day) => (day.min.value < getTempMinDefaultValue() ? day.min.date.getFullYear() : ''),
-        serietooltipcallback);
-    const maxserie = createSerie_10(`Korkein`, days, 
-        (day) => (day.max.value > getTempMaxDefaultValue() ? day.max.value : NaN), 
-        (day) => (day.max.value > getTempMaxDefaultValue() ? day.max.date.getFullYear() : ''),
-        serietooltipcallback);
-    const averageserie = createSerie_10(`Keskiarvo`, days, 
-        (day) => (day.average), 
-        (day) => (NaN),
-        serietooltipcallback);
-    savedaverageserie = averageserie;
-    const curyear = createReturnDataType(`Vuosi ${curyearno}`,yearlyarrangeddata[yearlyarrangeddata.length-1].values.map(day => {
-        return createReturnDataValue(new Date(temperatureClass.defaultyear, day.date.getMonth(), day.date.getDate()),
-            day.average, NaN, false, /* estimate */ serietooltipcallback) 
-    }));   
+    series.push(createChartClassSerie( 'Korkein',  
+        days.map(day => [day.date,  (day.max.value > getTempMaxDefaultValue() ? day.max.value : NaN)]), ChartDefaultSymbolSize));
+    series.push(createChartClassSerie( 'Matalin',  
+        days.map(day => [day.date,  (day.min.value < getTempMinDefaultValue() ? day.min.value : NaN)]), ChartDefaultSymbolSize));
+    series.push(createChartClassSerie( 'Keskiarvo',  
+        days.map(day => [day.date,  (day.average)]), ChartDefaultSymbolSize));
 
-    const allseries = [minserie, maxserie, averageserie, curyear];
+    // update average serie for later use
+    savedaverageserie.values = series[series.length-1].data.map(d => ({date: d[0], value: d[1]}));
 
-    const returnvalues: GraphSerie[] = allseries.map(serie => {
-        return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-            value: createGraphItem(value.date, value.value, false), 
-            tooltip: createTooltip(serie.name, value),
-        })), false, 0)
-    })
-    let data = createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true })    
-    if (statisticsdata != null) compareSeriedata('CFcreateAllYearsAverageSeriedata', data, statisticsdata.allyearsaverageseriedata);  
-    return data;
+    series.push(createChartClassSerie( `${curyearno}`,
+        yearlyarrangeddata[yearlyarrangeddata.length-1].values.map(day => 
+            ([new Date(temperatureClass.defaultyear, day.date.getMonth(), day.date.getDate()), day.average])), ChartDefaultSymbolSize));
+          
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpötila/℃');
+    returnvalue.series = series;
+
+    return returnvalue;
 }
-export function CFcreateAllYearsMonthlyAverageSeriedata(): GraphSerieType {
-    function serietooltipcallback(seriename: string, value: ReturnDataValue): string {
-        return `${seriename} ${temperatureClass.monthnameslong[value.date.getMonth()]} ${isNaN(value.year) ? '' : value.year} ${roundNumber(value.value, 1)}°C`;
-    } 
+export function createAllYearsMonthlyAverageSeriedata(): ChartClassOptions {
+    // New function
+    const charttitle = 'Kuukausittainen keskiarvo';
+    const minmaxseries: ChartClassSerie[] = [];
 
-    if (operationMode != 0) {
-        return statisticsdata.allyearsmonthlyaverageseriedata;
-    }
+    minmaxseries.push(createChartClassSerie( 'Korkein',  
+        temperatureClass.yearlyMonthlyAverages.monthlydata.map(day => [day.date,  ((day.total.high > getTempMaxDefaultValue() ? day.total.high : NaN))]), ChartDefaultSymbolSize));
+    minmaxseries.push(createChartClassSerie( 'Matalin',  
+        temperatureClass.yearlyMonthlyAverages.monthlydata.map(day => [day.date,  (day.total.low < getTempMinDefaultValue() ? day.total.low : NaN)]), ChartDefaultSymbolSize));
 
-    let minserie = createSerie_2(`Matalin`, temperatureClass.yearlyMonthlyAverages.monthlydata, temperatureClass.defaultyear,
-        (value) => (value.low < getTempMinDefaultValue() ? value.low : NaN), (value) => (value.lowdate.getFullYear()), serietooltipcallback);
-    let maxserie = createSerie_2(`Korkein`, temperatureClass.yearlyMonthlyAverages.monthlydata, temperatureClass.defaultyear,
-        (value) => (value.high > getTempMaxDefaultValue() ? value.high : NaN),  (value) => (value.highdate.getFullYear()), serietooltipcallback);
-
+    let lastyear = 0;  
     const yearsstatistics = temperatureClass.yearlyMonthlyAverages.yearlydata;
 
-    let lastyear = 0;   
     const allyears = yearsstatistics.map(year => {
         lastyear = year.year;
-        let estimatedmonthindexes = [];
-        const allmonths = createReturnDataType(`Vuosi ${year.year}`,year.months.map(month => {
+        let estimatedmonthindexes: any = [];
+        const allmonths = createChartClassSerie(`${year.year}`, year.months.map(month => {
             if (year.estimate && month.estimate) estimatedmonthindexes.push(month.monthno-1);
-
-            return createReturnDataValue(new Date(temperatureClass.defaultyear, month.monthno-1, 1),
-                month.monthlytemperature, yearsstatistics[yearsstatistics.length-1].year, 
-                month.estimate, /* estimate */ serietooltipcallback) 
-        }));      
+            return ({value: [new Date(temperatureClass.defaultyear, month.monthno-1, 1), month.monthlytemperature], symbol: month.estimate ? EstimateSymbol : undefined, symbolsize: month.estimate ? EstimateSymbolsize : undefined})
+        }), ChartDefaultSymbolSize);
       
         return allmonths;
-    });       
-   const allseries = [maxserie, minserie].concat(allyears);
+    });   
+   const series = minmaxseries.concat(allyears);
 
-    let estimateparams = addEstimatesToParameters(allyears);
-    const returnvalues: GraphSerie[] = allseries.map(serie => {
-        return createGraphSerie(serie.name, '', 0, serie.values.map(value => ({
-            value: createGraphItem(value.date, value.value, false), 
-            tooltip: createTooltip(serie.name, value),
-        })), false, 0)
-    })
+    const returnvalue: ChartClassOptions = createChartClassOptions(charttitle, undefined, 'Aika', 'Lämpötila/℃');
+    returnvalue.series = series;
+    returnvalue.legend.selected = [`${lastyear}`, 'Korkein', 'Matalin']
 
-    return createGraphSerieType(returnvalues, { rangeoffset: 1, showlegend: true, series: estimateparams, selection: [`Vuosi ${lastyear}`, 'Korkein', 'Matalin'] })    
-}    
+    return returnvalue;
+}
 export function CFcalculateTrend(valuearray: TrendCalcTable[]): {k: number, b: number} {
     let k = NaN;
     let b = NaN;
@@ -1522,79 +1411,6 @@ export function CFcalculateTrend(valuearray: TrendCalcTable[]): {k: number, b: n
 
     return { k, b }
 }
-
-
-// createSerie -functions -=------------------------------------
-
-
-    function createSerie_2(seriename: string, monthlydata: FilterValue[], year: number, dataFunc: datafunction, yearFunc: yearfunction, cbFunc: tooltipcallback): ReturnDataType {
-        return createReturnDataType(seriename, monthlydata.map(month => {
-            return createReturnDataValue(new Date(year, month.date.getMonth(), month.date.getDate()),
-                dataFunc(month.total), yearFunc(month.total), false, /* estimate */ cbFunc)
-        })); 
-    }    
-    function createSerie_4(seriename: string, dailyminmaxtable: Filtered[] | AverageCalculated[], dataFunc: datafunction, yearFunc: yearfunction, cbFunc: tooltipcallback): ReturnDataType {
-        return createReturnDataType(seriename, dailyminmaxtable.map(reading => {
-            return createReturnDataValue(reading.date, dataFunc(reading), yearFunc ? yearFunc(reading) : reading.date.getFullYear(), false, /* estimate */ cbFunc);
-        }));
-    }
-    function createSerie_7(seriename: string, dailyminmaxtable: AverageCalculated[], dateFunc: datefunction, dataFunc: datafunction, yearFunc: yearfunction, cbFunc: tooltipcallback): ReturnDataType {
-        return createReturnDataType(seriename, dailyminmaxtable.map(minmax => {
-            return createReturnDataValue(dateFunc(minmax), dataFunc(minmax), yearFunc(minmax), false, /* estimate */ cbFunc)
-        }))
-    }
-    function createSerie_3(dailyminmaxtable: AverageCalculated[], startyear: number, dataFunc: datafunction, yearFunc: yearfunction, cbFunc: tooltipcallback): ReturnDataValue[] {
-        return dailyminmaxtable.map(minmax => {
-            let value = NaN;
-            let date = NaN;
-            if (minmax.evening.max.value > getTempMaxDefaultValue()) {
-                value = dataFunc(minmax);
-                date = yearFunc(minmax);
-            }
-            return createReturnDataValue(new Date(startyear, minmax.monthno - 1, minmax.day),
-                value, date, false, /* estimate */ cbFunc);
-        });
-    }
-    function createSerie_8(seriename: string, yearlyminmaxvalues: YearlyMinMax[], dataFunc: datafunction, lastyearestimate: boolean, cbFunc: tooltipcallback): ReturnDataType {
-        return createReturnDataType(seriename, yearlyminmaxvalues.map((value, index) => {
-            return createReturnDataValue(new Date(value.year, 0, 1), dataFunc(value), value.year, 
-                (index == yearlyminmaxvalues.length-1 && lastyearestimate) ? true : false, /* estimate */ cbFunc);
-        }));   
-    }
-
-    function createSerie_1(seriename: string, tempserie: ReturnDataType, cbFunc: tooltipcallback): ReturnDataType {
-        let trenddata = createTrendCalcTable(tempserie.values.map(v => (createTrendCalcData(v.year, v.value))));
-        const trend = CFcalculateTrend([trenddata]);
-        if (isNaN(trend.k)) return createReturnDataType(seriename, []);
-
-        return createReturnDataType(`${seriename} ${trend.k > 0 ? '+' : '-'}${roundNumber(trend.k * 10, 1)} °C/10v`, tempserie.values.map(value => {
-            return createReturnDataValue(new Date(value.year, 0, 1),
-                value.year * trend.k + trend.b, value.year, false, /* estimate */ cbFunc);
-        }));
-    }
-    function createSerie_5(seriename: string, years: YearlyAverageData[], dataFunc: datafunction, cbFunc: tooltipcallback): ReturnDataType {
-        return createReturnDataType(seriename, years.map((value, index) => {
-            return createReturnDataValue(new Date(value.year, 0, 1),
-                value.estimate && index != years.length - 1 ? NaN : dataFunc(value), value.year, value.estimate, /* estimate */ cbFunc);
-        }));
-    }
-    function createSerie_9(seriename: string, yearlyminmaxvalues: YearlyMinMax[], dataFunc: datafunction, cbFunc: tooltipcallback): ReturnDataType {
-        let trendserie: ReturnDataType = createReturnDataType(seriename, []);
-        let trenddata = createTrendCalcTable(yearlyminmaxvalues.map(v => (createTrendCalcData(v.year, dataFunc(v)))));
-        const trend = CFcalculateTrend([trenddata]);
-        if (!isNaN(trend.k) && !isNaN(trend.b)) {
-            trendserie = createReturnDataType(trendserie.name, yearlyminmaxvalues.map(value => {
-                return createReturnDataValue(new Date(value.year, 0, 1), 
-                    trend.k * value.year + trend.b, value.year, false, /* estimate */ cbFunc);
-            }));  
-        }
-        return trendserie;
-    }
-    function createSerie_10(seriename: string, days: HiLoValue[], dataFunc: datafunction, yearFunc: yearfunction, cbFunc: tooltipcallback): ReturnDataType {
-        return createReturnDataType(seriename, days.map(day => {
-                return createReturnDataValue(day.date, dataFunc(day), yearFunc(day), false /* estimate */, cbFunc) 
-            }));        
-    }
 
 // -------------------------------------------
 
@@ -1733,3 +1549,4 @@ export function CF2SetStatisticsdata(statdata: any): number {
     if (statdata && statdata.data) statisticsdata = statdata.data;
     return oldmode;
 }
+

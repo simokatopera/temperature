@@ -24,7 +24,9 @@
         
       </script>
 
-    <script src="js/echarts5.4.3.js"></script>
+    <!-- <script src="js/echarts5.4.3.js"></script> -->
+    <script src="js/echarts6.1.0.js"></script>
+    <script src="js/Chart.js"></script>
     <link href="css/loader.css" rel="stylesheet">
     <script src="api/api.js" defer></script>
 
@@ -119,7 +121,7 @@
         #currentdaygraph {
             display: inline-block;
             width: 380px;
-            height: 200px;
+            height: 250px;
         }
         #forecastgraph {
             display: inline-block;
@@ -191,7 +193,8 @@
     <div id="app" class="container-fluid">
         <div class="page-title">
             <h1 class="hiddenstart hidden" id="ID_PageTitle">Lämpötilaseuranta {{ location }}</h1>
-            <h2>8.9.2026-1</h2>
+            <h2>25.10.2026-1</h2>
+            <h2>Chart {{ getChartVersion() }}</h2>
         </div>
         <div class="page-content">
             <div class="hiddenstart hidden">
@@ -353,6 +356,7 @@
         const vueapp = createApp({
             data() {
                 return {
+
                     monthnames: months1,
                     monthnamesLong: months2,
                     givenyears: givenyears,
@@ -610,6 +614,9 @@
                 }
             },
             methods: {
+                getChartVersion() {
+                    return Chart.getVersion();
+                },
                 gotofrontpage() {
                     window.location.href = `/?${userguid === null ? '' : 'userid=' + userguid + '&'}location=${this.location}`;
                 },
@@ -618,8 +625,8 @@
                 },
                 createLatestReadinsChart(title) {
                     this.daycharttitle = title;
-                    this.currentdayData.chart = this.createChart('currentdaygraph', 
-                        this.daycharttitle, this.createCurrentDayGraph, this.selecteddayData.chart);
+                    const chartparams = this.createCurrentDayGraph(title);
+                    if (chartparams) createNewChart('currentdaygraph', chartparams).drawChart(); 
                 },
                 updateLatestReading(observations) {
                     if (observations && observations.observations.length) {
@@ -642,10 +649,8 @@
                         this.currentdayData.data = this.latestdayvalues;
                         this.daycharttitle = 'Viimeiset lukemat';
 
-                        this.currentdayData.chart = this.createChart('currentdaygraph', 
-                            //this.daycharttitle, this.createCurrentDayGraph, this.selecteddayData.chart);
-                            this.daycharttitle, this.createCurrentDayGraph, this.currentdayData.chart);
-
+                        const chartparams = this.createCurrentDayGraph(this.daycharttitle);
+                        if (chartparams) createNewChart('currentdaygraph', chartparams).drawChart(); 
                     }
                 },
                 updateYearlyAverages() {
@@ -662,12 +667,6 @@
                     let years = null;
                     if (this.givenyears === null) years = await apiGetYears(userguid, this.location);
                     else years = this.givenyears;
-
-                    //years.data = [2024]
-
-                    //const statistics = await apiGetStatistics(userguid, this.location, years.data, this.alltemperaturereadings.filtersize, months1, months2);
-                    //CF2SetStatisticsdata({data: statistics.data.statistics})
-                    //let temperatures = {data: statistics.data.readings};
 
                     let temperatures = await apiGetTemperatures(userguid, this.location, years.data);
 
@@ -728,26 +727,45 @@
                     // initialize graphics curves
                     this.calculated.values = CFcalculateMonthlyAverages();
                     this.monthlylimits = this.calculated.values.monthlystatvalues;
-    
-                    this.createChart(this.testgraph10, 'Suodatetut lämpötilat', CFcreateYearlyFilteredSeriedata);
-                    this.createChart(this.testgraph2, 'Päivittäiset keskiarvot', CFcreateAllYearsAverageSeriedata);
-                    this.createChart(this.testgraph, 'Kuukausittainen keskiarvo', CFcreateAllYearsMonthlyAverageSeriedata);
-                    this.createChart(this.testgraph3, 'Päivittäinen keskilämpötila', CFcreateAllYearsFilteredSeriedata);
-                    this.createChart(this.testgraph4, 'Viimeinen vuosi', CFcreateLastYearsSeriedata);
-                    this.createChart(this.testgraph9, 'Aamun ja illan ero (suodatettu)', CFcreateDailyDiffdata);
-                    this.createChart(this.testgraph12, 'Ennätyslämpötilat/vuosi (kpl)', CFcreateYearlyHighValuedata);
-                    this.createChart(this.testgraph11, 'Vuosittainen suuntaus', CFcreateYearlyTrendSeriedata);
+
+                    // --------------------------------------------------
+                    const chartparams10 = createYearlyFilteredSeriedata();
+                    createNewChart(this.testgraph10, chartparams10).drawChart(); 
+                    const chartparams2 = createAllYearsAverageSeriedata();
+                    createNewChart(this.testgraph2, chartparams2).drawChart(); 
+                    const chartparams = createAllYearsMonthlyAverageSeriedata();
+                    createNewChart(this.testgraph, chartparams).drawChart(); 
+                    const chartparams3 = createAllYearsFilteredSeriedata()
+                    createNewChart(this.testgraph3, chartparams3).drawChart(); 
+                    const chartparams4 = createLastYearsSeriedata();
+                    createNewChart(this.testgraph4, chartparams4).drawChart(); 
+                    const chartparams9 = createDailyDiffdata();
+                    createNewChart(this.testgraph9, chartparams9).drawChart(); 
+                    const chartparams12 = createYearlyHighValuedata();
+                     createNewChart(this.testgraph12, chartparams12).drawChart(); 
+                    const chartparams11 = createYearlyTrendSeriedata();
+                    createNewChart(this.testgraph11, chartparams11).drawChart(); 
 
                     this.updateYearlyAverages();
 
-                    this.screenCharts.push(this.createChart(this.testgraph5, 'Kesän suuntaus', CFcreateMonthlySummerTrendSeriedata));
-                    this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                    this.screenCharts.push(this.createChart(this.testgraph6, 'Talven suuntaus', CFcreateMonthlyWinterTrendSeriedata));
-                    this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                    this.screenCharts.push(this.createChart(this.testgraph7, 'Syksyn suuntaus', CFcreateMonthlyFallTrendSeriedata));
-                    this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
-                    this.screenCharts.push(this.createChart(this.testgraph8, 'Kevään suuntaus', CFcreateMonthlySpringTrendSeriedata));
-                    this.screenCharts[this.screenCharts.length-1].trendChart.on('legendselectchanged', this.monthlytrendcallback);
+                    let ch;
+                    const chartparams5 = createMonthlySummerTrendSeriedata();
+                    (ch = createNewChart(this.testgraph5, chartparams5)).drawChart(); 
+                    this.screenCharts.push({trendChart: ch, serieOptions: chartparams5});
+                    ch.chart.on('legendselectchanged', this.monthlytrendcallback);
+                    const chartparams6 = createMonthlyWinterTrendSeriedata();
+                    (ch = createNewChart(this.testgraph6, chartparams6)).drawChart(); 
+                    this.screenCharts.push({trendChart: ch, serieOptions: chartparams6});
+                    ch.chart.on('legendselectchanged', this.monthlytrendcallback);
+                    const chartparams7 = createMonthlyFallTrendSeriedata();
+                    (ch = createNewChart(this.testgraph7, chartparams7)).drawChart(); 
+                    this.screenCharts.push({trendChart: ch, serieOptions: chartparams7});
+                    ch.chart.on('legendselectchanged', this.monthlytrendcallback);
+                    const chartparams8 = createMonthlySpringTrendSeriedata();
+                    (ch = createNewChart(this.testgraph8, chartparams8)).drawChart(); 
+                    this.screenCharts.push({trendChart: ch, serieOptions: chartparams8});
+                    ch.chart.on('legendselectchanged', this.monthlytrendcallback);
+
                     //CF2setOperationMode(0);
 
                     let itemlist = document.querySelectorAll(".hiddenstart.hidden");
@@ -765,8 +783,6 @@
                             console.log(error)
                         });
 
-                    // this.updateLatestReading(await apiGetLatestTemperatures3(this.location, 2));
-
                     this.stopSpinner(1);
                     
                     setTimeout(() => {
@@ -775,19 +791,6 @@
                             elem.addEventListener('show.bs.modal', async () => {
                                 // get latest readings when modal opened
                                 this.startSpinner(3);
-
-                            //     const saving = await apiGetSavingAllowed(userguid);
-                            //     this.latestReadingsFromNet.saveenable = saving.data.access;
-                            //     apiGetLatestTemperatures3(this.location, 7).then(stationreadings => {
-                            //         this.updateLatestReading(stationreadings);
-
-                            //         let temp = this.latestReadingsFromNet.saveenable;
-                            //         this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
-                            //          this.latestReadingsFromNet.saveenable - temp;
-                            //     })
-                            //     .catch(error => {
-                            //         console.log(error)
-                            //     });
 
                                 const stationreadings = await apiGetLatestTemperatures3(this.location, 7);
                                 this.latestReadingsFromNet = compareReadings(this.lastTemperatures, stationreadings);
@@ -807,17 +810,12 @@
                                 apiGetForecast2(this.location). then(resp => {
                                     this.forecastData.data = resp; 
                                     setTimeout(() => {
-                                        this.forecastData.chart = this.createChart('forecastgraph', 
-                                        "Ennuste", this.createForecastGraph, this.forecastData.chart);                                       
+                                        const chartparams = this.createForecastGraph();
+                                        if (chartparams) createNewChart('forecastgraph', chartparams).drawChart(); 
                                     }, 200);
                                 })
-                                this.forecastData.chart = this.createChart('forecastgraph', 
-                                    "Ennuste", this.createForecastGraph, this.forecastData.chart);
-
-                                // this.forecastData.data = await apiGetForecast2(this.location);
-                                // this.forecastData.chart = this.createChart('forecastgraph', 
-                                //     "Ennuste", this.createForecastGraph, this.forecastData.chart);
-
+                                const chartparams = this.createForecastGraph();
+                                if (chartparams) createNewChart('forecastgraph', chartparams).drawChart(); 
                             })
                         }
                         document.addEventListener('hide.bs.modal', function (event) {
@@ -904,12 +902,6 @@
                     anchor.href = this.objUrl;
                     anchor.dataset.downloadurl = ['text/plain', anchor.download, anchor.href].join(':');
                     anchor.click();
-                    // document.querySelector("body").dispatchEvent(
-                    //     new CustomEvent(eventname, {
-                    //         bubbles: true,
-                    //         detail: { text: () => successmsg },
-                    //     })
-                    // );
                 },      
                 changeeditdate(event) {
                     const date = event.target.value.split('-');
@@ -1013,21 +1005,35 @@
                 },
                 monthlytrendcallback(params) {
                     const seriestatus = Object.keys(params.selected).map(k => ({status: params.selected[k], name: k}));
-                    let i = 0;
+                    
+                    // find the chart
+                    let serieindex = 0;
                     let chart = null;
-                    while (!chart && i < this.screenCharts.length) {
-                        let j = 0;
-                        while (j < this.screenCharts[i].serieOptions.series.length && !chart) {
-                            // only one serie cheked, maybe should be more
-                            let search = seriestatus.find(s => this.screenCharts[i].serieOptions.series[j].trend == false && this.screenCharts[i].serieOptions.series[j].name == s.name);
-                            if (search) chart = this.screenCharts[i];
-                            else j++;
+                    while (!chart && serieindex < this.screenCharts.length) {
+                        let index = 0;
+                        let found = true;
+                        while (index < this.screenCharts[serieindex].serieOptions.series.length && found == true) {
+                            if (this.screenCharts[serieindex].serieOptions.series[index].trend == false) {
+                                if (seriestatus.findIndex(s => s.name == this.screenCharts[serieindex].serieOptions.series[index].name) < 0) {
+                                    found = false;
+                                }
+                            }
+                            index++;
                         }
-                        if (!chart) i++;
+                        if (found == true) chart = this.screenCharts[serieindex];
+                        else serieindex++;
                     }
                     if (!chart) return;
 
-                    const series = chart.serieOptions.series.map(d => {
+                    // check if trend serie active
+                    const trendserie = this.screenCharts[serieindex].serieOptions.series.find(s => s.trend == true) ;
+                    if (!trendserie) return;
+                    const trendactive = seriestatus.find(s => s.name == trendserie.name);
+                    if (!trendactive) alert('trendactive is undefined')
+                    if (trendactive.status == false) return;
+
+                    // find active series from chart
+                    const monthseries = chart.serieOptions.series.map(d => {
                         let search = seriestatus.find(s => s.name == d.name);
                         if (!d.trend && search && search.status === true) {
                             // serie active
@@ -1043,17 +1049,19 @@
                         return null;
                     }).filter(v => v !== null);
 
-                    const originaltrendserie = chart.serieOptions.series.find(d => d.trend == true);
-                    if (!originaltrendserie) return;
-                    const tempserie = {data: chart.serieOptions.series[0].data.map(ss => ({info: {year: ss.value[0].getFullYear(), location: ''}}))};
-                    const temp = createTrendForGivenMonths(series.map(s => s.num), series.map(s => s.name));
-                    const datavalues = temp.values;
+                    const datavalues = createTrendForGivenMonths(monthseries.map(s => s.num), monthseries.map(s => s.name));
                     const newtrendserie = datavalues.find(d => d.trend == true);
                     if (!newtrendserie) return;
-                    originaltrendserie.data = newtrendserie.values.map(v => v);
-                    originaltrendserie.name = newtrendserie.name;
-                    chart.trendChart.setOption(chart.serieOptions);
+
+                    const originaltrendserieindex = chart.serieOptions.series.findIndex(d => d.trend == true);
+                    chart.trendChart.options.series[originaltrendserieindex].data = [];
+                    newtrendserie.data.forEach(v => chart.trendChart.options.series[originaltrendserieindex].data.push(v));
+                    chart.trendChart.options.series[originaltrendserieindex].name = newtrendserie.name;
+                    chart.trendChart.options.legend.data[originaltrendserieindex].name = newtrendserie.name;
+                    trendserie.name = newtrendserie.name;
+                    chart.trendChart.chart.setOption(chart.trendChart.options);
                 },                
+
                 checkData(temperatures) {
                     temperatures.data.forEach(t => {
                         const year = t.info.year;
@@ -1083,8 +1091,6 @@
                                 const diffTime = Math.abs(d.datetimeLocal - prevdate);
                                 const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))-1; 
                                 const txt = `Missing date(s) between: ${prevdate.getDate()}.${prevdate.getMonth()+1}.${prevdate.getFullYear()} and ${d.datetimeLocal.getDate()}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()} (${diffDays})`;
-                                //alert(txt)
-                                console.log(txt)
                             }
                             else
                                 if (typeof(d.morning) == 'undefined' || typeof(d.evening) == "undefined") {
@@ -1093,130 +1099,12 @@
                                     }
                                     let value = typeof(d.morning) == 'undefined' ? "morning" : "evening";
                                     let txt = `Missing ${value} value at: ${d.datetimeLocal.getDate()}.${d.datetimeLocal.getMonth()+1}.${d.datetimeLocal.getFullYear()}`;
-                                    //alert(txt)
-                                    console.log(txt)
-                            
                                 }
                             }
                             prevdate = d.datetimeLocal;
                         })
                     })
                     
-                },
-                //------------------------------------------------------------------------------
-                createChart(element, title, funct, thischart) {
-                    this.testgraphtitles[element] = title;
-                    let trendChart = (thischart ? thischart.trendChart : this.initSerie(element));
-                    if (trendChart === null) return;
-                    const buildValues = funct();
-                    const params = buildValues.params;
-                    let serieOptions = this.buildChartOptions(title, buildValues);
-
-                    trendChart.setOption(serieOptions);
-                    return {trendChart, serieOptions, params};
-                },
-                initSerie(element) {
-                    const graphelem = document.getElementById(element);
-                    if (graphelem === null) return null;
-                    return echarts.init(graphelem);
-                },
-                getMinMaxValue(series) {
-                    let min = getTempMinDefaultValue();
-                    let max = getTempMaxDefaultValue();
-                    series.data.forEach(s => {
-                        s.values.forEach(point => {
-                            let val = Number(point.value[1])
-                            if (val > max) max = val;
-                            if (val < min) min = val;
-                        })
-                    })
-                    return { min: min, max: max }
-                },
-                getSelection(seriedata, selectedseries) {
-                    let selection = {};
-                    seriedata.data.forEach(s => {
-                        selection[s.name] = false;
-                    })
-                    if (selectedseries && selectedseries.length) {
-                        selectedseries.forEach(s => {
-                            selection[s] = true;
-                        })
-                    }
-                    return selection;
-                },                
-                buildChartOptions(title, series) {
-                    const monthnames = this.monthnames;
-                    let chartoptions = {
-                        animation: false,
-                        title: {
-                            text: '',//title,
-                        },
-                        tooltip: {
-                            trigger: 'item',
-                            formatter: function (params) {
-                                return params.data.text;
-                            }
-                        },
-                        xAxis: {
-                            type: 'time',
-                            axisLabel: {
-                                formatter: (function (value) {
-                                    let v = new Date(value);
-                                    let m = v.getMonth();
-                                    let y = v.getFullYear();
-                                    let d = v.getDate();
-                                    if (series.params && series.params.legend && series.params.legend.items) {
-                                        return series.params.legend.items[m];
-                                    }
-                                    if (series.params && series.params.legend && series.params.legend.date) {
-                                        return `${d}.${m+1}`
-                                    }
-                                    if (y == defaultYear()) return monthnames[m];
-                                    if (series.params.axistime && series.params.axistime === true) {
-                                        return `${v.getHours()}.${v.getMinutes()<10?v.getMinutes():''}${v.getMinutes()}`
-                                    }
-                                    return y.toString();
-                                })
-                            },
-                            name: 'Aika',
-                        },
-                        yAxis: {
-                            name: 'Lämpötila/°C'
-                        },
-                        series: this.createSeries(series, series.params),
-                        legend: {
-                            show: false,
-                            textStyle: { color: '#f0f', fontSize: '16' },
-                        },
-                    };
-                    if (series.params) {
-                        if (series.params.xaxisname) {
-                            chartoptions.yAxis.name = series.params.xaxisname;
-                        }
-                        if (series.params.rangeoffset != null) {
-                            let minmax = this.getMinMaxValue(series);
-                            let offset = Number(series.params.rangeoffset);
-                            chartoptions.yAxis.min = roundNumber(minmax.min - offset - 1, 0);
-                            chartoptions.yAxis.max = roundNumber(minmax.max + offset, 0);
-                        }
-                        if (series.params.rangemin != null) {
-                            chartoptions.yAxis.min = series.params.rangemin;
-                        }
-                        if (series.params.rangemax != null) {
-                            chartoptions.yAxis.max = series.params.rangemax;
-                        }
-                        if (series.params.showlegend) {
-                            chartoptions.legend.show = true;
-                        }
-                        if (series.params.selection) {
-                            chartoptions.legend.selected = this.getSelection(series, series.params.selection);
-                        }
-                        if (series.params.axistime && series.params.axistime === true) {
-                            // no operation here
-                        }
-                    }
-
-                    return chartoptions;
                 },
                 //------------------------------------------------------------------------------
                 dayselected(data) {
@@ -1241,8 +1129,8 @@
                     let series = [data.values, trend];
                     this.selecteddayData.data = series;
                     this.dailycharttitle = `Päivän ${values.data.length ? values.data[0].date.getDate() : ''}.${values.data.length ? values.data[0].date.getMonth()+1 : ''} vuosittaisarvot (${factors.k > 0 ? '+' : ''}${roundNumber(factors.k * 10, 1)}°C/10v)`;
-                    this.selecteddayData.chart = this.createChart('daygraph', 
-                        this.dailycharttitle, this.createDayGraph, this.selecteddayData.chart);
+                    const chartparams = this.createDayGraph(this.dailycharttitle);
+                    if (chartparams) createNewChart('daygraph', chartparams).drawChart(); 
                 },
                 rundays() {
                     if (this.scrollday.scroll == false) {
@@ -1286,115 +1174,115 @@
                 getDateTxt(date, daymonth) {
                     return getDateTxt(date, daymonth == true ? true : false);
                 },
-                createSeries(series, params) {
-                    let chartdata = series.data.map(values => ({
-                        type: 'line',
-                        symbolSize: 4,
-                        symbol: 'circle',
-                        data: values.values.map(s => ({
-                            value: [s.value[0], s.value[1]],
-                            name: values.location,
-                            text: `${s.tooltip}`,
-                        })),
-                        name: values.name,
-                        trend: values.trend,
-                        num: values.index,
-                    }))
-
-                    if (params) {
-                        if (params.series) {
-                            params.series.forEach(p => {
-                                if (p.name == '') {
-                                    // apply to all series
-                                    if (p.markersize !== undefined) {
-                                        chartdata.forEach(chart => {
-                                            chart.symbolSize = p.markersize;
-                                        })
-                                    }
-                                }
-                            })
-                            chartdata.forEach(d => {
-                                let found = params.series.filter(p => p.name === d.name);
-                                if (found && found.length) {
-                                    d.symbolsize = 1;
-                                    if (found.color) d.lineStyle = { color: found.color }
-
-                                    if (found.symbolindex == 'last') {
-                                        if (d.data.length) {
-                                            d.data[d.data.length-1].symbol = found.symbol;
-                                            d.data[d.data.length-1].symbolSize = found.symbolsize;
-                                        }
-                                    }
-                                    else {
-                                        let i = 0;
-                                        while (i < found.length) {
-                                            if (d.data[found[i].symbolindex]) {
-                                                if (found[i].symbol) d.data[found[i].symbolindex].symbol = found[i].symbol;
-                                            }
-                                            if (d.data[found[i].symbolindex]) {
-                                                if (found[i].symbolsize) d.data[found[i].symbolindex].symbolSize = found[i].symbolsize;
-                                            }
-                                            i++;
-                                        }
-                                    }
-                                }
-                            })
+                createCurrentDayGraph(title) {
+                    if (this.latestdayvalues.length == 0) return null;
+                    const chartparams = {
+                        title1: undefined,//title,
+                        title2: undefined,
+                        xaxis: {
+                            name: 'Aika',
+                            type: 'time',
+                            formatter: (value) => `${new Date(value).getHours()}:${new Date(value).getMinutes()< 10?'0':''}${new Date(value).getMinutes()}`
+                        },
+                        yaxis: [{
+                            name: 'Lämpötila/°C',
+                            formatter: null,
+                        }],
+                        series: [{
+                            name: 'serie1',
+                            data: [],
+                            type: undefined,
+                            symbol: {size: 2},
+                        }],
+                        legend: {
+                            show: false,
+                            tooltipformatter: (par) => `${par.value[0].getDate()}.${par.value[0].getMonth()+1}.${par.value[0].getFullYear()} ${par.value[0].getHours()}:${par.value[0].getMinutes()<10?'0':''}${par.value[0].getMinutes()} ${par.value[1]}°C`,
+                            selected: undefined,
+                            top: {legend: 0, grid: 0}
                         }
-                    }
-                    return chartdata;
+                    }                    
+                    chartparams.series[0].data = this.latestdayvalues.map(reading => [new Date(reading.datetime), reading.value]);
+                    
+                    return chartparams;
                 },
-                createCurrentDayGraph() {
-                    let datavalues = [];
-                    let readings = [];
-                    this.latestdayvalues.forEach(reading => { 
-                        readings.push({value: [reading.datetime, reading.value], 
-                            tooltip: `Klo ${reading.datetime.getHours()}:${reading.datetime.getMinutes()<10?'0':''}${reading.datetime.getMinutes()} ${roundNumber(reading.value, 1)}`});
-                    })
-                    datavalues.push({values: readings, location: '', year: -1});
-                    return {data: datavalues, params: {axistime: true}};
-                },
-                createDayGraph() {
-                    let datavalues = [];
-                    this.selecteddayData.data.forEach((serie, i) => {
-                        let values = serie.map(dd => (
-                            {value: [dd.date, dd.value], tooltip: `Päivä: ${this.getDateTxt(dd.date, false)} ${roundNumber(dd.value, 1)}`}
-                        ))
-                        datavalues.push({values: values, location: '', year: 0});
-                    });
-                    const month =  datavalues.length > 0 && datavalues[0].values.length > 0 ?  datavalues[0].values[0].value[0].getMonth() : -1;
-                    let limits = month >= 0 ? this.monthlylimits[month] : {min: -20, max: 20};
-                    return {data: datavalues, params: {rangemin: limits.min, rangemax: limits.max}}
+                createDayGraph(title) {
+                    //if (this.latestdayvalues.length == 0) return null;
+                    const chartparams = {
+                        title1: '',//title,
+                        title2: undefined,
+                        xaxis: {
+                            name: 'Aika',
+                            type: 'time',
+                            formatter: (value) => `${new Date(value).getFullYear()}`
+                        },
+                        yaxis: [{
+                            name: 'Lämpötila/°C',
+                            formatter: null,
+                        }],
+                        series: [],
+                        legend: {
+                            show: false,
+                            tooltipformatter: (par) => `${par.value[0].getDate()}.${par.value[0].getMonth()+1}.${par.value[0].getFullYear()} ${this.roundNumber(par.value[1], 1)}°C`,
+                            selected: undefined,
+                            top: {legend: 0, grid: 0}
+                        }
+                    }                    
+
+                    chartparams.series = this.selecteddayData.data.map((serie, i) => ({
+                        data: serie.map( dd => ({value: [dd.date, dd.value]}) ),
+                        name: `Sarja:${i}`,
+                        symbol: {size: 2},
+                    }));
+                    
+                    return chartparams;
                 },
                 createForecastGraph() {
+                    const chartparams = {
+                        title1: '',//title,
+                        title2: undefined,
+                        xaxis: {
+                            name: 'Aika',
+                            type: 'time',
+                            formatter: (value) => `${new Date(value).getDate()}.${new Date(value).getMonth()+1}`
+                        },
+                        yaxis: [{
+                            name: 'Lämpötila/°C',
+                            formatter: null,
+                        }],
+                        series: [],
+                        legend: {
+                            show: true,
+                            tooltipformatter: (par) => `${par.value[0].getDate()}.${par.value[0].getMonth()+1}.${par.value[0].getFullYear()} ${par.value[0].getHours()}:${par.value[0].getMinutes()<10?'0':''}${par.value[0].getMinutes()} ${par.value[1]}°C`,
+                            selected: undefined,
+                            top: {legend: 0, grid: 0}
+                        }
+                    }                    
                     const latestreadingsamount = 28;
-
                     const forecastvalues = this.forecastData.data.map(data => ({
                         value: [new Date(data.localtime), data.temperature], 
-                        tooltip: `Päivä: ${new Date(data.localtime).getDate()}.${new Date(data.localtime).getMonth()+1} klo ${new Date(data.localtime).getHours()} ${roundNumber(data.temperature, 1)}`
                     }));
 
                     let latestvalues = [];
                     this.lastTemperatures.forEach((data => {
                         if (data.morning) {
                             const date = new Date(data.datetimeLocal.getFullYear(), data.datetimeLocal.getMonth(), data.datetimeLocal.getDate(), 7);
-                            latestvalues.push({value: [date,data.morning], 
-                                tooltip: `Päivä: ${date.getDate()}.${date.getMonth()+1} klo ${date.getHours()} ${roundNumber(data.morning, 1)}`})
+                            latestvalues.push({value: [date,data.morning]});
                         }
                         if (data.evening) {
                             const date = new Date(data.datetimeLocal.getFullYear(), data.datetimeLocal.getMonth(), data.datetimeLocal.getDate(), 15);
-                            latestvalues.push({value: [date, data.evening], 
-                                tooltip: `Päivä: ${date.getDate()}.${date.getMonth()+1} klo ${date.getHours()} ${roundNumber(data.evening, 1)}`})
+                            latestvalues.push({value: [date, data.evening]});
                         }
                     }))
                     if (latestvalues.length > latestreadingsamount) {
                         latestvalues = latestvalues.splice(latestvalues.length - latestreadingsamount, latestvalues.length - latestreadingsamount)
                     }
-                    const returndata = [
-                        {name: "Viimeiset", values: latestvalues, year: 0, location: ''},
-                        {name: 'Ennuste', values: forecastvalues, year: 0, location: ''},
+                    chartparams.series = [
+                        {name: "Viimeiset", data: latestvalues, year: 0, symbol: {size: 2}},
+                        {name: 'Ennuste', data: forecastvalues, year: 0, symbol: {size: 2}},
                     ]
-                    const params = {showlegend: true, legend: {date: true}}
-                    return {data: returndata, params: params}
+
+
+                    return chartparams;
                 },
                 getLastreadings(temperatures) {
                     const lasttemperaturesamount = 50;
@@ -1428,3 +1316,5 @@
 </body>
 
 </html>
+
+

@@ -9,6 +9,7 @@
       "noImplicitAny": false,
       "removeComments": true,
       "preserveConstEnums": true,
+      "strictNullChecks": false,
       "rootDir": "./server",
       "outDir": "./dist"
     },
