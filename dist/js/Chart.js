@@ -1,4 +1,4 @@
-const chartVersion = '1.3';
+const chartVersion = '1.4';
 class Chart {
 
         constructor(element) {
@@ -38,7 +38,7 @@ class Chart {
             }
             this.options.xAxis.push(newaxis);
         }
-        addYAxis(name, type, labelformatter) {
+        addYAxis(name, type, labelformatter, min, max) {
             const newaxis = {};
             if (typeof name !== 'undefined') newaxis.name = name;
             if (typeof type !== 'undefined') newaxis.type = type;
@@ -46,6 +46,8 @@ class Chart {
                 newaxis.axisLabel = {};
                 newaxis.axisLabel.formatter = labelformatter;
             }
+            if (typeof min !== 'undefined') newaxis.min = min;
+            if (typeof max !== 'undefined') newaxis.max = max;
             this.options.yAxis.push(newaxis);
         }
         addSerie(name, type, data, yaxisindex) {
@@ -119,9 +121,7 @@ function createNewChart(divname, params) {
 
     newchart.addXAxis(params.xaxis.name, typeof params.xaxis.type === 'undefined' ? 'time' : params.xaxis.type, undefined, params.xaxis.formatter);
     for (let axisno = 0; axisno < params.yaxis.length; axisno++) {
-        newchart.addYAxis(params.yaxis[0].name, 'value', params.yaxis[axisno].formatter);
-        //newchart.options.yAxis[0].min = -10;
-        //newchart.options.yAxis[0].max = 10;
+        newchart.addYAxis(params.yaxis[0].name, 'value', params.yaxis[axisno].formatter, params.yaxis[axisno].min, params.yaxis[axisno].max);
     }
     for (let serieno = 0; serieno < params.series.length; serieno++) {
         newchart.addSerie(params.series[serieno].name, typeof params.series[serieno].type === 'undefined' ? 'line' : params.series[serieno].type, params.series[serieno].data, params.series[serieno].yaxisindex);

@@ -822,10 +822,12 @@ function createChartClassXAxis(name: string): ChartClassXAxis {
 }
 interface ChartClassYAxis {
     name: string;
+    min: number | undefined;
+    max: number | undefined;
     formatter: (value: any) => string;
 }
 function createChartClassYAxis(name: string): ChartClassYAxis {
-    return {name: name, formatter: null};
+    return {name: name, formatter: null, min: undefined, max: undefined};
 }
 interface ChartClassSerie {
     name: string;
@@ -1184,12 +1186,7 @@ export function createYearlyTrendSeriedata(): ChartClassOptions {
 
     const yeartemperatureserie = createChartClassSerie('Lämpötila', temperatureClass.yearlyMonthlyAverages.yearlydata.map(val => ({value: [val.year, val.yearlyaverage], symbol: val.estimate ? EstimateSymbol : undefined, symbolsize: val.estimate ? EstimateSymbolsize : undefined})), ChartDefaultSymbolSize);
     const yeardiffserie = createChartClassSerie('Illan ja aamun ero', temperatureClass.yearlyMonthlyAverages.yearlydata.map( (val) => ({value: [val.year, val.yearlyaveragediff], symbol: val.estimate ? EstimateSymbol : undefined, symbolsize: val.estimate ? EstimateSymbolsize : undefined})), ChartDefaultSymbolSize);   
-    // format date
-    //yeartemperatureserie.data.forEach(v => {v.value[0] = new Date(v.value[0],0, 1)});
-    //yeardiffserie.data.forEach(v => v.value[0] = new Date(v.value[0],0, 1));
-
     // --------------------------
-
     function createTrendSerie(seriename: string, tempserie: ChartClassSerie): ChartClassSerie {
         let trenddata = createTrendCalcTable(tempserie.data.map(v => (createTrendCalcData(v.value[0], v.value[1]))));
         const trend = CFcalculateTrend([trenddata]);
@@ -1209,9 +1206,12 @@ export function createYearlyTrendSeriedata(): ChartClassOptions {
     returnvalue.series.push(yeardiffserie);
     returnvalue.series.push(trendserie);
     returnvalue.series.push(difftrendserie);
+    returnvalue.series.forEach(ser => ser.data.forEach(s => { s.value[0] = new Date(s.value[0], 0, 1); }));
+    const minmax = findMinMaxFromSeries(returnvalue.series, 1);
+    returnvalue.yaxis[0].min = minmax[0];
+    returnvalue.yaxis[0].max = minmax[1];
 
     return returnvalue;
-  
 }
 
 export function createTrendForGivenMonths(monthnumbers: number[], monthnames: string[]): ChartClassSerie[] {
@@ -1263,7 +1263,7 @@ export function createTrendForGivenMonths(monthnumbers: number[], monthnames: st
         createTrendCalcTable(month.data.map(data => ( createTrendCalcData(data.year, data.value))))));
     // ----------------
     let trend = CFcalculateTrend(calctable);
-    let newvalues = years.map((yearserie) => [new Date(yearserie.year, 0, 1), isNaN(trend.k) ? NaN : yearserie.year * trend.k + trend.b]);
+    let newvalues = years.map((yearserie) => ({value: [new Date(yearserie.year, 0, 1), isNaN(trend.k) ? NaN : yearserie.year * trend.k + trend.b]}));
 
     if (isNaN(trend.k)) datavalues.push( createChartClassSerie( `Trendi --- °C/10v`, newvalues, ChartDefaultSymbolSize));
     else {
@@ -1276,6 +1276,24 @@ export function createTrendForGivenMonths(monthnumbers: number[], monthnames: st
     return datavalues;
 }
 
+function findMinMaxFromSeries(series: ChartClassSerie[], headroom: number) : [number, number] {
+    let min = 10000000;
+    let max = -10000000;
+
+    series.forEach(ser => {
+        ser.data.forEach(s => 
+            {
+                if (s.value[1] > max) 
+                    max = s.value[1]; 
+                if (s.value[1] < min) 
+                    min = s.value[1]
+            })
+        });
+    min = Math.floor(min - headroom);
+    max = Math.ceil(max + headroom);
+
+    return [min, max];
+}
 export function createMonthlySummerTrendSeriedata(): ChartClassOptions {
     // New function
     const charttitle = 'Kesän suuntaus';
@@ -1286,6 +1304,9 @@ export function createMonthlySummerTrendSeriedata(): ChartClassOptions {
 
     returnvalue.series = createTrendForGivenMonths([6, 7, 8], ['Kesäkuu', 'Heinäkuu', 'Elokuu'])
     returnvalue.animation = true;
+    const minmax = findMinMaxFromSeries(returnvalue.series, 1);
+    returnvalue.yaxis[0].min = minmax[0];
+    returnvalue.yaxis[0].max = minmax[1];
     return returnvalue;
 }    
 export function createMonthlyWinterTrendSeriedata(): ChartClassOptions {
@@ -1297,6 +1318,9 @@ export function createMonthlyWinterTrendSeriedata(): ChartClassOptions {
     returnvalue.series = series;
 
     returnvalue.series = createTrendForGivenMonths([1, 2, 12], ['Tammikuu', 'Helmikuu', 'Joulukuu']);
+    const minmax = findMinMaxFromSeries(returnvalue.series,1);
+    returnvalue.yaxis[0].min = minmax[0];
+    returnvalue.yaxis[0].max = minmax[1];
 
     return returnvalue;
 }    
@@ -1309,6 +1333,9 @@ export function createMonthlyFallTrendSeriedata(): ChartClassOptions {
     returnvalue.series = series;
 
     returnvalue.series = createTrendForGivenMonths([9, 10, 11], ['Syyskuu', 'Lokakuu', 'Marraskuu']);
+    const minmax = findMinMaxFromSeries(returnvalue.series,1);
+    returnvalue.yaxis[0].min = minmax[0];
+    returnvalue.yaxis[0].max = minmax[1];
 
     return returnvalue;
 }    
@@ -1321,6 +1348,9 @@ export function createMonthlySpringTrendSeriedata(): ChartClassOptions {
     returnvalue.series = series;
 
     returnvalue.series = createTrendForGivenMonths([3, 4, 5], ['Maaliskuu', 'Huhtikuu', 'Toukokuu']);
+    const minmax = findMinMaxFromSeries(returnvalue.series,1);
+    returnvalue.yaxis[0].min = minmax[0];
+    returnvalue.yaxis[0].max = minmax[1];
 
     return returnvalue;
 }    
