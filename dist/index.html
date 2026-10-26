@@ -48,6 +48,17 @@
             margin-left: 4px;
             margin-bottom: 20px;
         }
+        .locationbutton {
+            background-color: lightblue;
+            margin-left: 10px;
+            margin-bottom: 20px;
+        }
+        .locationbutton:hover {
+            background-color: rgb(82, 213, 252);
+        }
+        .locationbutton.selected:hover {
+            background-color: rgb(182, 182, 242);
+        } 
         .groupbutton {
             margin: 4px;
             border-radius: 5px;
@@ -71,6 +82,9 @@
         .margin5 {
             margin: 5px;
         }
+        h2 {
+            font-size: 8px;
+        }
 
     </style>
 </head>
@@ -86,7 +100,9 @@
                     </div>
                     <div class="page-content col-md-6">
                         <h1 id="ID_PageTitle">Lämpötilatilastot</h1>
+                        <h2>Ver 1.1</h2>
                         <hr>
+                        <button class="locationbutton" @click="selectlocation(loc)" v-for="loc in locations.data" :class="{selected: location==loc}">{{ loc }}</button>
                         <p>Valitse näytettävät vuodet</p>
                         <button class="yearbutton" @click="selectyear(item)" :class="{selected:item.selected}" v-for="item in years">{{ item.year }}</button>
                         <hr>
@@ -135,33 +151,44 @@
                     },
                     async mounted() {
                         this.locations = await apiGetLocations(userid);
-                        const years = await apiGetYears(userid, this.location);
-                        this.years = years.data.map(y => ({selected: true, year: y}));
-                        if (years.data && years.data.length > 1) {
-                            let count = years.data.length;
-                            let firstyear = years.data[0];
-                            let lastyear = years.data[count - 1];
-                            if (count > 10) {
-                                if (count < 20) {
-                                    const half = Math.floor(count/2);
-                                    this.yeargroups.push({first: firstyear,last: years.data[half], selected: true});
-                                    this.yeargroups.push({first: years.data[half + 1],last: lastyear, selected: true});
-                                }
-                                else {
-                                    let index = 0;
-                                    while (index < count) {
-                                        this.yeargroups.push({first: years.data[index], last: years.data[(index + 9) >= count-1 ? count-1 : index+9], selected: true});
-                                        index += 10;
-                                    }
-                                }
-                            }
-                        }
+
+                        await this.updateLocationInfo();
                     },
                     components: {
                     },
                     methods: {
+                        async updateLocationInfo() {
+                            const years = await apiGetYears(userid, this.location);
+                            this.years = years.data.map(y => ({ selected: true, year: y }));
+                            if (years.data && years.data.length > 1) {
+                                let count = years.data.length;
+                                let firstyear = years.data[0];
+                                let lastyear = years.data[count - 1];
+                                if (count > 10) {
+                                    if (count < 20) {
+                                        const half = Math.floor(count / 2);
+                                        this.yeargroups.push({ first: firstyear, last: years.data[half], selected: true });
+                                        this.yeargroups.push({ first: years.data[half + 1], last: lastyear, selected: true });
+                                    }
+                                    else {
+                                        let index = 0;
+                                        while (index < count) {
+                                            this.yeargroups.push({ first: years.data[index], last: years.data[(index + 9) >= count - 1 ? count - 1 : index + 9], selected: true });
+                                            index += 10;
+                                        }
+                                    }
+                                }
+                            }
+
+                        },
                         selectyear(item) {
                             item.selected = !item.selected;
+                        },
+                        selectlocation(item) {
+                            if (this.location != item) {
+                                this.location = item;
+                                this.updateLocationInfo();
+                            }
                         },
                         showstatistics() {
                             const yearparams = this.years.map(y => y.selected ? y.year : null).filter(y => y !== null).join(',');

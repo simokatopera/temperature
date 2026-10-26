@@ -161,6 +161,13 @@ export class DbSupaClass implements DbApiClass {
         this.filetemperaturedata.push(require("./files/Harjunpaa_1990.json"));
 
     }
+    async getFileLocations(): Promise<string[]> {
+        let temp: string[] = [];
+        for (let index = 0; index < this.filetemperaturedata.length; index++) {
+            temp.push(this.filetemperaturedata[index].info.location);
+        }
+        return temp.filter(this.onlyUnique);
+    }
     async getFileTemperatures(location: string, years: number[]): Promise<TemperatureType[]> {
         if (this.operationAllowed('get', 'temperatures')) {
             let dataindex, yearindex: number;
@@ -263,10 +270,6 @@ export class DbSupaClass implements DbApiClass {
                         if (!isNaN(itemtoadd.evening) && itemtoadd.evening != null) newreading.evening = itemtoadd.evening;
 
                         readingstobesaved.splice(0, 0, newreading);
-
-                        // console.log('add new readings 1')
-                        // for (let i = 0; i < 5; i++)
-                        //     console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)
                     }
 
                 console.log('4')
@@ -283,9 +286,6 @@ export class DbSupaClass implements DbApiClass {
                             // remove date reading
                             readingstobesaved.splice(index, 1);
                         }
-                        // console.log('add new readings 3')
-                        // for (let i = index - 5; i < index + 5 && i < readingstobesaved.length; i++)
-                        //     console.log(`${i} ${JSON.stringify(readingstobesaved[i])}`)
                     }
                     else {
                         let newreading: any = { date: itemtoadd.date }
@@ -383,11 +383,14 @@ export class DbSupaClass implements DbApiClass {
     }
     async locations(): Promise<string[]> {
         if (this.operationAllowed('get', 'locations')) {
+            let filelocations = await this.getFileLocations();
+            console.log(filelocations)
             let dbdata = await supabase
                 .from(this.DbTemperatureTable)
                 .select('location')
             if (dbdata.error || dbdata.data.length == 0) return [];
             let locations = dbdata.data.map((d: any) => (d == null || d.location == null) ? null : d.location.replace(/(\n)/g, '')).filter((val: string | null) => val !== null);
+            locations = locations.concat(filelocations);
             return locations.filter(this.onlyUnique);
         }
         return [];
