@@ -109,10 +109,20 @@
 
         (async function () {
             const userguid = new URLSearchParams(document.location.search).get("userid");
-            const vueapp = createvueapp(userguid);
+            let location = new URLSearchParams(document.location.search).get("location");
+            if (location == "" || location == null || location == undefined) {
+                location = "Salo";
+            }
+            else {
+                const first = location.substring(0, 1);
+                const rest = location.substring(1);
+                location = first.toUpperCase() + rest.toLowerCase();
+            }
+
+            const vueapp = createvueapp(userguid, location);
         })();
 
-            function createvueapp(userid) {
+            function createvueapp(userid, location) {
                 return createApp({
                     data() {
                         return {
@@ -120,7 +130,7 @@
                             years: [],
                             yeargroups: [],
                             userid: userid,
-                            location: 'Salo',
+                            location: location,
                         }
                     },
                     async mounted() {
@@ -133,8 +143,9 @@
                             let lastyear = years.data[count - 1];
                             if (count > 10) {
                                 if (count < 20) {
-                                    this.yeargroups.push({first: firstyear,last: years.data[count/2], selected: true});
-                                    this.yeargroups.push({first: years.data[count/2] + 1,last: lastyear, selected: true});
+                                    const half = Math.floor(count/2);
+                                    this.yeargroups.push({first: firstyear,last: years.data[half], selected: true});
+                                    this.yeargroups.push({first: years.data[half + 1],last: lastyear, selected: true});
                                 }
                                 else {
                                     let index = 0;

@@ -35,13 +35,14 @@ export class DbSupaClass implements DbApiClass {
         this.getFileData();
     }
 
-    private getFileYears(): Number[] {
+    private getFileYears(location: string): Number[] {
         let i: number;
         let years: number[] = [];
         let yearnums: number[] = [];
         for (i = 0; i < this.filetemperaturedata.length; i++) {
             if (this.filetemperaturedata[i].info.year &&  !isNaN(Number(this.filetemperaturedata[i].info.year))) {
-                years.push(this.filetemperaturedata[i].info.year);
+                if (this.filetemperaturedata[i].info.location.toUpperCase() == location.toUpperCase())
+                    years.push(this.filetemperaturedata[i].info.year);
             }
         }
         years = years.filter(this.onlyUnique);
@@ -381,11 +382,12 @@ export class DbSupaClass implements DbApiClass {
         return setFailResult("Not allowed");
     }
     async locations(): Promise<string[]> {
-        if (this.operationAllowed('get', 'location')) {
+        if (this.operationAllowed('get', 'locations')) {
             let dbdata = await supabase
                 .from(this.DbTemperatureTable)
-
-            let locations: string[] = ['kukku', 'luuru'];
+                .select('location')
+            if (dbdata.error || dbdata.data.length == 0) return [];
+            let locations = dbdata.data.map((d: any) => (d == null || d.location == null) ? null : d.location.replace(/(\n)/g, '')).filter((val: string | null) => val !== null);
             return locations.filter(this.onlyUnique);
         }
         return [];
@@ -395,14 +397,13 @@ export class DbSupaClass implements DbApiClass {
         if (this.operationAllowed('get', 'years')) {
             const dbdata = await supabase
                 .from(this.DbTemperatureTable)
-                .select('year, readings, location')
+                .select('year, location')
                 //.eq('location', location)
-
-            console.log(dbdata)
             if (dbdata.error || dbdata.data.length == 0) return [];
-            let years = dbdata.data.map((d: any) => Number(d.year));
-            years = years.concat(this.getFileYears());
-            return years.filter(this.onlyUnique).sort((a: any, b: any) => Number(a) - Number(b));
+            let years = dbdata.data.map((d: any) => d.location == null ? -1 : (d.location.toUpperCase() == location.toUpperCase()) ? Number(d.year) : -1).filter((val: number) => val !== -1);
+            years = years.concat(this.getFileYears(location));
+            let temp = years.sort((a: any, b: any) => Number(a) - Number(b)).filter(this.onlyUnique);
+            return temp;
         }
         return [];
     }
@@ -428,7 +429,7 @@ export class DbSupaClass implements DbApiClass {
                     .from(this.DbTemperatureTable)
                     .select('year, readings, location')
                     .in('year', newyears)
-                    .eq('location', location)
+                    //.eq('location', location)
                 if (dbdata.error || dbdata.data.length == 0) return temperatures;
                 for (let yearindex = 0; yearindex < dbdata.data.length; yearindex++) {
                     const readings = dbdata.data[yearindex].readings;
@@ -437,7 +438,8 @@ export class DbSupaClass implements DbApiClass {
                             const tempvalues =  readings.data.map(d => {
                                 return createTemperatureDataType(d.date, d.morning, d.evening, this.getDate(d.date), null)
                             })
-                            temperatures.push(createTemperatureType(dbdata.data[yearindex].year, dbdata.data[yearindex].location, tempvalues));
+                            if (dbdata.data[yearindex].location.toUpperCase() == location.toUpperCase())
+                                temperatures.push(createTemperatureType(dbdata.data[yearindex].year, dbdata.data[yearindex].location, tempvalues));
                         }
                     }
                     else {

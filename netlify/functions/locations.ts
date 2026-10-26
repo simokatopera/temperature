@@ -7,7 +7,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     console.log('Locations');
 	const guidresp = requestGuidValid(event);
 	if (guidresp.msg !== null) return createJsonErrorResponse(HttpResponseType.BadRequest, guidresp.msg);
-
     const api = await GetProvider(guidresp.guid);
     if (event.httpMethod == "GET") {
 		const resp = await api.locations();
